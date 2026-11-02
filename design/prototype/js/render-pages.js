@@ -114,9 +114,12 @@
   };
 
   /* ---------- 证据抽屉 ---------- */
+  function cpSlice(text, start, end) {
+    return Array.from(text).slice(start, end).join('');
+  }
   function passageHtml(e) {
     if (e.kind === 'sentence') {
-      return esc(e.passageText.slice(0, e.sentenceStart)) + '<mark class="c-evidence-mark">' + esc(e.passageText.slice(e.sentenceStart, e.sentenceEnd)) + '</mark>' + esc(e.passageText.slice(e.sentenceEnd));
+      return esc(cpSlice(e.passageText, 0, e.sentenceStart)) + '<mark class="c-evidence-mark">' + esc(cpSlice(e.passageText, e.sentenceStart, e.sentenceEnd)) + '</mark>' + esc(cpSlice(e.passageText, e.sentenceEnd));
     }
     return esc(e.passageText);
   }

@@ -15,7 +15,7 @@ stubs: []
 ## 0. 一眼看懂
 
 - **目标**：在 Windows 11 x64 上用 MSVC、vcpkg OpenSSL、DuckDB 1.4.3 构建并加载 `jevdb.duckdb_extension`；无论成功失败都留下可复现记录。
-- **失败时**：产品自动使用 `jev_direct`，不阻塞 Windows MVP-0；不得声称 JEVDB 可用。
+- **失败时**：开发期可自动使用 `jev_direct`；不得声称 JEVDB 可用，也不得把 Windows 结果当作 macOS M-8 的替代证据。Windows 车道恢复时须先立 ADR 决定其最终门槛。
 - **预计规模**：约 380 行，PowerShell 260 行、自检与说明 120 行。
 
 ## 1. 背景与边界
@@ -185,7 +185,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File scripts\build_jevdb_msvc.ps1
 
 | 下游工作包 | 它会使用 | 约定 |
 |---|---|---|
-| W-05 | `build-result.json` | JEVDB 失败不阻塞；继续验证 Jev 直连 |
+| W-05 | `build-result.json` | 记录 JEVDB 结果；失败时仅记录开发降级，不替代 macOS M-8 |
 | S-04 | 可选扩展路径 | 只读路径与 SHA，不在 Windows 改共享引擎 |
 | v1 打包 | `artifacts/x64-windows` 的哈希 | 二进制未签名，不得默认随发布分发 |
 

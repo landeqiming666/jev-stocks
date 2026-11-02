@@ -124,6 +124,7 @@ export function createMockRpcClient(options: { scenario?: string }): RpcClient;
 2. **发送**：生成 `id = "r-" + counter + "-" + randomHex(4)`；把 `{jsonrpc:"2.0",id,method,params}` 用 `JSON.stringify`（无空格）编码；先设 timer 和 pending，再调用 `invoke`；`invoke` 失败时移除 pending 并 reject `RpcError`。
 3. **接收**：`JSON.parse(line)` 必须是对象；有 `id` 且 pending 存在时，`error` 走 `RpcError.fromWire`，`result` resolve；无 `id` 且 `method` 是已订阅通知时广播；未知 id 和未知通知只记录一次，不抛到页面。
 4. **超时**：timer 到点时若仍 pending，先发送 `$/cancel`，删除并 reject `RpcError("TIMEOUT", "请求超时，请重试。", true)`；不要重复发送同一个请求。
+   `RpcClient` 不得修改或重新生成 `params`；`paper.order.place` 的 `idempotencyKey` 由调用方（U-05）持有并在重试时复用。
 5. **abort**：绑定 `signal.addEventListener("abort", ...)`；中止时直接发送 `{"jsonrpc":"2.0","method":"$/cancel","params":{"id":id}}`，删除 pending 并 reject `CANCELLED`；已完成的请求不再发送取消。
 6. **通知**：`subscribe` 先注册本地 handler 再返回 unsubscribe；同一通知允许多个订阅；通知不缓存，丢失后由页面主动查询。
 7. **mock**：`createMockRpcClient` 从 `mocks/scenarios.ts` 读取 `scenario` 的方法映射；每个方法取 `generated/mock-data.ts` 的第一个指定示例；未指定方法时取第一个成功示例；mock 的 `subscribe` 和 `status` 与真实客户端同形。

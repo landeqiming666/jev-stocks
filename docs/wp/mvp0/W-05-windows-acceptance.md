@@ -35,7 +35,7 @@ stubs: []
 |---|---|
 | 修改共享代码、契约、页面或 Mac 验收 | 禁止 |
 | NSIS 安装包、托盘、自启 | v1 |
-| 把 JEVDB 失败判成 Windows MVP 失败 | W-03 记录；继续 Jev 直连 |
+| 把 JEVDB 失败当作 macOS M-8 的直连替代 | W-03 只记录 Windows 开发结果；macOS M-8 仍须真实 JEVDB |
 | 覆盖 macOS 的 I-02 报告 | 分目录、分平台 |
 
 ## 2. 必读
@@ -116,7 +116,7 @@ param(
 10. 人工按 `manual-checklist.md` 走 US-01～US-15，保存一段连续录屏；每一步勾选并写时间戳，不能只写“已通过”。
 11. 在 1024×700 下逐页截图；若存在页面级横向滚动、文字截断或 WebView2 控件异常，WM-2 fail。
 12. 关闭窗口后 5 秒检查 `python.exe`/`uv.exe`/`node.exe` 无本次子进程残留；残留则 WM-1 或 WM-3 fail。
-13. 汇总 W-03 的 `build-result.json`：JEVDB 失败且 `fallback=jev_direct` 不导致 WM-5 fail；伪装 `built` 才 fail。
+13. 汇总 W-03 的 `build-result.json`：记录 JEVDB 结果和 `fallback=jev_direct`；该记录不替代 macOS M-8，伪装 `built` 才 fail。
 14. 写 `acceptance.json`，终端打印 `WINDOWS ACCEPTANCE PASS/FAIL WM1..WM5`；不在任何共享目录写 pass。
 
 ## 7. 错误与边界情况
@@ -130,7 +130,7 @@ param(
 | 窗口标题或标题栏不对 | WM-2 fail | 1 | 截图证据 |
 | 六页任一溢出 | WM-2 fail | 1 | 截图与视口路径 |
 | 凭据测试失败 | WM-4 fail | 1 | 不退回内存后端 |
-| JEVDB 加载失败 | WM-5 记 `fallback=jev_direct` | 0 可 pass | 明确 JEVDB 未使用 |
+| JEVDB 加载失败 | WM-5 记 `fallback=jev_direct` | 0 可 pass | 只表示 Windows 开发可用，明确不能替代 macOS M-8 |
 | 子进程残留 | WM-3 fail | 1 | 任务管理器导出 |
 
 ## 8. 测试（先写）

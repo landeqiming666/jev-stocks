@@ -298,7 +298,10 @@ def main(argv: Optional[List[str]] = None) -> int:
         if not node:
             print("[说明] 没有找到 node，跳过渲染检查")
         else:
-            proc = subprocess.run([node, str(ROOT / "scripts" / "proto_render.js")], capture_output=True, text=True, cwd=str(ROOT))
+            proc = subprocess.run(
+                [node, str(ROOT / "scripts" / "proto_render.js")],
+                capture_output=True, text=True, encoding="utf-8", cwd=str(ROOT),
+            )
             if proc.returncode != 0:
                 problems.append("proto_render.js 运行失败: %s" % proc.stderr.strip()[:500])
             else:
@@ -308,6 +311,17 @@ def main(argv: Optional[List[str]] = None) -> int:
                     problems += check_html(html, key)
                 problems += check_classes_defined(_all_html_classes(out["pages"]), css_defined)
                 print("[渲染] 检查 %d 个页面状态" % len(out["pages"]))
+
+            regression = subprocess.run(
+                [node, str(ROOT / "scripts" / "proto_regression.js")],
+                capture_output=True, text=True, encoding="utf-8", cwd=str(ROOT),
+            )
+            if regression.returncode != 0:
+                problems.append("proto_regression.js 运行失败: %s" % regression.stderr.strip()[:500])
+            else:
+                reg_out = json.loads(regression.stdout)
+                problems += ["原型回归: %s" % e for e in reg_out["errors"]]
+                print("[回归] R10/R11/R12 检查完成")
 
     for p in problems:
         print("[错误] " + p)

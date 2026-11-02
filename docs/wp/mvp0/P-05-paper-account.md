@@ -75,7 +75,8 @@ class PaperService:
     def place_order(self, intent: OrderIntent) -> PaperOrderView: ...
     def cancel_order(self, order_id: str) -> PaperOrderView: ...
     def list_orders(self, account_id: str, status: str | None,
-                    limit: int, cursor: str | None) -> PaperOrderPage: ...
+                    limit: int, cursor: str | None,
+                    idempotency_key: str | None = None) -> PaperOrderPage: ...
     def advance(self, account_id: str) -> AdvanceResult: ...
     def reset(self, account_id: str, confirm_text: str) -> None: ...
 def register_handlers(registrar: HandlerRegistrar, service: PaperService) -> None: ...
@@ -89,7 +90,7 @@ def execute_order(tx: WriteTx, order: OrderRow, next_day: date,
 ```
 - `PaperService` 的 8 个 handler 全部以 `cancellable=False` 注册（C-01 §5.1）：账本写入不接受 `$/cancel`，避免“已成交但客户端收到 CANCELLED”。
 - `place_order` 对参数错误不保存订单；对 `NO_PRICE`、`INSUFFICIENT_CASH`、`INSUFFICIENT_POSITION` 保存 `rejected` 订单并抛 `ORDER_REJECTED`，`data.orderId` 指向该行。
-- `advance` 中每笔订单独立事务；单笔程序错误只能回滚该笔，不能留下半条成交或半个持仓。
+- `advance` 整次推进一个事务：成交、拒单、资金、持仓、时钟与快照一起提交；程序错误全部回滚。
 - `reset` 删除前必须先成功备份；确认文字必须与账户名完全一致。
 - 所有 SQL 参数绑定；所有现金运算用 `Decimal`；数量用 `int`。
 - 列表分页按 `created_at DESC, order_id DESC`，limit 默认 50、最大 200。
@@ -130,11 +131,11 @@ def execute_order(tx: WriteTx, order: OrderRow, next_day: date,
 4. **冻结**：买单通过后插入 `pending` 订单，`reserved_cash = required`，写一条 `reserve(-required)`；卖单 `reserved_cash = NULL`，不写资金流水。订单、冻结与返回对象在一个事务提交。
 5. **取消**：只接受 `pending`；状态改 `cancelled`，写 `release(+reserved_cash)`，清空 `reserved_cash`。重复取消或非 pending 抛 `CONFLICT`。
 6. **推进前置**：`next_day = next_trading_day(clock_date)`；若 `latest_price_date(involved) is None` 或 `next_day > latest`，抛 `DATA_INSUFFICIENT` 且时钟不变。
-7. **逐单撮合**：按卖单优先、再 `created_at`、`order_id` 排序。每笔订单开独立事务；调用 `open_on` 与 P-04 `match_at_open`。无开盘价但未满 5 日时保持 pending，只更新 `updated_at`。
+7. **一次推进一个事务**：按卖单优先、再 `created_at`、`order_id` 排序；在**同一个 `Database.write()` 事务**内逐笔处理，调用 `open_on` 与 P-04 `match_at_open`。业务拒单（资金/持仓/无价）写入 rejected 结果并继续下一笔；程序异常直接抛出，整个事务回滚。
 8. **成交记账**：买单先写 `release(+reserved_cash)`，再检查可用现金；足够时写 `buy(-amount)`、`fee(-fee)`，更新持仓数量与平均成本。卖单写 `sell(+amount)`、`fee(-fee)`，减少数量，`avg_cost` 不变；清仓保留 `quantity=0` 行。
-9. **写成交与状态**：成交行字段为 price、quantity、amount、fee、slippage_bps；订单改 `filled`、清空 `reserved_cash`。拒单时释放冻结、写拒单码与中文消息、订单改 `rejected`。
-10. **推进与快照**：全部订单事务结束后，单开事务把 `clock_date = next_day`，按当日收盘估值；缺当日收盘的持仓使用最近一个 `close <= next_day` 并记录 `warn`。写唯一 `equity_snapshot`。返回 `AdvanceResult(clockDate=next_day, tradingDay=True, filled, rejected, pendingRemaining, portfolio=推进后的 PortfolioView)`。
-11. **部分推进失败**：若任一订单事务出现程序错误，已提交订单不回滚，`advance` 抛 `INTERNAL` 且时钟不前进；再次调用时已成交订单不再是 pending，因此不会重复成交。
+9. **写成交与状态**：成交行字段为 price、quantity、amount、fee、slippage_bps；订单改 `filled`、清空 `reserved_cash`。拒单时释放冻结、写拒单码与中文消息、订单改 `rejected`；这些都在同一事务内。
+10. **推进与快照**：在同一事务内把 `clock_date = next_day`，按当日收盘估值；缺当日收盘的持仓使用最近一个 `close <= next_day` 并记录 `warn`。写唯一 `equity_snapshot`，提交事务后返回 `AdvanceResult(...)`。
+11. **失败语义**：任一笔程序错误或数据库错误都会回滚**整次推进**（成交、拒单、资金、持仓、时钟、快照全部不生效），`advance` 抛 `INTERNAL`；不会出现“D+1 已成交、时钟仍为 D”。业务拒单不是异常，不影响其他订单。
 12. **组合读取**：现金、冻结和持仓从流水与 `position` 读取；市值只使用 `trade_date <= clock_date` 的行情。`sellableQuantity = quantity`，美股无 T+1。
 13. **重置**：校验账户、确认名；先调用 `db.backup("paper.reset")` 并确认返回路径存在；事务内删除该账户的 `fill`、`paper_order`、`position`、`cash_ledger`、`equity_snapshot`，恢复 `clock_date=start_date`，写新 deposit。其他账户数据不得受影响；备份失败则不删除任何行。
 14. **一致性**：每次 `advance` 后调用 `assert_invariants`：现金非负、持仓非负、冻结等于 pending 买单之和、权益等于现金加市值、成交金额等于价格乘数量、持仓等于买入减卖出。任一违规抛 `INTERNAL` 并保留现场。
@@ -150,7 +151,7 @@ def execute_order(tx: WriteTx, order: OrderRow, next_day: date,
 | 资金或持仓业务拒绝 | 独立事务保存 rejected 后抛错，不冻结 | `ORDER_REJECTED` | `trading.*` |
 | 取消非 pending | 状态不变 | `CONFLICT` | `error.CONFLICT` |
 | 下一交易日无任何行情 | 不更新时钟、不撮合 | `DATA_INSUFFICIENT` | `error.DATA_INSUFFICIENT` |
-| 单笔订单 SQL 失败 | 该笔整批回滚 | `INTERNAL` | `error.INTERNAL` |
+| 任一笔订单 SQL/程序失败 | 整次推进回滚 | `INTERNAL` | `error.INTERNAL` |
 | 重置确认文字错误 | 不备份、不删除 | `INVALID_ARGUMENT` | `error.INVALID_ARGUMENT` |
 | 账本不变量失败 | 停止推进并记录错误编号 | `INTERNAL` | `error.INTERNAL` |
 
@@ -171,6 +172,7 @@ def execute_order(tx: WriteTx, order: OrderRow, next_day: date,
 | `test_cancel_releases_exact_reserved_amount` | 同上 | pending 买单冻结 2841.4200 | 取消后冻结 0，现金恢复 |
 | `test_advance_uses_next_day_open_not_clock_day_close` | 同上 | D 日 close 100，D+1 open 110 | 成交价含 5 bps 为 110.055000 |
 | `test_advance_does_not_read_future_prices` | 同上 | 只有 D+2 价格，无 D+1 | `DATA_INSUFFICIENT`，时钟仍 D |
+| `test_advance_second_order_failure_rolls_back_all` | 同上 | 3 笔订单，第 2 笔注入异常 | 3 笔均不生效；时钟仍 D；无新增 fill/流水 |
 | `test_gap_up_shortfall_rejects_and_releases` | 同上 | 释放冻结后差 0.0001 | `INSUFFICIENT_CASH_AT_FILL`，冻结 0 |
 | `test_reset_removes_only_target_account` | 同上 | 两个账户 | 目标账户只剩 deposit；另一个数据不变 |
 | `test_random_200_step_ledger_invariants` | `test_account.py` | seed 20261102，买/卖/取消/推进各 50 次 | 每步后 7 项不变量全通过 |
@@ -183,7 +185,7 @@ def execute_order(tx: WriteTx, order: OrderRow, next_day: date,
 ### 9.1 命令与期望输出
 ```bash
 (cd core && uv run pytest tests/unit/trading/test_ledger.py tests/unit/trading/test_matching.py tests/unit/trading/test_account.py -q)
-# 期望：16 passed，0 failed
+# 期望：17 passed，0 failed
 scripts/check.sh
 # 期望：exit=0；ruff、mypy 对 sentinel/trading 全绿
 ```
@@ -198,9 +200,9 @@ scripts/check.sh
 ## 10. 交接、风险与回退
 | 对象 | 使用或风险 | 约定与回退 |
 |---|---|---|
-| U-06 | 使用 8 个 RPC 方法 | 金额为 4 位字符串；成交价为 6 位字符串；界面显示拒单原因；收到 `INTERNAL` 后必须刷新组合与订单列表（可能已有部分订单成交） |
+| U-06 | 使用 8 个 RPC 方法 | 金额为 4 位字符串；成交价为 6 位字符串；界面显示拒单原因；收到 `INTERNAL` 后刷新组合与订单列表（整次推进已回滚） |
 | E-01 | 创建演示账户与订单 | 只调用公开 RPC 或用同一服务方法，不直接写账本 |
 | I-01 | 端到端验证下单与推进 | 先刷新行情；缺少目标日行情时不出成交 |
-| 推进中途程序错误 | 部分订单已成交、时钟未变 | 保留已提交结果；用户重试，已成交订单不会重复 |
+| 推进中途程序错误 | 整次推进回滚，时钟与成交均不变 | 用户重试；不会出现混合状态 |
 | 重置误删风险 | 用户确认文字错误 | 全等校验；删除前备份；只有目标账户数据被删 |
 | 行情缺失 | 权益使用最近收盘 | 日志与界面标注数据截至；禁止使用未来行情 |

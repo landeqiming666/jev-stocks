@@ -29,7 +29,7 @@ JEVDB 直接把语义判定写进 SQL，适合课程要求的“语义连接”�
 2. 生成 `jev_probability` 的评分 SQL 与证据 SQL；用户文字只走表列绑定。
 3. 把查询行映射为 `PairScore`；用字符数 ÷ 3.5 估算 token 并标 `tokens_estimated=True`。
 4. 记录 `jevdb_stats()`；同步取消调用 `interrupt()`。
-5. G0-JEVDB 失败时的失败路径、SQL 单测与 `ENGINE_UNAVAILABLE`。
+5. G0-JEVDB 失败时的失败路径、SQL 单测与 `ENGINE_UNAVAILABLE`；这只允许开发期推进，不能绕过 ADR-018 的最终验收。
 
 ### 1.3 明确不做
 | 不做 | 由谁做 |
@@ -53,7 +53,7 @@ JEVDB 直接把语义判定写进 SQL，适合课程要求的“语义连接”�
 
 - S-02 已交付 Protocol、问题集、`estimate_tokens()`、`classify()`、错误类型。
 - G0-JEVDB 已交付扩展路径、SHA256、加载参数和 settings 结论。
-- 若 G0 结论不是 PASS：本包仍交付可导入的类、SQL 生成函数和全部失败测试，但 `load()` 固定抛 `ENGINE_UNAVAILABLE`，不得声称可用。
+- 若 G0 结论不是 PASS：本包仍交付可导入的类、SQL 生成函数和全部失败测试，但 `load()` 固定抛 `ENGINE_UNAVAILABLE`，不得声称可用；最终验收状态必须为 BLOCKED。
 - 扩展路径只能来自设置或 `SENTINEL_JEVDB_PATH`；不接受 RPC 用户输入。
 
 ## 4. 交付物清单
@@ -79,6 +79,8 @@ class JevdbEngine:
     def health(self) -> EngineHealth: ...
     def load(self) -> None: ...
     def close(self) -> None: ...
+    def score_pairs(self, company: str, pairs: Sequence[PairInput],
+                    cancel: CancelToken) -> list[PairScore]: ...
     def score_event(self, company: str, theses: Sequence[ThesisInput],
                     passages: Sequence[PassageInput], cancel: CancelToken) -> list[PairScore]: ...
     def locate_evidence(self, thesis: ThesisInput, relation: Relation,
@@ -88,7 +90,7 @@ def build_score_sql(question_set: dict[str, QuestionSpec], table_suffix: str) ->
 def build_evidence_sql(question_set: dict[str, QuestionSpec], table_suffix: str) -> str: ...
 def map_jevdb_error(message: str) -> EngineError: ...
 ```
-`load()` 幂等；未调用 `load()` 时 `score_event` 自动调用一次。`close()` 幂等。同一实例的公开方法用 `threading.RLock` 串行，避免临时表名和连接状态互相污染。`extension_path` 必须绝对、存在、后缀 `.duckdb_extension`，否则 `ENGINE_UNAVAILABLE`。
+`load()` 幂等；未调用 `load()` 时 `score_pairs` 自动调用一次。`close()` 幂等。同一实例的公开方法用 `threading.RLock` 串行，避免临时表名和连接状态互相污染。`score_pairs` 返回数必须严格等于 `len(pairs)`，不得返回未请求的组合；`score_event` 只是全量笛卡尔积包装。`extension_path` 必须绝对、存在、后缀 `.duckdb_extension`，否则 `ENGINE_UNAVAILABLE`。
 
 ### 5.2 数据结构
 | 字段 | 类型 | 必填 | 约束 | 含义 |
@@ -115,8 +117,8 @@ def map_jevdb_error(message: str) -> EngineError: ...
 1. 校验 `duckdb.__version__ == "1.4.3"`；调用 `connection_factory(":memory:", config={"allow_unsigned_extensions":"true"})`，默认使用 `duckdb.connect`。禁止连接主库。
 2. 从 `secret_provider()` 取 key；在全局 `_ENV_LOCK` 下暂存 `JEV_API_KEY`，执行 `LOAD '<path>'`（路径先断言无引号/换行/NUL）和 `CREATE SECRET jev (TYPE jev, PROVIDER env)`，随后恢复原环境。key 不保存到实例。
 3. 执行固定 settings：`jevdb_backend=jev`、`jevdb_model=<model>`、`jevdb_threads=4`、`jevdb_max_retries=3`、`jevdb_retry_max_delay=30`、`jevdb_on_error=error`、`jevdb_timeout=60`、`threads=1`。禁止 `reject`。
-4. 评分 SQL 创建 `th(ref,thesis,kill_condition,keys)` 与 `ps(pid,document,keys)`；`executemany` 绑定用户文字，keys 都写 `['batch']`；`FROM th JOIN ps ON jev_keys_overlap(th.keys,ps.keys)`。
-5. `SELECT` 五个常量问题分别调用 `jev_probability`：`relevant/against/contradicts/supports` 输入 `{'thesis': th.thesis}` 与 `{'document': ps.document}`；`kill_met` 输入额外 `{'kill_condition': th.kill_condition}`。问题文字仅来自 S-02 的 JEVDB 变体。
+4. 评分 SQL 创建 `th(ref,thesis,kill_condition,keys)`、`ps(pid,document,keys)` 与 `wanted(ref,pid)`；`th/ps` 只插入本次 pair 涉及的去重输入，`wanted` 精确写入请求的 pair。`executemany` 绑定用户文字，keys 都写 `['batch']`；语义连接后再 `JOIN wanted`，保证输出严格等于请求集合。
+5. `SELECT th.ref, ps.pid` 与五个常量问题；`relevant/against/contradicts/supports` 输入 `{'thesis': th.thesis}` 与 `{'document': ps.document}`；`kill_met` 输入额外 `{'kill_condition': th.kill_condition}`。问题文字仅来自 S-02 的 JEVDB 变体。`score_event` 先生成全量 pair，再调用 `score_pairs`。
 6. 每行映射一个 `PairScore`；`classify()` 由上层调用。任一概率为 NULL（除 kill）或越界抛 `MODEL_ERROR`，不得填 0。查询后调用 `SELECT * FROM jevdb_stats()` 写 debug 日志。
 7. token 估算：每个 pair 按 `estimate_tokens(len(thesis)+len(kill or "")+len(document)+question_chars)`，`tokens_estimated=True`；`latency_ms` 为整条查询墙钟，同批复用。
 8. 证据 SQL 建临时表 `ev(sid,sentence,thesis,kill_condition)`；每行调用 `jev_probability`，问题来自 `build_evidence_questions(..., flavor="jevdb")`；返回 `s1..sN` 对应概率。句子原文不进入模型输出，偏移由 S-05 计算。
@@ -142,10 +144,12 @@ def map_jevdb_error(message: str) -> EngineError: ...
 ### 8.1 测试清单
 | 测试名 | 文件 | 输入 | 期望 |
 |---|---|---|---|
-| `test_score_event_returns_one_pairscore_per_pair` | `core/tests/unit/semantic/test_jevdb.py` | 2 逻辑 × 3 段落 | 6 个 PairScore；每个 `tokens_estimated=True` |
+| `test_score_pairs_returns_one_pairscore_per_requested_pair` | `core/tests/unit/semantic/test_jevdb.py` | 2 逻辑 × 2 段落，只请求 3 对 | 3 个 PairScore；每个 `tokens_estimated=True` |
+| `test_score_event_wraps_full_cartesian_product` | 同上 | 2 逻辑 × 3 段落 | `score_pairs` 收到 6 对；返回 6 个 PairScore |
+| `test_score_pairs_sql_joins_wanted_pairs` | 同上 | 3 个请求 pair | SQL 含 `wanted` 连接；结果不含未请求组合 |
 | `test_score_sql_contains_no_user_text` | 同上 | 逻辑含 `'; DROP TABLE x; --` | SQL 不含该串；参数列表含原文 |
 | `test_score_sql_uses_kill_met_struct_separately` | 同上 | 一条有 kill，一条无 kill | `kill_condition` 只出现在 kill_met 参数 |
-| `test_score_event_treats_null_probability_as_model_error` | 同上 | `p_against=NULL` | `MODEL_ERROR`；不返回 none |
+| `test_score_pairs_treats_null_probability_as_model_error` | 同上 | `p_against=NULL` | `MODEL_ERROR`；不返回 none |
 | `test_missing_extension_raises_engine_unavailable` | 同上 | 不存在路径 | `ENGINE_UNAVAILABLE`；连接创建 0 次 |
 | `test_auth_401_and_429_errors_are_distinct` | 同上 | 两段错误文本 | 分别为 `UNAUTHENTICATED`、`RATE_LIMITED` |
 | `test_evidence_probabilities_follow_sentence_order` | 同上 | 4 个 sid | 列表长度 4、顺序 s1..s4 |
@@ -165,24 +169,24 @@ def map_jevdb_error(message: str) -> EngineError: ...
 ### 9.1 命令与期望输出
 ```bash
 cd core && uv run pytest tests/unit/semantic/test_jevdb.py -q
-# 期望：10 passed，0 failed
+# 期望：12 passed，0 failed
 cd .. && scripts/check.sh
 # 期望：exit=0；SQL 注入与临时表清理测试通过
 ```
-若 G0-JEVDB 未通过，以上单元测试仍必须通过；真实扩展加载验收在状态文件标为 BLOCKED，不能标 PASS。
+若 G0-JEVDB 未通过，以上单元测试仍必须通过；S-04 状态文件必须将真实扩展加载验收标为 BLOCKED，且 I-02 的 M-8 不得通过，不能用 `jev_direct` 或 SQL 字符串测试替代。
 
 ### 9.2 完成清单
 - [ ] 实现与 `jev_direct` 相同的 Protocol 与返回结构
 - [ ] 用户文字从不拼进 SQL；kill_met STRUCT 单独处理
 - [ ] `jevdb_on_error='error'`，JEVDB 自身绝不降级；`auto` 降级只由 S-02 完成
 - [ ] 失败、取消、临时表清理、401/429 均有测试
-- [ ] 第 8.1 节 10 个测试全部通过；已写 `docs/wp/status/S-04.md`
+- [ ] 第 8.1 节 12 个测试全部通过；已写 `docs/wp/status/S-04.md`
 
 ## 10. 给下游的交接
 
 | 下游工作包 | 它会使用 | 约定 |
 |---|---|---|
-| S-05 | `JevdbEngine`、`tokens_estimated=True` | 预算按估算值累计；界面显示“≈” |
+| S-05 | `JevdbEngine.score_pairs`、`tokens_estimated=True` | 只计算显式 pair；预算按估算值累计；界面显示“≈” |
 | P-02 | `health()`、`load()`、`close()` | 应用退出必须调用 `close()`；自动降级由 selector 负责 |
 | E-02 | 两引擎同问题集与同返回结构 | 指标按 engine 分开报告 |
 
@@ -190,7 +194,7 @@ cd .. && scripts/check.sh
 
 | 风险 | 征兆 | 回退 |
 |---|---|---|
-| JEVDB 构建不可用 | G0-JEVDB 失败 | 产品全程 `jev_direct`；本包仅保留 SQL 与失败测试 |
+| JEVDB 构建不可用 | G0-JEVDB 失败 | 开发期可临时使用 `jev_direct`；本包仅保留 SQL 与失败测试，最终验收保持 BLOCKED |
 | 上游 SQL 对 STRUCT 字段理解错误 | 概率异常或 NULL | 用 G0 样例改 JEVDB 问题指代，升问题集版本 |
 | `interrupt()` 不终止 HTTP | 取消后仍占用 | 超时 60 秒兜底；上层丢弃结果并关闭连接 |
 | 估算 token 偏差大 | 与直连样本差异明显 | 报告标注“≈”；不得用于精度结论 |

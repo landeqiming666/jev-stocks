@@ -16,7 +16,7 @@ stubs: []
 ## 0. 一眼看懂
 
 - **目标**：在 macOS arm64、DuckDB 1.4.3 上从固定源码构建 JEVDB 0.1.0，静态链接 OpenSSL，用 `allow_unsigned_extensions` 加载，并实测 `jev_probability` 与 `jev_keys_overlap`。
-- **完成后解锁**：S-04。通过则实现完整 JEVDB 引擎；失败则 S-04 只保留接口、SQL 生成与降级测试，产品使用 `jev_direct`。
+- **完成后解锁**：S-04。通过则实现完整 JEVDB 引擎并服务 M-8；失败则 S-04 只保留接口、SQL 生成与降级测试，开发期可临时使用 `jev_direct`，最终验收保持 BLOCKED。
 - **预计规模**：两个脚本约 260 行，两个测试文件约 120 行；源码和构建产物不提交，只提交 pin、脚本与报告。
 
 ## 1. 背景与边界
@@ -190,7 +190,7 @@ cd core && uv run python ../scripts/probe_jevdb.py \
 
 | 风险 | 征兆 | 回退 |
 |---|---|---|
-| OpenSSL 静态库缺失 | CMake 找不到 `.a` | 记录阻塞；产品全程 `jev_direct` |
+| OpenSSL 静态库缺失 | CMake 找不到 `.a` | 记录阻塞；开发期可临时 `jev_direct`，最终验收不得通过 |
 | DuckDB 1.4.3 编译过慢/失败 | 日志出现 OOM 或 target 失败 | 提高虚拟内存或减少并行到 2；仍失败则闸门失败 |
 | 扩展加载被签名策略拒绝 | `LOAD` 报 unsigned | 只在进程配置启用 `allow_unsigned_extensions`，不得修改系统策略 |
 | 上游源码结构变化 | `scripts/build.sh` 不存在 | pin 已固定；若仍缺失，闸门失败并保留证据 |

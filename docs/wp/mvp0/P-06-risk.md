@@ -123,7 +123,7 @@ def register_handlers(registrar: HandlerRegistrar, service: RiskService) -> None
 | 名称 | 值 | 位置 | 含义 |
 |---|---|---|---|
 | `WINDOW_MONTHS` | `{"6M": 6, "1Y": 12, "3Y": 36}` | `prices.py` | 日历窗口 |
-| `WINDOW_YEARS` | `{"6M": 0.5, "1Y": 1.0, "3Y": 3.0}` | `risk.py` | 年化口径 |
+| `PERIODS_PER_YEAR` | `252` | `risk.py` | 固定日频年化参数；窗口标签不参与 |
 | `MIN_OBSERVATIONS` | `60` | `risk.py` | 生产样本门槛 |
 | `SHRINKAGE_ALPHA` | `0.1` | `risk.py` | 收缩强度 |
 | `SINGULARITY_RATIO` | `1e-12` | `risk.py` | 条件数空值阈值 |
@@ -132,14 +132,14 @@ def register_handlers(registrar: HandlerRegistrar, service: RiskService) -> None
 ## 6. 实现步骤
 1. **窗口终点**：每只参与标的取 `price_daily.trade_date <= clock.now()` 的最大日期；终点是所有最大日期的最小值。起点用日历月回退：6/12/36 个月，目标月无该日时取月末。
 2. **价格基线**：窗口内所有参与标的的 `adj_close` 均非空时使用 `adj_close`；任一缺失时全部使用 `close`，并加“价格未复权”警告。
-3. **共同交易日**：保留窗口内所有标的价格均为有限正数的日期并升序排列。`T = len(dates) - 1`；`T < 60` 抛 `DATA_INSUFFICIENT(data.observations=T, required=60)`。
-4. **零方差剔除**：逐列计算相邻共同日的简单收益率；样本标准差为 0 的列加入 `excluded`，原因“价格无变化”，移除后从第 3 步重算。全部被剔除时 `DATA_INSUFFICIENT`。
+3. **逐只收益**：按市场交易日历对每只标的计算相邻交易日的简单收益 `P_t/P_{t-1}-1`；任一端点缺失或非有限值，该日收益无效。禁止先删除缺价日再计算，避免把多日收益压成日收益。
+4. **有效交集与门槛**：取所有标的都拥有有效一日收益的日期交集，升序排列，`T = len(intersection)`；`T < 60` 抛 `DATA_INSUFFICIENT(data.observations=T, required=60)`。
 5. **权重**：`w_i = quantity_i × endpoint_close_i / Σ`，`endpoint_close` 使用窗口终点原始 `close`，不是复权价。矩阵列顺序按持仓 symbol 升序。
-6. **协方差与相关**：`X = R - R.mean(axis=0)`；`Σ = X.T @ X / (T - 1)`；`ρ_ij = Σ_ij / sqrt(Σ_ii Σ_jj)`。`n=1` 时相关矩阵固定 `[[1.0]]` 并加警告。
-7. **年化波动率**：组合历史收益 `p_t = R[t] @ w`；`annualizedVol = sqrt(periods_per_year × w.T @ Σ @ w)`。服务层令 `periods_per_year = T / WINDOW_YEARS[label]`；测试可直接给 252。
+6. **协方差与相关**：`X = R - R.mean(axis=0)`；`Σ = X.T @ X / (T - 1)`。**零方差资产保留在 `R`、`w` 和 `Σ` 中**，对应零行零列；`ρ_ij` 对零方差列返回 `null`，不重算权重。`n=1` 时相关矩阵固定 `[[1.0]]` 并加警告。
+7. **年化波动率**：组合历史收益 `p_t = R[t] @ w`；`annualizedVol = sqrt(PERIODS_PER_YEAR × w.T @ Σ @ w)`，`PERIODS_PER_YEAR = 252`。窗口标签只决定取数区间；3Y 只有 1Y 数据时年化仍用 252。
 8. **最大回撤**：`V_0=1`，`V_t=V_{t-1}(1+p_t)`；`peak_t=max(V_0..V_t)`；结果为 `max((peak_t-V_t)/peak_t)`，非负。
 9. **收缩与条件数**：`target = trace(Σ)/n`；`Σ_α=(1-α)Σ+α×target×I`；`eigvalsh` 求特征值。若 `λmin <= 1e-12×λmax`，条件数为 null 并加“协方差矩阵接近奇异”；否则为 `λmax/λmin`。
-10. **SVD**：`Z=X/s_i`，其中 `s_i` 为样本标准差 `ddof=1`；`U,S,Vt=np.linalg.svd(Z, full_matrices=False)`；`explained=S²/ΣS²`，取前 `min(5,n)`。
+10. **SVD**：仅对样本标准差 `s_i > 0` 的列做 `Z=X_col/s_i`；`U,S,Vt=np.linalg.svd(Z, full_matrices=False)`；`explained=S²/ΣS²`，取前 `min(5,n)`。零方差列不参与分解，但输出中保留标的映射并标注为 `null`/排除。
 11. **载荷方向**：第一主成分取 `Vt[0]`；找绝对值最大的索引，若其值为负则整体乘 −1；按 `abs(value) DESC, symbol ASC` 取前 5。
 12. **输出转换**：NumPy 标量转为 Python `float`，非有限值转 null；相关矩阵对角线强制 `1.0`；`topWeights` 按权重降序、symbol 升序取前 3。
 13. **服务层**：查询 `quantity > 0` 且未归档持仓；调用 `build_risk_input` 与 `compute_risk`；在写事务中插入 `risk_run`，`result_json` 使用 `json.dumps(allow_nan=False)`。
@@ -151,7 +151,7 @@ def register_handlers(registrar: HandlerRegistrar, service: RiskService) -> None
 | `scope/window/currency` 非法 | 不计算 | `INVALID_ARGUMENT` | `error.INVALID_ARGUMENT` |
 | 没有 `quantity > 0` 持仓 | 不写 `risk_run` | `DATA_INSUFFICIENT` | “没有可计算的持仓” |
 | 共同交易日少于 60 | `data.observations/required` | `DATA_INSUFFICIENT` | “样本不足：共同交易日 {n} 天，至少需要 60 天。” |
-| 全部标的零方差 | 不出矩阵 | `DATA_INSUFFICIENT` | “价格没有变化，无法计算风险。” |
+| 全部标的零方差 | 返回零波动率；相关/SVD 为 null | — | “资产无波动，相关性与主成分无法计算。” |
 | 只有 1 只持仓 | 返回波动率、回撤、权重和 `[[1]]` | — | 警告“至少需要 2 只持仓” |
 | 协方差接近奇异 | 条件数为 null | — | 警告“协方差矩阵接近奇异” |
 | 任一复权价缺失 | 使用原始收盘价 | — | 警告“价格未复权” |
@@ -164,7 +164,10 @@ def register_handlers(registrar: HandlerRegistrar, service: RiskService) -> None
 |---|---|---|---|
 | `test_window_and_calendar_start` | `test_prices.py` | 两只最新日 10-30/10-28；终点 2026-08-31 | 终点 10-28；6M 起点 2026-02-28 |
 | `test_price_basis_and_common_days` | 同上 | 一只 `adj_close=None`；10-28 只一只标的有价 | basis `close` 并警告；10-28 被丢弃 |
-| `test_insufficient_and_zero_variance` | `test_risk.py` | T=59；第 2 列全为 0 | 前者 `DATA_INSUFFICIENT`；后者 excluded 第 2 列 |
+| `test_insufficient_and_zero_variance_is_kept` | `test_risk.py` | T=59；第 2 列全为 0 | 前者 `DATA_INSUFFICIENT`；后者保留第 2 列，相关格为 null |
+| `test_annualization_is_252_regardless_of_window_label` | 同上 | 同一组 252 天收益，标签 1Y 与 3Y | 年化波动率完全相等 |
+| `test_missing_endpoint_does_not_create_multi_day_return` | `test_prices.py` | A `100→110→100→110`，B 缺第 2 日 | 只保留有效一日收益，不出现跨两日收益 |
+| `test_zero_variance_asset_keeps_weight_and_portfolio_vol` | `test_risk.py` | 50% 恒价 + 50% 日波动 1% | 有效持仓 2；组合波动 0.5% |
 | `test_document_covariance_and_correlation` | 同上 | §8.4 的 3×4 收益率矩阵 | 协方差逐项 `1e-9` 一致；ρ12 `0.6`，其余非对角 `0` |
 | `test_document_condition_numbers` | 同上 | alpha 0.1 | raw `11.050128313`；shrunk `6.937910721` |
 | `test_document_vol_drawdown_and_effective_holdings` | 同上 | w `(0.5,0.3,0.2)`、periods 252 | vol `0.2186229631`；回撤 `0.0194042931`；有效持仓 `2.6315789474` |
@@ -179,7 +182,7 @@ def register_handlers(registrar: HandlerRegistrar, service: RiskService) -> None
 ### 9.1 命令与期望输出
 ```bash
 (cd core && uv run pytest tests/unit/quant -q)
-# 期望：8 passed，0 failed
+# 期望：11 passed，0 failed
 scripts/check.sh
 # 期望：exit=0；ruff、mypy 对 sentinel/quant 全绿
 ```

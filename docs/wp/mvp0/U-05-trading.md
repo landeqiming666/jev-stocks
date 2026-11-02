@@ -95,7 +95,8 @@ function usePaper(client: RpcClient): {
   reset: (confirmText:string) => Promise<void>;
 };
 ```
-- `place` 每次点击生成一个新的 `crypto.randomUUID()` 作为 `idempotencyKey`；同一个提交请求未返回前按钮禁用，防止双击。
+- `place` 在一次“下单意图”开始时生成 `crypto.randomUUID()` 作为 `idempotencyKey`，并把键保存在 `pendingIntent` 中；超时、网络错误或用户重试都复用同一个键，直到确认成功或明确失败。用户修改数量/方向后开始新意图才生成新键。
+- 超时后先调用 `paper.orders({accountId, idempotencyKey})` 查询是否已提交；查到订单则按已成功处理，不再重发。禁止在重试时生成新 UUID。
 - `advance` 成功后更新 `clockDate`、组合与订单；失败时保留原时钟并显示原因。
 - `validateOrder` 只做前端可判断的校验；最终以 `ORDER_REJECTED` 与 `data.orderId` 为准。
 
@@ -150,7 +151,7 @@ function usePaper(client: RpcClient): {
 | `trading_default_renders_four_metric_cards` | `TradingPage.test.tsx` | `paper.portfolio/default` | 现金、冻结资金、持仓市值、权益四个标题 |
 | `trading_zero_quantity_blocks_submit` | `OrderPanel.test.tsx` | 数量 `0` | 不发 `paper.order.place`，错误“数量必须是正整数” |
 | `trading_insufficient_cash_shows_amounts` | 同上 | 预计 `92025.99`，可用 `90185.09` | 文本含两个金额 |
-| `trading_place_generates_idempotency_key` | 同上 | 点击提交 | `idempotencyKey` 非空且长度 ≥ 32 |
+| `trading_place_reuses_idempotency_key_on_timeout` | 同上 | 提交后超时，再点重试 | 两次请求的 `idempotencyKey` 相同；先查询 `paper.orders`，不重复下单 |
 | `trading_rejected_order_appears_in_history` | `OrdersTable.test.tsx` | 历史含 rejected | 状态“已拒绝”并显示拒单原因 |
 | `trading_advance_updates_clock_and_toast` | `TradingPage.test.tsx` | `paper.advance/filled` | 回放日期更新，Toast 含“1 笔成交” |
 | `trading_no_price_keeps_clock` | 同上 | `paper.advance` 抛 `DATA_INSUFFICIENT` | 日期不变，出现 warn 提示 |

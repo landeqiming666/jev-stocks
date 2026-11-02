@@ -127,7 +127,7 @@ function useSettings(client: RpcClient): {
 3. 密钥：未保存时显示 `type="password"` 输入与“保存”；已保存时只显示“已保存”徽标和“替换”“清除”。替换时显示新输入，保存后立即清空输入；清除需 `Modal` 确认“清除后扫描无法开始”，`Esc` 关闭并把焦点还给“清除”。
 4. 邮箱：显示已保存值（邮箱不是密钥，可回显），保存前校验格式；非法时红边 + “联系邮箱格式不正确”，不发 `settings.update`。说明小字固定“SEC 要求访问时声明联系方式。邮箱只会出现在发给 SEC 的请求头里。”
 5. 引擎：三项单选：`自动（推荐）`、`JEVDB`、`Jev 直连`，方向键在选项间移动并即时保存；显示当前实际引擎徽标和只读模型 ID。选择 `jevdb` 但扩展不可用时，保存成功但显示 warn“JEVDB 不可用，将阻止扫描”，不静默降到直连。
-6. `测试连接` 调 `settings.testConnection`；结果固定三行 `Jev`、`SEC`、`JEVDB`，每行 ✓/✗、延迟 ms、说明。失败项用 danger 文案；`JEVDB` 失败不影响整体 `ok`，但必须显示“已使用 Jev 直连（同一模型）”。
+6. `测试连接` 调 `settings.testConnection`；结果固定三行 `Jev`、`SEC`、`JEVDB`，每行 ✓/✗、延迟 ms、说明。失败项用 danger 文案；`JEVDB` 失败不影响日常运行 `ok`，但必须显示“开发降级为 Jev 直连（同一模型）；最终验收仍需 JEVDB”。
 7. 预算：数字输入 + 估算费用 `≈ $0.084`，界面公式为 `round(dailyTokenBudget / 2,000,000 * 0.084, 2)`，仅表示量级、不参与计费；回看天数 1–30，失焦时校验。
 8. 隐私表：只读 5 行域名、用途、发送内容；底部固定声明“持仓数量、成本、备注永远不会离开本机。”不得提供编辑。
 9. 演示数据：显示“已载入/未载入”；载入调用 `demo.load`，已载入时 `CONFLICT` 提示“演示数据已载入”；清除需 `Modal` 确认，成功后状态变为未载入。
@@ -158,7 +158,7 @@ function useSettings(client: RpcClient): {
 | `settings_budget_rejects_999` | `validation.test.ts` | `"999"` | `ok=false`，错误含 `1000` |
 | `settings_lookback_rejects_31` | 同上 | `"31"` | `ok=false`，错误含 `30` |
 | `settings_test_connection_renders_three_rows` | `EngineSection.test.tsx` | `settings.testConnection/ok` | 3 行，顺序 Jev/SEC/JEVDB |
-| `settings_jevdb_failure_keeps_overall_ok` | 同上 | JEVDB ✗，Jev/SEC ✓ | 整体“可用”，说明含“已使用 Jev 直连” |
+| `settings_jevdb_failure_keeps_overall_ok` | 同上 | JEVDB ✗，Jev/SEC ✓ | 日常运行“可用”，说明含“最终验收仍需 JEVDB” |
 | `settings_privacy_table_is_read_only` | `SettingsPage.test.tsx` | 默认 | 5 行域名；没有 input/button 编辑 |
 | `settings_demo_conflict_shows_message` | `DemoSection.test.tsx` | `demo.load` 抛 `CONFLICT` | 文本“演示数据已载入” |
 

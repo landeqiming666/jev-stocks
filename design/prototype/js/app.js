@@ -40,9 +40,14 @@
     setTimeout(function () { P.runtime.toast = null; if (kind !== 'error') { render(); } }, 4000);
   }
 
+  function closeDrawer() {
+    if (!cur) { return; }
+    go(P.drawerClosePatch(cur));
+  }
+
   var actions = {
     'drawer-open': function (arg) { P.focusDrawer = true; go({ drawer: drawerFor(arg) }); },
-    'drawer-close': function () { go({ drawer: '' }); },
+    'drawer-close': closeDrawer,
     'act': function (arg) {
       var a = arg.split(':'); P.runtime.acted[a[0]] = { action: a[1] };
       P.runtime.openMenu = null;
@@ -87,7 +92,7 @@
     if (e.target.getAttribute('data-input') === 'qty') { P.runtime.qty = e.target.value.replace(/[^\d]/g, ''); }
   });
   document.addEventListener('keydown', function (e) {
-    if (e.key === 'Escape' && cur && cur.drawer) { go({ drawer: '' }); }
+    if (e.key === 'Escape' && cur && (cur.drawer || (cur.route === 'scan' && cur.state === 'detail'))) { closeDrawer(); }
   });
   window.addEventListener('hashchange', render);
 

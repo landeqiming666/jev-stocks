@@ -32,4 +32,11 @@
     if (s.h) { q.push('h=' + s.h); }
     return '#/' + s.route + (q.length ? '?' + q.join('&') : '');
   };
+
+  P.drawerClosePatch = function (cur) {
+    if (cur && cur.route === 'scan' && cur.state === 'detail') {
+      return { state: '', drawer: '' };
+    }
+    return { drawer: '' };
+  };
 })(window.Proto = window.Proto || {});
