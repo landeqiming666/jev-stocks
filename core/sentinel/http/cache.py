@@ -10,9 +10,11 @@ import tempfile
 import threading
 from collections.abc import Mapping
 from dataclasses import dataclass
-from datetime import UTC, datetime
+from datetime import datetime
 from pathlib import Path
 from types import MappingProxyType
+
+from sentinel import clock
 
 from .policy import MAX_BYTES
 from .telemetry import get_logger, log_event
@@ -132,7 +134,7 @@ class HttpCache:
                 "etag": etag,
                 "last_modified": modified,
                 "headers": headers,
-                "fetched_at": datetime.now(UTC).isoformat(),
+                "fetched_at": clock.now().isoformat(),
             }
             body_path = self.directory / f"{self.key(url)}.{digest}.body"
             body_existed = body_path.exists()

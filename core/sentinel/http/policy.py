@@ -5,7 +5,9 @@ from __future__ import annotations
 import logging
 import math
 import threading
+from collections.abc import Sequence
 from dataclasses import dataclass
+from numbers import Real
 
 from .telemetry import get_logger, log_event
 
@@ -13,6 +15,15 @@ DEFAULT_MAX_ATTEMPTS = 3
 SEC_RATE_PER_S = 5.0
 SEC_BURST = 5
 MAX_BYTES = 5_242_880
+
+
+def _finite_number(value: object) -> bool:
+    if isinstance(value, bool) or not isinstance(value, Real):
+        return False
+    try:
+        return math.isfinite(float(value))
+    except (OverflowError, TypeError, ValueError):
+        return False
 
 
 @dataclass(frozen=True)
@@ -31,31 +42,41 @@ class SourcePolicy:
     max_bytes: int = MAX_BYTES
 
     def __post_init__(self) -> None:
+        if not isinstance(self.name, str) or not self.name:
+            raise ValueError("name must be a nonempty string")
+        if not isinstance(self.cache_enabled, bool):
+            raise ValueError("cache_enabled must be bool")
+        if not isinstance(self.backoff_s, Sequence):
+            raise ValueError("backoff must be a sequence of positive numbers")
         positive = (
             self.connect_timeout_s,
             self.read_timeout_s,
             self.total_timeout_s,
             *self.backoff_s,
         )
-        if not self.name or any(not math.isfinite(n) or n <= 0 for n in positive):
-            raise ValueError("name and timeouts/backoff must be positive")
+        if any(not _finite_number(n) or n <= 0 for n in positive):
+            raise ValueError("timeouts/backoff must be finite positive numbers")
         if (
             type(self.max_attempts) is not int
             or not 1 <= self.max_attempts <= 4
             or len(self.backoff_s) < self.max_attempts - 1
         ):
             raise ValueError("max_attempts must be 1..4 with sufficient backoff values")
-        if len(self.jitter) != 2 or not 0 < self.jitter[0] <= self.jitter[1] <= 1:
+        if (
+            not isinstance(self.jitter, Sequence)
+            or len(self.jitter) != 2
+            or any(not _finite_number(n) for n in self.jitter)
+            or not 0 < self.jitter[0] <= self.jitter[1] <= 1
+        ):
             raise ValueError("jitter must be ordered within (0, 1]")
-        if not math.isfinite(self.rate_wait_max_s) or self.rate_wait_max_s < 0:
+        if not _finite_number(self.rate_wait_max_s) or self.rate_wait_max_s < 0:
             raise ValueError("invalid rate wait budget")
-        if not isinstance(self.max_bytes, int) or not 0 < self.max_bytes <= MAX_BYTES:
+        if type(self.max_bytes) is not int or not 0 < self.max_bytes <= MAX_BYTES:
             raise ValueError("max_bytes must be within the 5 MiB cap")
+        if type(self.burst) is not int or not _finite_number(self.burst) or self.burst < 0:
+            raise ValueError("burst must be a nonnegative int")
         if self.rate_per_s is not None and (
-            not math.isfinite(self.rate_per_s)
-            or self.rate_per_s <= 0
-            or not isinstance(self.burst, int)
-            or self.burst < 1
+            not _finite_number(self.rate_per_s) or self.rate_per_s <= 0 or self.burst < 1
         ):
             raise ValueError("rate and burst must be positive")
 

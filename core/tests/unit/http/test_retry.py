@@ -43,7 +43,7 @@ def test_retry_honors_retry_after_and_skips_405(clock: FakeClock) -> None:
     )
     with pytest.raises(SourceError) as exc:
         client.get("https://example.test/429", source="nasdaq")
-    assert exc.value.params == {"retryAfterSec": 60.0}
+    assert exc.value.params == {"retryAfterSec": 60}
     assert clock.sleeps == [60.0, 60.0]
     with pytest.raises(SourceError) as exc:
         client.get("https://example.test/405", source="nasdaq")
@@ -152,3 +152,37 @@ def test_configured_fourth_attempt_can_succeed(clock: FakeClock) -> None:
     ) as client:
         response = client.get("https://example.test/fourth", source="fourth")
     assert response.attempts == 4 and response.text == "ok"
+
+
+@pytest.mark.parametrize(
+    "header, expected, waits",
+    [
+        ("2.25", 3, [2.25, 2.25]),
+        (None, 0, [0.5, 1.0]),
+        ("2", 2, [2.0, 2.0]),
+        ("60.25", 60, [60.0, 60.0]),
+        ("-0.25", 0, [0.5, 1.0]),
+        ("0", 0, [0.5, 1.0]),
+    ],
+)
+def test_429_wire_retry_after_is_integer_while_waits_stay_fractional(
+    header: str | None,
+    expected: int,
+    waits: list[float],
+    clock: FakeClock,
+) -> None:
+    headers = {} if header is None else {"Retry-After": header}
+    with (
+        HttpClient(
+            transport=httpx.MockTransport(lambda request: httpx.Response(429, headers=headers)),
+            sleeper=clock.sleep,
+            monotonic=clock.monotonic,
+            uniform=lambda a, b: a,
+        ) as client,
+        pytest.raises(SourceError) as exc,
+    ):
+        client.get("https://example.test/rate-limited", source="nasdaq")
+    wire = exc.value.to_wire()
+    retry_after = wire["data"]["retryAfterSec"]
+    assert type(retry_after) is int and retry_after == expected
+    assert clock.sleeps == waits

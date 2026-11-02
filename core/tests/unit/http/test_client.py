@@ -675,6 +675,8 @@ def test_max_attempts_rejects_non_integer_or_out_of_range(value: object) -> None
         b'{"value": NaN}',
         b'{"value": Infinity}',
         b'{"value": -Infinity}',
+        b'{"value": 1e400}',
+        b'{"value": -1e400}',
         b'{"broken":',
         b"[" * 10000 + b"0" + b"]" * 10000,
     ],
@@ -726,3 +728,94 @@ def test_json_constant_names_in_strings_are_valid() -> None:
             None,
             {"literal": "NaN Infinity -Infinity"},
         ]
+
+
+def test_json_finite_floats_keep_float_api() -> None:
+    body = b'{"decimal": 1.25, "negative": -0.125, "exponent": 2.5e2, "integer": 2}'
+    with HttpClient(
+        transport=httpx.MockTransport(lambda request: httpx.Response(200, content=body))
+    ) as client:
+        result = client.get_json("https://example.test/finite", source="nasdaq")
+    assert result == {"decimal": 1.25, "negative": -0.125, "exponent": 250.0, "integer": 2}
+    assert isinstance(result, dict)
+    assert all(type(result[key]) is float for key in ("decimal", "negative", "exponent"))
+    assert type(result["integer"]) is int
+
+
+@pytest.mark.parametrize(
+    "field",
+    [
+        "connect_timeout_s",
+        "read_timeout_s",
+        "total_timeout_s",
+        "rate_wait_max_s",
+        "rate_per_s",
+    ],
+)
+@pytest.mark.parametrize("value", [True, "invalid", float("nan"), float("inf")])
+def test_policy_real_fields_reject_invalid_numbers(field: str, value: object) -> None:
+    from sentinel.http import SourcePolicy
+
+    with pytest.raises(ValueError):
+        SourcePolicy("invalid", **{field: value})
+
+
+@pytest.mark.parametrize("field", ["max_attempts", "max_bytes", "burst"])
+@pytest.mark.parametrize("value", [True, 1.0, "1", float("inf")])
+def test_policy_integer_fields_require_real_int(field: str, value: object) -> None:
+    from sentinel.http import SourcePolicy
+
+    with pytest.raises(ValueError):
+        SourcePolicy("invalid", **{field: value})
+
+
+@pytest.mark.parametrize(
+    "options",
+    [
+        {"name": 1},
+        {"name": None},
+        {"name": ""},
+        {"cache_enabled": 1},
+        {"cache_enabled": "true"},
+        {"cache_enabled": None},
+        {"burst": -1},
+        {"connect_timeout_s": None},
+        {"total_timeout_s": 10**400},
+        {"backoff_s": None},
+        {"backoff_s": (1.0, True, 4.0)},
+        {"backoff_s": (1.0, "2", 4.0)},
+        {"backoff_s": (1.0, float("inf"), 4.0)},
+        {"jitter": None},
+        {"jitter": (True, 1.0)},
+        {"jitter": (0.5, "1")},
+        {"jitter": (0.5, float("nan"))},
+    ],
+)
+def test_policy_identity_and_container_validation_raises_value_error(
+    options: dict[str, object],
+) -> None:
+    from sentinel.http import SourcePolicy
+
+    with pytest.raises(ValueError):
+        SourcePolicy(**{"name": "invalid", **options})
+
+
+def test_policy_normal_integer_and_float_configuration_is_accepted() -> None:
+    from sentinel.http import SourcePolicy
+
+    policy = SourcePolicy(
+        "normal",
+        connect_timeout_s=5,
+        read_timeout_s=20.5,
+        total_timeout_s=30,
+        max_attempts=4,
+        backoff_s=(1, 2, 4),
+        jitter=(0.5, 1),
+        rate_per_s=5,
+        burst=5,
+        rate_wait_max_s=0,
+        max_bytes=1024,
+        cache_enabled=True,
+    )
+    assert policy.max_attempts == 4 and policy.read_timeout_s == 20.5
+    assert SourcePolicy("no-rate", rate_per_s=None, burst=0, cache_enabled=False).burst == 0

@@ -6,6 +6,7 @@ import codecs
 import hashlib
 import json
 import logging
+import math
 import os
 import random
 import threading
@@ -97,6 +98,13 @@ def _decode(content: bytes, headers: Mapping[str, str], truncated: bool) -> str:
 
 def _reject_json_constant(_: str) -> NoReturn:
     raise ValueError("non-standard JSON constant")
+
+
+def _parse_json_float(value: str) -> float:
+    number = float(value)
+    if not math.isfinite(number):
+        raise ValueError("non-finite JSON number")
+    return number
 
 
 class HttpClient:
@@ -393,7 +401,9 @@ class HttpClient:
                         raise SourceError("SOURCE_UNAVAILABLE", reason="SEC_FORBIDDEN")
                     retry_after = parse_retry_after(received.headers.get("retry-after"))
                     last_error = (
-                        SourceError("RATE_LIMITED", params={"retryAfterSec": retry_after})
+                        SourceError(
+                            "RATE_LIMITED", params={"retryAfterSec": math.ceil(retry_after)}
+                        )
                         if status == 429
                         else SourceError("SOURCE_UNAVAILABLE", reason=f"HTTP_{status}")
                     )
@@ -460,7 +470,9 @@ class HttpClient:
             url, source=source, headers=headers, cancel=cancel, use_cache=use_cache
         )
         try:
-            return json.loads(text, parse_constant=_reject_json_constant)
+            return json.loads(
+                text, parse_constant=_reject_json_constant, parse_float=_parse_json_float
+            )
         except (ValueError, RecursionError):
             if self._cache is not None:
                 self._cache.discard(url)

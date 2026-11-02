@@ -337,3 +337,21 @@ def test_cleanup_failure_keeps_published_cache_and_next_update_retries(
     cache.store(url, b"newer", {"ETag": "newer"})
     assert len(list(cache.directory.glob("*.body"))) == 1
     assert not old_path.exists()
+
+
+def test_fetched_at_uses_frozen_shared_clock(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    import json
+
+    from sentinel.http.cache import HttpCache
+
+    monkeypatch.setenv("SENTINEL_CLOCK", "2026-11-02T08:35:00+08:00")
+    cache = HttpCache(tmp_path)
+    url = "https://example.test/frozen"
+    for content in (b"one", b"two"):
+        cache.store(url, content, {"ETag": content.decode()})
+        metadata = json.loads((cache.directory / f"{cache.key(url)}.meta.json").read_bytes())
+        assert metadata["fetched_at"] == "2026-11-02T00:35:00+00:00"
+        entry = cache.load(url)
+        assert entry is not None and entry.content == content
