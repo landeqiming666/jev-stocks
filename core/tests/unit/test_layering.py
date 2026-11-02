@@ -20,7 +20,7 @@ LAYER_RULES: dict[str, set[str]] = {
     "trading": {"domain", "storage", "markets", "rpc"},
     "portfolio": {"domain", "storage", "markets", "rpc"},
     "rpc": {"domain", "platform"},
-    "settings": {"domain", "storage", "security", "secrets"},
+    "settings": {"domain", "storage", "security", "secrets", "rpc"},
     "secrets": {"domain", "security", "platform"},
     "scan": {"domain", "storage", "markets", "semantic", "rpc"},
     "app": {"*"},
@@ -122,3 +122,10 @@ def test_business_layers_can_use_foundation_logging() -> None:
         violations("from sentinel.platform import is_process_alive\n", "sentinel.rpc.server")
         == set()
     )
+
+
+def test_settings_can_register_handlers_without_moving_business_into_rpc() -> None:
+    assert violations("from sentinel.rpc import Dispatcher\n", "sentinel.settings.rpc") == set()
+    assert violations("from sentinel.settings import SettingsService\n", "sentinel.rpc.server") == {
+        "settings"
+    }

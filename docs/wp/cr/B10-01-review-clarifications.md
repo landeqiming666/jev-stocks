@@ -18,6 +18,8 @@
 
 密钥先 strip 后校验，拒绝内部空白；测试不能将仅含首尾空白的有效密钥判为非法。此规则以 05 §5.2 与工作包 §6 为准。
 
+`settings/rpc.py` 可以依赖 RPC 注册接口，反向依赖仍禁止。C-00 文案所有权缩小到公共三文件，`messages/settings.py` 归 C-04，`messages/trading.py` 归 P-04；公共初始化器由主 agent 集成，不让 worker 争用。清除密钥不清空进程内脱敏登记，避免仍在运行的旧请求泄漏；从钥匙串读取旧密钥也登记脱敏。
+
 ## C-03
 
 真实 DuckDB 验证表明 cursor 事务独立，不共享未提交数据。写事务内需要读自身写入时传原 `tx`；`WriteTx.execute()` 返回受保护的自身，而非可绕过上下文 commit 的原始连接。备份必须 checkpoint，临时正文 flush/fsync 后原子且不覆盖地发布；迁移恢复也先同步再 replace。排序只按备份 UTC 时间戳，忽略版本和 label。

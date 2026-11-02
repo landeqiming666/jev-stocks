@@ -6,7 +6,7 @@ platform: shared
 lane: core
 deps: [WP-00]
 size: S
-owns: [core/sentinel/ids.py, core/sentinel/clock.py, core/sentinel/errors.py, core/sentinel/logging_setup.py, core/sentinel/security/__init__.py, core/sentinel/security/redact.py, core/sentinel/messages/, core/tests/unit/test_ids.py, core/tests/unit/test_clock.py, core/tests/unit/test_errors.py, core/tests/unit/test_logging_setup.py, core/tests/unit/test_redact.py, core/tests/unit/test_messages.py]
+owns: [core/sentinel/ids.py, core/sentinel/clock.py, core/sentinel/errors.py, core/sentinel/logging_setup.py, core/sentinel/security/__init__.py, core/sentinel/security/redact.py, core/sentinel/messages/__init__.py, core/sentinel/messages/common.py, core/sentinel/messages/app.py, core/tests/unit/test_ids.py, core/tests/unit/test_clock.py, core/tests/unit/test_errors.py, core/tests/unit/test_logging_setup.py, core/tests/unit/test_redact.py, core/tests/unit/test_messages.py]
 appends: []
 stubs: []
 ---

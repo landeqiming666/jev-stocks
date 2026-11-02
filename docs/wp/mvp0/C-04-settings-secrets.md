@@ -6,7 +6,7 @@ platform: shared
 lane: core
 deps: [C-01, C-03]
 size: M
-owns: [core/sentinel/settings/__init__.py, core/sentinel/settings/models.py, core/sentinel/settings/repository.py, core/sentinel/settings/service.py, core/sentinel/settings/rpc.py, core/sentinel/secrets/__init__.py, core/sentinel/secrets/store.py, core/sentinel/secrets/service.py, core/tests/unit/settings/, core/tests/unit/secrets/test_secrets.py]
+owns: [core/sentinel/settings/__init__.py, core/sentinel/settings/models.py, core/sentinel/settings/repository.py, core/sentinel/settings/service.py, core/sentinel/settings/rpc.py, core/sentinel/secrets/__init__.py, core/sentinel/secrets/store.py, core/sentinel/secrets/service.py, core/sentinel/messages/settings.py, core/tests/unit/settings/, core/tests/unit/secrets/test_secrets.py]
 appends: []
 stubs: []
 ---
@@ -58,6 +58,7 @@ stubs: []
 | `core/sentinel/secrets/__init__.py` | 新建 | 导出 `SecretStore`、`SecretsService` |
 | `core/sentinel/secrets/store.py` | 新建 | `KeyringSecretStore` 与 `MemorySecretStore` |
 | `core/sentinel/secrets/service.py` | 新建 | 单向写入、清除、脱敏登记、状态 |
+| `core/sentinel/messages/settings.py` | 新建 | 设置、密钥与连接状态文案；由协调者加入公共文案目录 |
 | `core/tests/unit/settings/test_settings.py` | 新建 | 设置与 bootstrap 测试 |
 | `core/tests/unit/settings/test_rpc.py` | 新建 | 7 个处理器注册与 wire 字段 |
 | `core/tests/unit/secrets/test_secrets.py` | 新建 | 密钥测试 |
@@ -137,7 +138,7 @@ def register(dispatcher: Dispatcher, settings: SettingsService, secrets: Secrets
 3. **校验 patch**：`engine` 只允许三个枚举；邮箱用 `^[^@\s]+@[^@\s]+\.[^@\s]+$`，去首尾空白，空串转 `null`；预算 10,000–50,000,000；回看 1–30。失败立即返回，不写任何键。
 4. **原子更新**：把变化的键序列化为 `json.dumps(value, ensure_ascii=False, separators=(",",":"))`；同一事务 `INSERT ... ON CONFLICT DO UPDATE`，`updated_at` 使用同一个 `clock.now()`；提交后重新 `get()`。
 5. **密钥写入**：`value.strip()` 后长度 1–512，且 `re.search(r"\s", value)` 必须为 `None`；否则 `INVALID_ARGUMENT`。调用 `store.set("typesafe_api_key", value)`，再 `register_secret(value)`；成功响应只有 `{ok:true}`。
-6. **密钥清除**：`store.delete`，`clear_secrets()`；重复清除仍返回 `{ok:true}`。`status()` 只调用 `store.get` 判断非空，不把值返回给 RPC 层。
+6. **密钥清除**：`store.delete`；重复清除仍返回 `{ok:true}`。不清空本进程脱敏登记，防止正在执行的旧请求在清除后泄漏旧密钥；屏蔽记录随进程结束释放。`status()` 只调用 `store.get` 判断非空，读取现有密钥时也登记脱敏，不把值返回给 RPC 层。
 7. **连接测试**：先检查密钥和邮箱；缺失抛 `CONFIG_REQUIRED`，`data.missing` 按 `jevKey`、`secEmail` 顺序。否则依次调用 `check_jev(MODEL_ID)`、`check_sec(email)`、`check_jevdb()`，固定返回三项 `{name, ok, latencyMs, message}`；`ok = jev.ok and sec.ok and engine.active is not None`。
 8. **bootstrap**：读取设置和 `secrets.status()`，构造 [05] §4 的 `Bootstrap`；数据库版本用 `db.schema_version`；平台用参数；`offline` 只由环境变量 `SENTINEL_OFFLINE == "1"` 决定；`now` 用 `clock.now()`。没有密钥时 `engine.active` 强制为 `null`。
 9. **注册**：`register()` 依次注册 `app.bootstrap`（30 s）、`settings.get`、`settings.update`、`settings.testConnection`（20 s）、`secrets.set`、`secrets.clear`、`secrets.status`；重复注册不允许，参数模型全部 `extra="forbid"`。
