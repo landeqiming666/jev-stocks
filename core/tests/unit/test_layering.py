@@ -8,6 +8,7 @@ from pathlib import Path
 ALWAYS_ALLOWED = {"ids", "clock", "errors", "messages", "logging_setup"}
 
 LAYER_RULES: dict[str, set[str]] = {
+    "logging_setup": {"security"},
     "domain": set(),
     "storage": {"domain"},
     "http": {"domain"},
@@ -103,3 +104,10 @@ def test_repository_respects_layer_rules() -> None:
 def test_domain_layer_has_no_internal_dependencies() -> None:
     source = "from sentinel.storage import db\n"
     assert violations(source, "sentinel.domain.x") == {"storage"}
+
+
+def test_logging_can_import_redaction_but_not_business_services() -> None:
+    assert (
+        violations("from .security.redact import redact_obj\n", "sentinel.logging_setup") == set()
+    )
+    assert violations("from .storage import Database\n", "sentinel.logging_setup") == {"storage"}

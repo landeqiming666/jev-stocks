@@ -22,6 +22,14 @@ def test_render_unknown_key_raises_message_key_error() -> None:
 def test_every_error_code_has_message() -> None:
     assert len(ErrorCode) == 15
     for code in ErrorCode:
-        assert render(f"error.{code}")
+        assert render(
+            f"error.{code}", {"missing": "Jev 密钥", "requestId": "r-1", "retryAfterSec": 30}
+        )
     assert render("core.ready")
     assert "意外错误" in INTERNAL_FALLBACK
+
+
+def test_render_missing_parameter_is_not_filled_with_a_guess() -> None:
+    for key in ("error.RATE_LIMITED", "error.CONFIG_REQUIRED", "error.INTERNAL"):
+        with pytest.raises(MessageKeyError):
+            render(key)

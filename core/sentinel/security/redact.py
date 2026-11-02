@@ -63,10 +63,11 @@ def _redact(value: object, depth: int, seen: set[int]) -> object:
         try:
             result: dict[object, object] = {}
             for key, item in value.items():
+                safe_key = redact_text(key) if isinstance(key, str) else key
                 if isinstance(key, str) and _SENSITIVE_KEY_PATTERN.search(key):
-                    result[key] = MASK
+                    result[safe_key] = MASK
                 else:
-                    result[key] = _redact(item, depth + 1, seen)
+                    result[safe_key] = _redact(item, depth + 1, seen)
             return result
         finally:
             seen.remove(identity)

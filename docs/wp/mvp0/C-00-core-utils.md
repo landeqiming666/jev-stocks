@@ -176,7 +176,7 @@ def render(key: str, params: Mapping[str, object] | None = None) -> str: ...
 | `test_redact_obj_masks_sensitive_keys_and_is_cycle_safe` | 同上 | `{"apiKey": "x", "n": {"token": "y"}}` 加自引用字典 | 两个值均为 `MASK`；不抛 `RecursionError` |
 | `test_render_fills_placeholders` | `core/tests/unit/test_messages.py` | `render("error.RATE_LIMITED", {"retryAfterSec": 30})` | 含 `30` |
 | `test_render_unknown_key_raises_message_key_error` | 同上 | `render("error.NOPE")` | `MessageKeyError` |
-| `test_every_error_code_has_message` | 同上 | 遍历 `ErrorCode` 的 15 个取值 | 全部 `render(f"error.{code}")` 成功 |
+| `test_every_error_code_has_message` | 同上 | 遍历 `ErrorCode` 的 15 个取值，提供文案所需参数 | 全部 `render(f"error.{code}", params)` 成功；缺少模板参数必须抛错 |
 
 ### 8.2 Fixture
 | 路径 | 内容与来源 | 怎么得到 |

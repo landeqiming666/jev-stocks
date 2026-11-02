@@ -10,12 +10,6 @@ INTERNAL_FALLBACK = "发生了意外错误，请重试。"
 
 MESSAGES: dict[str, str] = common.MESSAGES | app.MESSAGES
 
-_OPTIONAL_DEFAULTS: dict[str, object] = {
-    "missing": "相关配置",
-    "requestId": "未提供",
-    "retryAfterSec": 30,
-}
-
 
 class MessageKeyError(Exception):
     """文案键不存在或模板参数不完整。"""
@@ -23,8 +17,6 @@ class MessageKeyError(Exception):
 
 class _TemplateParams(dict[str, object]):
     def __missing__(self, key: str) -> object:
-        if key in _OPTIONAL_DEFAULTS:
-            return _OPTIONAL_DEFAULTS[key]
         raise MessageKeyError(f"missing message parameter: {key}")
 
 

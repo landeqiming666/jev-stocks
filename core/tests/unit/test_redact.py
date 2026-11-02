@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from sentinel.security.redact import MASK, redact_obj, redact_text
+from sentinel.security.redact import MASK, clear_secrets, redact_obj, redact_text, register_secret
 
 
 def test_redact_text_masks_sk_and_bearer() -> None:
@@ -20,3 +20,15 @@ def test_redact_obj_masks_sensitive_keys_and_is_cycle_safe() -> None:
     assert value["apiKey"] == MASK  # type: ignore[index]
     assert value["n"]["token"] == MASK  # type: ignore[index]
     assert value["self"] == "<cycle>"  # type: ignore[index]
+
+
+def test_registered_secret_in_mapping_key_is_redacted() -> None:
+    import json
+
+    secret = "test-credential-in-a-key"
+    register_secret(secret)
+    try:
+        redacted = redact_obj({secret: "public", "nested": {secret: "value"}})
+        assert secret not in json.dumps(redacted)
+    finally:
+        clear_secrets()

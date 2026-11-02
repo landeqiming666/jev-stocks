@@ -2,18 +2,17 @@
 
 from __future__ import annotations
 
-import importlib
 import json
 import logging
 import sys
 import threading
-from collections.abc import Callable
 from logging.handlers import RotatingFileHandler
 from pathlib import Path
 from typing import cast
 
 from . import clock
 from .errors import InternalError
+from .security.redact import redact_obj
 
 LOG_MAX_BYTES = 5_242_880
 LOG_BACKUP_COUNT = 3
@@ -25,7 +24,6 @@ _LOG_LEVELS: dict[str, int] = {
     "error": logging.ERROR,
 }
 _configure_lock = threading.Lock()
-_redactor: Callable[[object], object] | None = None
 
 
 class JsonFormatter(logging.Formatter):
@@ -52,7 +50,7 @@ class JsonFormatter(logging.Formatter):
             "error_code": sentinel.get("error_code"),
             "event": sentinel.get("event", record.getMessage()),
         }
-        redacted = _get_redactor()(payload)
+        redacted = redact_obj(payload)
         try:
             return json.dumps(
                 redacted,
@@ -76,15 +74,6 @@ class JsonFormatter(logging.Formatter):
 
 def _unserializable(_: object) -> str:
     return "<unserializable>"
-
-
-def _get_redactor() -> Callable[[object], object]:
-    global _redactor
-    if _redactor is None:
-        # 脱敏器按需加载，避免日志基础模块在导入阶段初始化安全子包。
-        module = importlib.import_module("sentinel.security.redact")
-        _redactor = cast(Callable[[object], object], module.redact_obj)
-    return _redactor
 
 
 def configure(log_dir: Path, level: str = "info") -> None:
