@@ -1,0 +1,64 @@
+{
+  "inc_and_decimal": {
+    "input": "Zenith Arc Robotics Inc. rose 3.5 percent. Atlas sold shares.",
+    "sentences": [
+      {"start": 0, "end": 42, "text": "Zenith Arc Robotics Inc. rose 3.5 percent."},
+      {"start": 43, "end": 61, "text": "Atlas sold shares."}
+    ]
+  },
+  "chinese_punctuation": {
+    "input": "公司公告。控股股东拟减持！",
+    "sentences": [
+      {"start": 0, "end": 5, "text": "公司公告。"},
+      {"start": 5, "end": 13, "text": "控股股东拟减持！"}
+    ]
+  },
+  "closing_quote": {
+    "input": "He said \"no.\" Then left.",
+    "sentences": [
+      {"start": 0, "end": 13, "text": "He said \"no.\""},
+      {"start": 14, "end": 24, "text": "Then left."}
+    ]
+  },
+  "paragraph_break": {
+    "input": "Heading\n\nBody text",
+    "sentences": [
+      {"start": 0, "end": 7, "text": "Heading"},
+      {"start": 9, "end": 18, "text": "Body text"}
+    ]
+  },
+  "e1": {
+    "source": "docs/06-语义判定与Jev.md §10; completed sale; final LF retained",
+    "input_file": "e1_passage.txt",
+    "original_chars": 419,
+    "sentences": [
+      {"start": 0, "end": 23, "text": "Item 8.01 Other Events."},
+      {"start": 24, "end": 265, "text": "On October 29, 2026, Zenith Arc Robotics Inc. (the \"Company\") was notified by Atlas Holdings LP, its controlling stockholder, that Atlas completed the sale of 4.5% of the Company's outstanding common stock in a registered secondary offering."},
+      {"start": 266, "end": 362, "text": "Following the sale, Atlas continues to hold approximately 31.0% of the outstanding common stock."},
+      {"start": 363, "end": 418, "text": "The Company did not receive any proceeds from the sale."}
+    ],
+    "passage_lengths": [418]
+  },
+  "whitespace_hard_split": {
+    "repeat": "x ", "count": 900,
+    "passage_offsets": [[0, 1199], [1200, 1799]],
+    "passage_lengths": [1199, 599]
+  },
+  "paragraph_preference": {
+    "input": "First sentence.\n\nSecond sentence.",
+    "passage_offsets": [[0, 15], [17, 33]],
+    "passage_lengths": [15, 16]
+  },
+  "long_sentence": {
+    "repeat": "a", "count": 2500,
+    "passage_offsets": [[0, 1200], [1200, 2400], [2400, 2500]],
+    "passage_lengths": [1200, 1200, 100]
+  },
+  "truncated": {
+    "repeat": "abcdefghijklmnopqrst", "count": 70, "separator": "\n\n",
+    "passage_count": 60, "first_offset": [0, 20], "last_offset": [1298, 1318],
+    "truncated": true
+  },
+  "empty": {"input": "", "passages": [], "truncated": false, "original_chars": 0},
+  "invalid_limits": {"max_chars": 99, "max_passages": 61}
+}
