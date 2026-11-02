@@ -3,15 +3,18 @@ from datetime import date
 from decimal import ROUND_DOWN, Decimal, Inexact, localcontext
 from hashlib import sha256
 from pathlib import Path
+from string import Formatter
 
 import pytest
 
 from sentinel.errors import InternalError, UserError
+from sentinel.messages.trading import MESSAGES as TRADING_MESSAGES
 from sentinel.trading.fees import match_at_open
 from sentinel.trading.rules import (
     MarketRules,
     MarketSnapshot,
     OrderIntent,
+    Reject,
     estimate_buy,
     load_market_rules,
     precheck,
@@ -326,3 +329,89 @@ def test_sub_quantum_price_reports_input_field() -> None:
     with pytest.raises(UserError) as error:
         estimate_buy(D("0.0000001"), 100, MarketRules())
     assert error.value.field == "close"
+
+
+@pytest.fixture
+def trading_rejections() -> dict[str, Reject]:
+    rules = MarketRules()
+    snapshot = MarketSnapshot(date(2026, 10, 26), D("28.40"), rules.max_order_quantity)
+    results = [
+        precheck(intent(), replace(snapshot, close=None), D(0), 0, 0, rules),
+        precheck(intent(), snapshot, D(0), 0, 0, rules),
+        precheck(intent(side="sell"), snapshot, D(0), 99, 0, rules),
+        match_at_open(intent(), None, 4, D(0), D(0), 0, rules),
+        match_at_open(intent(), D("28.55"), 0, D("2841.4200"), D("2856.4274"), 0, rules),
+        match_at_open(intent(side="sell"), D("20"), 0, D(0), D(0), 99, rules),
+    ]
+    rejections: dict[str, Reject] = {}
+    for result in results:
+        assert result.reject is not None
+        rejections[result.reject.code] = result.reject
+    return rejections
+
+
+@pytest.mark.parametrize(
+    "reason,fields,expected",
+    [
+        ("NO_PRICE", ("date",), "没有 2026-10-26 的收盘价，无法估算所需资金。请先刷新行情。"),
+        (
+            "INSUFFICIENT_CASH",
+            ("required", "available"),
+            "资金不足：预计需要 $2841.4200，可用现金 $0.0000。",
+        ),
+        (
+            "INSUFFICIENT_POSITION",
+            ("held", "requested"),
+            "可卖数量不足：持仓 99 股，要卖出 100 股。",
+        ),
+        ("NO_PRICE_AT_FILL", ("n",), "连续 5 个交易日没有行情，订单已取消。"),
+        (
+            "INSUFFICIENT_CASH_AT_FILL",
+            ("required", "available"),
+            "开盘价高于预估，资金不足：需要 $2856.4275，可用 $2856.4274。",
+        ),
+        ("INSUFFICIENT_POSITION_AT_FILL", (), "成交时持仓不足，订单已取消。"),
+    ],
+)
+def test_reject_message_templates_render_actual_data(
+    trading_rejections: dict[str, Reject], reason: str, fields: tuple[str, ...], expected: str
+) -> None:
+    reject = trading_rejections[reason]
+    template = TRADING_MESSAGES[reject.message_key]
+    actual_fields = {name for _, name, _, _ in Formatter().parse(template) if name is not None}
+    assert actual_fields == set(fields)
+    assert template.format_map(dict(reject.data)) == expected
+    for name in fields:
+        incomplete = dict(reject.data)
+        del incomplete[name]
+        with pytest.raises(KeyError) as error:
+            template.format_map(incomplete)
+        assert error.value.args == (name,)
+
+
+@pytest.mark.parametrize(
+    "reason,expected",
+    [
+        ("INSUFFICIENT_CASH", "资金不足：预计需要 $2,841.42，可用现金 $0.00。"),
+        ("INSUFFICIENT_CASH_AT_FILL", "开盘价高于预估，资金不足：需要 $2,856.43，可用 $2,856.43。"),
+    ],
+)
+def test_cash_message_templates_accept_display_formatted_amounts(
+    trading_rejections: dict[str, Reject], reason: str, expected: str
+) -> None:
+    reject = trading_rejections[reason]
+    params = dict(reject.data)
+    for name in ("required", "available"):
+        params[name] = format(D(str(params[name])), ",.2f")
+    assert TRADING_MESSAGES[reject.message_key].format_map(params) == expected
+
+
+@pytest.mark.parametrize("order_type", ["limit", "stop", None])
+def test_unsupported_order_type_selects_chinese_message(order_type: str) -> None:
+    with pytest.raises(UserError) as error:
+        validate_parameters(intent(order_type=order_type), 0, MarketRules())
+    assert error.value.code == "INVALID_ARGUMENT" and error.value.field == "orderType"
+    assert error.value.message_key == "trading.order_type_unsupported"
+    assert TRADING_MESSAGES[error.value.message_key].format_map(error.value.params) == (
+        "暂不支持限价单，请使用开盘市价单。"
+    )

@@ -203,7 +203,10 @@ def _validate_intent(intent: OrderIntent) -> None:
         raise UserError("INVALID_ARGUMENT", field="side")
     if not isinstance(intent.order_type, str) or intent.order_type != "market_open":
         raise UserError(
-            "INVALID_ARGUMENT", field="orderType", detail="only market_open is supported"
+            "INVALID_ARGUMENT",
+            message_key="trading.order_type_unsupported",
+            field="orderType",
+            detail="only market_open is supported",
         )
     _require_int(intent.quantity, "quantity", minimum=1)
     if not isinstance(intent.idempotency_key, str) or not intent.idempotency_key.strip():
