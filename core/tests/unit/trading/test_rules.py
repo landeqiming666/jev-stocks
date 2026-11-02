@@ -8,6 +8,7 @@ from string import Formatter
 import pytest
 
 from sentinel.errors import InternalError, UserError
+from sentinel.messages import MessageKeyError, render
 from sentinel.messages.trading import MESSAGES as TRADING_MESSAGES
 from sentinel.trading.fees import match_at_open
 from sentinel.trading.rules import (
@@ -381,12 +382,24 @@ def test_reject_message_templates_render_actual_data(
     actual_fields = {name for _, name, _, _ in Formatter().parse(template) if name is not None}
     assert actual_fields == set(fields)
     assert template.format_map(dict(reject.data)) == expected
+    assert render(reject.message_key, reject.data) == expected
+    wire = UserError(
+        "ORDER_REJECTED",
+        reject.message_key,
+        params={**reject.data, "orderId": "01JC8Z5V3Q000000000000RD85"},
+        reason=reject.code,
+    ).to_wire()
+    assert wire["message"] == expected
+    assert wire["data"]["reason"] == reason  # type: ignore[index]
+    assert wire["data"]["retryable"] is False  # type: ignore[index]
     for name in fields:
         incomplete = dict(reject.data)
         del incomplete[name]
         with pytest.raises(KeyError) as error:
             template.format_map(incomplete)
         assert error.value.args == (name,)
+        with pytest.raises(MessageKeyError):
+            render(reject.message_key, incomplete)
 
 
 @pytest.mark.parametrize(
@@ -415,3 +428,4 @@ def test_unsupported_order_type_selects_chinese_message(order_type: str) -> None
     assert TRADING_MESSAGES[error.value.message_key].format_map(error.value.params) == (
         "暂不支持限价单，请使用开盘市价单。"
     )
+    assert error.value.to_wire()["message"] == "暂不支持限价单，请使用开盘市价单。"

@@ -4,11 +4,11 @@ from __future__ import annotations
 
 from collections.abc import Mapping
 
-from . import app, common
+from . import app, common, trading
 
 INTERNAL_FALLBACK = "发生了意外错误，请重试。"
 
-MESSAGES: dict[str, str] = common.MESSAGES | app.MESSAGES
+MESSAGES: dict[str, str] = common.MESSAGES | app.MESSAGES | trading.MESSAGES
 
 
 class MessageKeyError(Exception):
