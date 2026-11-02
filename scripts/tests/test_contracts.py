@@ -20,6 +20,40 @@ def read(path):
     return json.loads(path.read_text(encoding="utf-8"))
 
 
+def author_payload():
+    with tempfile.TemporaryDirectory(prefix="author-fictional-") as tmp:
+        for name in ("data.py", "data_more.py", "examples.py"):
+            shutil.copyfile(ROOT / ".kiro/notes/author" / name, Path(tmp) / name)
+        result = subprocess.run(
+            [
+                sys.executable,
+                "-B",
+                "-c",
+                "import json, sys; sys.path.insert(0, sys.argv[1]); "
+                "import examples; print(json.dumps({'examples': examples.EX, "
+                "'notifications': examples.NOTIFICATIONS}, ensure_ascii=False))",
+                tmp,
+            ],
+            cwd=ROOT,
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+            check=True,
+        )
+        return json.loads(result.stdout)
+
+
+def decisions(value):
+    if isinstance(value, dict):
+        if "decisionId" in value and "probabilities" in value:
+            yield value
+        for child in value.values():
+            yield from decisions(child)
+    elif isinstance(value, list):
+        for child in value:
+            yield from decisions(child)
+
+
 class ContractTests(unittest.TestCase):
     def checker(self):
         from scripts import check_contracts
@@ -625,6 +659,80 @@ class ContractTests(unittest.TestCase):
                     lambda m: m["examples"][-1]["error"]["data"].pop(field),
                     field,
                 )
+
+    def test_contract_examples_and_mock_match_author_source(self):
+        payload = author_payload()
+        self.assertEqual(len(payload["examples"]), 40)
+        self.assertEqual(sum(len(e) for e in payload["examples"].values()), 92)
+        for method, examples in payload["examples"].items():
+            actual = read(CONTRACTS / "methods" / (method + ".json"))["examples"]
+            self.assertEqual(
+                actual, [dict(name=name, **e) for name, e in examples.items()]
+            )
+        notifications = read(CONTRACTS / "notifications.json")
+        for name, example in payload["notifications"].items():
+            self.assertEqual(notifications[name]["example"], example)
+        from scripts.gen_proto_mock import HEADER
+
+        expected = (
+            HEADER
+            + "window.MOCK = "
+            + json.dumps(payload, ensure_ascii=False, indent=1, sort_keys=False)
+            + ";\n"
+        ).encode("utf-8")
+        self.assertEqual(
+            expected, (ROOT / "design/prototype/data/mock.js").read_bytes()
+        )
+
+    def test_e1_high_killmet_evidence_describes_completed_sale(self):
+        source = author_payload()
+        mock = (ROOT / "design/prototype/data/mock.js").read_text(encoding="utf-8")
+        payload = json.loads(mock.split("window.MOCK = ", 1)[1][:-2])
+        for dataset in (source, payload):
+            items = list(decisions(dataset))
+            self.assertTrue(items)
+            for item in items:
+                self.assertEqual(item["questionSetVersion"], "qs-2026-11-02.2")
+            e1 = [
+                d for d in items if d["event"]["eventId"] == "us:0009990001-26-000001"
+            ]
+            self.assertTrue(e1)
+            for item in e1:
+                self.assertEqual(item["probabilities"]["killMet"], 0.93)
+                self.assertIn("completed sale", item["event"]["title"].lower())
+                text = item["evidence"]["text"]
+                self.assertIn("completed the sale of 4.5%", text)
+                self.assertNotIn("intends", text.lower())
+                self.assertNotIn("proposed", item["evidence"]["passageText"].lower())
+
+    def test_e1_evidence_offsets_slice_exact_completed_sentence(self):
+        doc = (ROOT / "docs/06-语义判定与Jev.md").read_text(encoding="utf-8")
+        section = doc.split("## 10.", 1)[1]
+        passage = next(
+            line[2:]
+            for line in section.splitlines()
+            if line.startswith("> Item 8.01 Other Events.")
+        )
+        payload = author_payload()
+        e1 = [
+            d
+            for d in decisions(payload)
+            if d["event"]["eventId"] == "us:0009990001-26-000001"
+        ]
+        self.assertTrue(e1)
+        for item in e1:
+            evidence = item["evidence"]
+            self.assertEqual(evidence["passageText"], passage)
+            start, end = evidence["sentenceStart"], evidence["sentenceEnd"]
+            self.assertEqual(type(start), int)
+            self.assertEqual(type(end), int)
+            self.assertEqual(passage[start:end], evidence["text"])
+            self.assertTrue(evidence["text"].startswith("On October 29, 2026,"))
+            self.assertTrue(evidence["text"].endswith("registered secondary offering."))
+            self.assertEqual(
+                passage[end:],
+                " Following the sale, Atlas continues to hold approximately 31.0% of the outstanding common stock. The Company did not receive any proceeds from the sale.",
+            )
 
 
 if __name__ == "__main__":

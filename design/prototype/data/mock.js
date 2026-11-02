@@ -699,7 +699,7 @@ window.MOCK = {
         "relation": "overturn",
         "headline": 0.93,
         "createdAt": "2026-11-02T00:31:12Z",
-        "eventTitle": "8-K: Other Events — Notice of proposed sale by controlling stockholder"
+        "eventTitle": "8-K: Other Events — Completed sale by controlling stockholder"
        }
       },
       {
@@ -906,7 +906,7 @@ window.MOCK = {
       "relation": "overturn",
       "headline": 0.93,
       "createdAt": "2026-11-02T00:31:12Z",
-      "eventTitle": "8-K: Other Events — Notice of proposed sale by controlling stockholder"
+      "eventTitle": "8-K: Other Events — Completed sale by controlling stockholder"
      }
     }
    },
@@ -1000,21 +1000,21 @@ window.MOCK = {
        },
        "engine": "jev_direct",
        "modelId": "jev-1.14.0",
-       "questionSetVersion": "qs-2026-11-02.1",
+       "questionSetVersion": "qs-2026-11-02.2",
        "event": {
         "eventId": "us:0009990001-26-000001",
         "instrumentId": "us:ZZAR",
-        "title": "8-K: Other Events — Notice of proposed sale by controlling stockholder",
+        "title": "8-K: Other Events — Completed sale by controlling stockholder",
         "formType": "8-K",
         "publishedAt": "2026-10-30T20:12:00Z",
         "url": "https://www.sec.gov/Archives/edgar/data/9990001/000999000126000001/zzar-8k.htm"
        },
        "evidence": {
         "kind": "sentence",
-        "text": "On October 29, 2026, Zenith Arc Robotics Inc. (the \"Company\") was notified by Atlas Holdings LP, its controlling stockholder, that Atlas intends to sell up to 4.5% of the Company's outstanding common stock in a registered secondary offering during the next sixty days.",
-        "passageText": "Item 8.01 Other Events. On October 29, 2026, Zenith Arc Robotics Inc. (the \"Company\") was notified by Atlas Holdings LP, its controlling stockholder, that Atlas intends to sell up to 4.5% of the Company's outstanding common stock in a registered secondary offering during the next sixty days. Following the proposed sale, Atlas would continue to hold approximately 31.0% of the outstanding common stock. The Company will not receive any proceeds from the sale.",
+        "text": "On October 29, 2026, Zenith Arc Robotics Inc. (the \"Company\") was notified by Atlas Holdings LP, its controlling stockholder, that Atlas completed the sale of 4.5% of the Company's outstanding common stock in a registered secondary offering.",
+        "passageText": "Item 8.01 Other Events. On October 29, 2026, Zenith Arc Robotics Inc. (the \"Company\") was notified by Atlas Holdings LP, its controlling stockholder, that Atlas completed the sale of 4.5% of the Company's outstanding common stock in a registered secondary offering. Following the sale, Atlas continues to hold approximately 31.0% of the outstanding common stock. The Company did not receive any proceeds from the sale.",
         "sentenceStart": 24,
-        "sentenceEnd": 292,
+        "sentenceEnd": 265,
         "filePart": "主文档"
        },
        "contentStatus": "full_text",
@@ -1049,7 +1049,7 @@ window.MOCK = {
        },
        "engine": "jev_direct",
        "modelId": "jev-1.14.0",
-       "questionSetVersion": "qs-2026-11-02.1",
+       "questionSetVersion": "qs-2026-11-02.2",
        "event": {
         "eventId": "us:0009990001-26-000002",
         "instrumentId": "us:ZZCL",
@@ -1098,7 +1098,7 @@ window.MOCK = {
        },
        "engine": "jev_direct",
        "modelId": "jev-1.14.0",
-       "questionSetVersion": "qs-2026-11-02.1",
+       "questionSetVersion": "qs-2026-11-02.2",
        "event": {
         "eventId": "us:0009990001-26-000003",
         "instrumentId": "us:ZZAR",
@@ -1149,7 +1149,7 @@ window.MOCK = {
        },
        "engine": "jev_direct",
        "modelId": "jev-1.14.0",
-       "questionSetVersion": "qs-2026-11-02.1",
+       "questionSetVersion": "qs-2026-11-02.2",
        "event": {
         "eventId": "us:0009990001-26-000004",
         "instrumentId": "us:ZZFD",
@@ -1198,7 +1198,7 @@ window.MOCK = {
        },
        "engine": "jev_direct",
        "modelId": "jev-1.14.0",
-       "questionSetVersion": "qs-2026-11-02.1",
+       "questionSetVersion": "qs-2026-11-02.2",
        "event": {
         "eventId": "us:0009990001-26-000006",
         "instrumentId": "us:ZZCL",
@@ -1249,7 +1249,7 @@ window.MOCK = {
        },
        "engine": "jev_direct",
        "modelId": "jev-1.14.0",
-       "questionSetVersion": "qs-2026-11-02.1",
+       "questionSetVersion": "qs-2026-11-02.2",
        "event": {
         "eventId": "us:0009990001-26-000005",
         "instrumentId": "us:ZZBK",
@@ -1359,21 +1359,21 @@ window.MOCK = {
        },
        "engine": "jev_direct",
        "modelId": "jev-1.14.0",
-       "questionSetVersion": "qs-2026-11-02.1",
+       "questionSetVersion": "qs-2026-11-02.2",
        "event": {
         "eventId": "us:0009990001-26-000001",
         "instrumentId": "us:ZZAR",
-        "title": "8-K: Other Events — Notice of proposed sale by controlling stockholder",
+        "title": "8-K: Other Events — Completed sale by controlling stockholder",
         "formType": "8-K",
         "publishedAt": "2026-10-30T20:12:00Z",
         "url": "https://www.sec.gov/Archives/edgar/data/9990001/000999000126000001/zzar-8k.htm"
        },
        "evidence": {
         "kind": "sentence",
-        "text": "On October 29, 2026, Zenith Arc Robotics Inc. (the \"Company\") was notified by Atlas Holdings LP, its controlling stockholder, that Atlas intends to sell up to 4.5% of the Company's outstanding common stock in a registered secondary offering during the next sixty days.",
-        "passageText": "Item 8.01 Other Events. On October 29, 2026, Zenith Arc Robotics Inc. (the \"Company\") was notified by Atlas Holdings LP, its controlling stockholder, that Atlas intends to sell up to 4.5% of the Company's outstanding common stock in a registered secondary offering during the next sixty days. Following the proposed sale, Atlas would continue to hold approximately 31.0% of the outstanding common stock. The Company will not receive any proceeds from the sale.",
+        "text": "On October 29, 2026, Zenith Arc Robotics Inc. (the \"Company\") was notified by Atlas Holdings LP, its controlling stockholder, that Atlas completed the sale of 4.5% of the Company's outstanding common stock in a registered secondary offering.",
+        "passageText": "Item 8.01 Other Events. On October 29, 2026, Zenith Arc Robotics Inc. (the \"Company\") was notified by Atlas Holdings LP, its controlling stockholder, that Atlas completed the sale of 4.5% of the Company's outstanding common stock in a registered secondary offering. Following the sale, Atlas continues to hold approximately 31.0% of the outstanding common stock. The Company did not receive any proceeds from the sale.",
         "sentenceStart": 24,
-        "sentenceEnd": 292,
+        "sentenceEnd": 265,
         "filePart": "主文档"
        },
        "contentStatus": "full_text",
@@ -1412,7 +1412,7 @@ window.MOCK = {
        },
        "engine": "jev_direct",
        "modelId": "jev-1.14.0",
-       "questionSetVersion": "qs-2026-11-02.1",
+       "questionSetVersion": "qs-2026-11-02.2",
        "event": {
         "eventId": "us:0009990001-26-000002",
         "instrumentId": "us:ZZCL",
@@ -1465,7 +1465,7 @@ window.MOCK = {
        },
        "engine": "jev_direct",
        "modelId": "jev-1.14.0",
-       "questionSetVersion": "qs-2026-11-02.1",
+       "questionSetVersion": "qs-2026-11-02.2",
        "event": {
         "eventId": "us:0009990001-26-000003",
         "instrumentId": "us:ZZAR",
@@ -1518,7 +1518,7 @@ window.MOCK = {
        },
        "engine": "jev_direct",
        "modelId": "jev-1.14.0",
-       "questionSetVersion": "qs-2026-11-02.1",
+       "questionSetVersion": "qs-2026-11-02.2",
        "event": {
         "eventId": "us:0009990001-26-000005",
         "instrumentId": "us:ZZBK",
@@ -1626,21 +1626,21 @@ window.MOCK = {
        },
        "engine": "jev_direct",
        "modelId": "jev-1.14.0",
-       "questionSetVersion": "qs-2026-11-02.1",
+       "questionSetVersion": "qs-2026-11-02.2",
        "event": {
         "eventId": "us:0009990001-26-000001",
         "instrumentId": "us:ZZAR",
-        "title": "8-K: Other Events — Notice of proposed sale by controlling stockholder",
+        "title": "8-K: Other Events — Completed sale by controlling stockholder",
         "formType": "8-K",
         "publishedAt": "2026-10-30T20:12:00Z",
         "url": "https://www.sec.gov/Archives/edgar/data/9990001/000999000126000001/zzar-8k.htm"
        },
        "evidence": {
         "kind": "sentence",
-        "text": "On October 29, 2026, Zenith Arc Robotics Inc. (the \"Company\") was notified by Atlas Holdings LP, its controlling stockholder, that Atlas intends to sell up to 4.5% of the Company's outstanding common stock in a registered secondary offering during the next sixty days.",
-        "passageText": "Item 8.01 Other Events. On October 29, 2026, Zenith Arc Robotics Inc. (the \"Company\") was notified by Atlas Holdings LP, its controlling stockholder, that Atlas intends to sell up to 4.5% of the Company's outstanding common stock in a registered secondary offering during the next sixty days. Following the proposed sale, Atlas would continue to hold approximately 31.0% of the outstanding common stock. The Company will not receive any proceeds from the sale.",
+        "text": "On October 29, 2026, Zenith Arc Robotics Inc. (the \"Company\") was notified by Atlas Holdings LP, its controlling stockholder, that Atlas completed the sale of 4.5% of the Company's outstanding common stock in a registered secondary offering.",
+        "passageText": "Item 8.01 Other Events. On October 29, 2026, Zenith Arc Robotics Inc. (the \"Company\") was notified by Atlas Holdings LP, its controlling stockholder, that Atlas completed the sale of 4.5% of the Company's outstanding common stock in a registered secondary offering. Following the sale, Atlas continues to hold approximately 31.0% of the outstanding common stock. The Company did not receive any proceeds from the sale.",
         "sentenceStart": 24,
-        "sentenceEnd": 292,
+        "sentenceEnd": 265,
         "filePart": "主文档"
        },
        "contentStatus": "full_text",
@@ -1675,7 +1675,7 @@ window.MOCK = {
        },
        "engine": "jev_direct",
        "modelId": "jev-1.14.0",
-       "questionSetVersion": "qs-2026-11-02.1",
+       "questionSetVersion": "qs-2026-11-02.2",
        "event": {
         "eventId": "us:0009990001-26-000002",
         "instrumentId": "us:ZZCL",
@@ -1724,7 +1724,7 @@ window.MOCK = {
        },
        "engine": "jev_direct",
        "modelId": "jev-1.14.0",
-       "questionSetVersion": "qs-2026-11-02.1",
+       "questionSetVersion": "qs-2026-11-02.2",
        "event": {
         "eventId": "us:0009990001-26-000003",
         "instrumentId": "us:ZZAR",
@@ -1775,7 +1775,7 @@ window.MOCK = {
        },
        "engine": "jev_direct",
        "modelId": "jev-1.14.0",
-       "questionSetVersion": "qs-2026-11-02.1",
+       "questionSetVersion": "qs-2026-11-02.2",
        "event": {
         "eventId": "us:0009990001-26-000004",
         "instrumentId": "us:ZZFD",
@@ -1824,7 +1824,7 @@ window.MOCK = {
        },
        "engine": "jev_direct",
        "modelId": "jev-1.14.0",
-       "questionSetVersion": "qs-2026-11-02.1",
+       "questionSetVersion": "qs-2026-11-02.2",
        "event": {
         "eventId": "us:0009990001-26-000006",
         "instrumentId": "us:ZZCL",
@@ -1875,7 +1875,7 @@ window.MOCK = {
        },
        "engine": "jev_direct",
        "modelId": "jev-1.14.0",
-       "questionSetVersion": "qs-2026-11-02.1",
+       "questionSetVersion": "qs-2026-11-02.2",
        "event": {
         "eventId": "us:0009990001-26-000005",
         "instrumentId": "us:ZZBK",
@@ -2074,21 +2074,21 @@ window.MOCK = {
        },
        "engine": "jev_direct",
        "modelId": "jev-1.14.0",
-       "questionSetVersion": "qs-2026-11-02.1",
+       "questionSetVersion": "qs-2026-11-02.2",
        "event": {
         "eventId": "us:0009990001-26-000001",
         "instrumentId": "us:ZZAR",
-        "title": "8-K: Other Events — Notice of proposed sale by controlling stockholder",
+        "title": "8-K: Other Events — Completed sale by controlling stockholder",
         "formType": "8-K",
         "publishedAt": "2026-10-30T20:12:00Z",
         "url": "https://www.sec.gov/Archives/edgar/data/9990001/000999000126000001/zzar-8k.htm"
        },
        "evidence": {
         "kind": "sentence",
-        "text": "On October 29, 2026, Zenith Arc Robotics Inc. (the \"Company\") was notified by Atlas Holdings LP, its controlling stockholder, that Atlas intends to sell up to 4.5% of the Company's outstanding common stock in a registered secondary offering during the next sixty days.",
-        "passageText": "Item 8.01 Other Events. On October 29, 2026, Zenith Arc Robotics Inc. (the \"Company\") was notified by Atlas Holdings LP, its controlling stockholder, that Atlas intends to sell up to 4.5% of the Company's outstanding common stock in a registered secondary offering during the next sixty days. Following the proposed sale, Atlas would continue to hold approximately 31.0% of the outstanding common stock. The Company will not receive any proceeds from the sale.",
+        "text": "On October 29, 2026, Zenith Arc Robotics Inc. (the \"Company\") was notified by Atlas Holdings LP, its controlling stockholder, that Atlas completed the sale of 4.5% of the Company's outstanding common stock in a registered secondary offering.",
+        "passageText": "Item 8.01 Other Events. On October 29, 2026, Zenith Arc Robotics Inc. (the \"Company\") was notified by Atlas Holdings LP, its controlling stockholder, that Atlas completed the sale of 4.5% of the Company's outstanding common stock in a registered secondary offering. Following the sale, Atlas continues to hold approximately 31.0% of the outstanding common stock. The Company did not receive any proceeds from the sale.",
         "sentenceStart": 24,
-        "sentenceEnd": 292,
+        "sentenceEnd": 265,
         "filePart": "主文档"
        },
        "contentStatus": "full_text",
@@ -2123,7 +2123,7 @@ window.MOCK = {
        },
        "engine": "jev_direct",
        "modelId": "jev-1.14.0",
-       "questionSetVersion": "qs-2026-11-02.1",
+       "questionSetVersion": "qs-2026-11-02.2",
        "event": {
         "eventId": "us:0009990001-26-000002",
         "instrumentId": "us:ZZCL",
@@ -2172,7 +2172,7 @@ window.MOCK = {
        },
        "engine": "jev_direct",
        "modelId": "jev-1.14.0",
-       "questionSetVersion": "qs-2026-11-02.1",
+       "questionSetVersion": "qs-2026-11-02.2",
        "event": {
         "eventId": "us:0009990001-26-000003",
         "instrumentId": "us:ZZAR",
@@ -2223,7 +2223,7 @@ window.MOCK = {
        },
        "engine": "jev_direct",
        "modelId": "jev-1.14.0",
-       "questionSetVersion": "qs-2026-11-02.1",
+       "questionSetVersion": "qs-2026-11-02.2",
        "event": {
         "eventId": "us:0009990001-26-000004",
         "instrumentId": "us:ZZFD",
@@ -2272,7 +2272,7 @@ window.MOCK = {
        },
        "engine": "jev_direct",
        "modelId": "jev-1.14.0",
-       "questionSetVersion": "qs-2026-11-02.1",
+       "questionSetVersion": "qs-2026-11-02.2",
        "event": {
         "eventId": "us:0009990001-26-000006",
         "instrumentId": "us:ZZCL",
@@ -2323,7 +2323,7 @@ window.MOCK = {
        },
        "engine": "jev_direct",
        "modelId": "jev-1.14.0",
-       "questionSetVersion": "qs-2026-11-02.1",
+       "questionSetVersion": "qs-2026-11-02.2",
        "event": {
         "eventId": "us:0009990001-26-000005",
         "instrumentId": "us:ZZBK",
@@ -2425,21 +2425,21 @@ window.MOCK = {
      },
      "engine": "jev_direct",
      "modelId": "jev-1.14.0",
-     "questionSetVersion": "qs-2026-11-02.1",
+     "questionSetVersion": "qs-2026-11-02.2",
      "event": {
       "eventId": "us:0009990001-26-000001",
       "instrumentId": "us:ZZAR",
-      "title": "8-K: Other Events — Notice of proposed sale by controlling stockholder",
+      "title": "8-K: Other Events — Completed sale by controlling stockholder",
       "formType": "8-K",
       "publishedAt": "2026-10-30T20:12:00Z",
       "url": "https://www.sec.gov/Archives/edgar/data/9990001/000999000126000001/zzar-8k.htm"
      },
      "evidence": {
       "kind": "sentence",
-      "text": "On October 29, 2026, Zenith Arc Robotics Inc. (the \"Company\") was notified by Atlas Holdings LP, its controlling stockholder, that Atlas intends to sell up to 4.5% of the Company's outstanding common stock in a registered secondary offering during the next sixty days.",
-      "passageText": "Item 8.01 Other Events. On October 29, 2026, Zenith Arc Robotics Inc. (the \"Company\") was notified by Atlas Holdings LP, its controlling stockholder, that Atlas intends to sell up to 4.5% of the Company's outstanding common stock in a registered secondary offering during the next sixty days. Following the proposed sale, Atlas would continue to hold approximately 31.0% of the outstanding common stock. The Company will not receive any proceeds from the sale.",
+      "text": "On October 29, 2026, Zenith Arc Robotics Inc. (the \"Company\") was notified by Atlas Holdings LP, its controlling stockholder, that Atlas completed the sale of 4.5% of the Company's outstanding common stock in a registered secondary offering.",
+      "passageText": "Item 8.01 Other Events. On October 29, 2026, Zenith Arc Robotics Inc. (the \"Company\") was notified by Atlas Holdings LP, its controlling stockholder, that Atlas completed the sale of 4.5% of the Company's outstanding common stock in a registered secondary offering. Following the sale, Atlas continues to hold approximately 31.0% of the outstanding common stock. The Company did not receive any proceeds from the sale.",
       "sentenceStart": 24,
-      "sentenceEnd": 292,
+      "sentenceEnd": 265,
       "filePart": "主文档"
      },
      "contentStatus": "full_text",
@@ -2481,7 +2481,7 @@ window.MOCK = {
      },
      "engine": "jev_direct",
      "modelId": "jev-1.14.0",
-     "questionSetVersion": "qs-2026-11-02.1",
+     "questionSetVersion": "qs-2026-11-02.2",
      "event": {
       "eventId": "us:0009990001-26-000003",
       "instrumentId": "us:ZZAR",
@@ -2537,7 +2537,7 @@ window.MOCK = {
      },
      "engine": "jev_direct",
      "modelId": "jev-1.14.0",
-     "questionSetVersion": "qs-2026-11-02.1",
+     "questionSetVersion": "qs-2026-11-02.2",
      "event": {
       "eventId": "us:0009990001-26-000004",
       "instrumentId": "us:ZZFD",
@@ -2593,7 +2593,7 @@ window.MOCK = {
      },
      "engine": "jev_direct",
      "modelId": "jev-1.14.0",
-     "questionSetVersion": "qs-2026-11-02.1",
+     "questionSetVersion": "qs-2026-11-02.2",
      "event": {
       "eventId": "us:0009990001-26-000006",
       "instrumentId": "us:ZZCL",
@@ -2649,7 +2649,7 @@ window.MOCK = {
      },
      "engine": "jev_direct",
      "modelId": "jev-1.14.0",
-     "questionSetVersion": "qs-2026-11-02.1",
+     "questionSetVersion": "qs-2026-11-02.2",
      "event": {
       "eventId": "us:0009990001-26-000005",
       "instrumentId": "us:ZZBK",
@@ -2731,21 +2731,21 @@ window.MOCK = {
      },
      "engine": "jev_direct",
      "modelId": "jev-1.14.0",
-     "questionSetVersion": "qs-2026-11-02.1",
+     "questionSetVersion": "qs-2026-11-02.2",
      "event": {
       "eventId": "us:0009990001-26-000001",
       "instrumentId": "us:ZZAR",
-      "title": "8-K: Other Events — Notice of proposed sale by controlling stockholder",
+      "title": "8-K: Other Events — Completed sale by controlling stockholder",
       "formType": "8-K",
       "publishedAt": "2026-10-30T20:12:00Z",
       "url": "https://www.sec.gov/Archives/edgar/data/9990001/000999000126000001/zzar-8k.htm"
      },
      "evidence": {
       "kind": "sentence",
-      "text": "On October 29, 2026, Zenith Arc Robotics Inc. (the \"Company\") was notified by Atlas Holdings LP, its controlling stockholder, that Atlas intends to sell up to 4.5% of the Company's outstanding common stock in a registered secondary offering during the next sixty days.",
-      "passageText": "Item 8.01 Other Events. On October 29, 2026, Zenith Arc Robotics Inc. (the \"Company\") was notified by Atlas Holdings LP, its controlling stockholder, that Atlas intends to sell up to 4.5% of the Company's outstanding common stock in a registered secondary offering during the next sixty days. Following the proposed sale, Atlas would continue to hold approximately 31.0% of the outstanding common stock. The Company will not receive any proceeds from the sale.",
+      "text": "On October 29, 2026, Zenith Arc Robotics Inc. (the \"Company\") was notified by Atlas Holdings LP, its controlling stockholder, that Atlas completed the sale of 4.5% of the Company's outstanding common stock in a registered secondary offering.",
+      "passageText": "Item 8.01 Other Events. On October 29, 2026, Zenith Arc Robotics Inc. (the \"Company\") was notified by Atlas Holdings LP, its controlling stockholder, that Atlas completed the sale of 4.5% of the Company's outstanding common stock in a registered secondary offering. Following the sale, Atlas continues to hold approximately 31.0% of the outstanding common stock. The Company did not receive any proceeds from the sale.",
       "sentenceStart": 24,
-      "sentenceEnd": 292,
+      "sentenceEnd": 265,
       "filePart": "主文档"
      },
      "contentStatus": "full_text",
@@ -2791,7 +2791,7 @@ window.MOCK = {
      },
      "engine": "jev_direct",
      "modelId": "jev-1.14.0",
-     "questionSetVersion": "qs-2026-11-02.1",
+     "questionSetVersion": "qs-2026-11-02.2",
      "event": {
       "eventId": "us:0009990001-26-000005",
       "instrumentId": "us:ZZBK",

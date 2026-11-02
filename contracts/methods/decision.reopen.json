@@ -57,7 +57,7 @@
         },
         "engine": "jev_direct",
         "modelId": "jev-1.14.0",
-        "questionSetVersion": "qs-2026-11-02.1",
+        "questionSetVersion": "qs-2026-11-02.2",
         "event": {
           "eventId": "us:0009990001-26-000005",
           "instrumentId": "us:ZZBK",
