@@ -1,0 +1,99 @@
+{
+  "method": "settings.update",
+  "summary": "更新设置",
+  "owner": "C-04",
+  "phase": "mvp0",
+  "timeoutMs": 30000,
+  "params": {
+    "type": "object",
+    "required": [],
+    "properties": {
+      "engine": {
+        "$ref": "types.schema.json#/$defs/EngineChoice"
+      },
+      "secContactEmail": {
+        "anyOf": [
+          {
+            "type": "string",
+            "maxLength": 120,
+            "pattern": "^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$"
+          },
+          {
+            "type": "null"
+          }
+        ]
+      },
+      "dailyTokenBudget": {
+        "type": "integer",
+        "minimum": 10000,
+        "maximum": 50000000
+      },
+      "firstScanLookbackDays": {
+        "type": "integer",
+        "minimum": 1,
+        "maximum": 30
+      }
+    },
+    "additionalProperties": false
+  },
+  "result": {
+    "$ref": "types.schema.json#/$defs/Settings"
+  },
+  "errors": [
+    "INVALID_ARGUMENT"
+  ],
+  "examples": [
+    {
+      "name": "ok",
+      "params": {
+        "secContactEmail": "name@example.com",
+        "dailyTokenBudget": 2000000
+      },
+      "result": {
+        "engine": "auto",
+        "modelId": "jev-1.14.0",
+        "secContactEmail": "name@example.com",
+        "dailyTokenBudget": 2000000,
+        "firstScanLookbackDays": 7,
+        "demoDataLoaded": true,
+        "language": "zh-CN",
+        "allowedDomains": [
+          {
+            "domain": "api.typesafe.ai",
+            "purpose": "Jev 判定",
+            "sends": "逻辑正文、失效条件、披露段落；不含持仓数量、成本、备注"
+          },
+          {
+            "domain": "www.sec.gov",
+            "purpose": "披露原文",
+            "sends": "请求地址和含联系邮箱的 User-Agent"
+          },
+          {
+            "domain": "data.sec.gov",
+            "purpose": "披露列表与标的表",
+            "sends": "请求地址和含联系邮箱的 User-Agent"
+          },
+          {
+            "domain": "（行情源，待 G1-US 确定）",
+            "purpose": "日线行情",
+            "sends": "股票代码"
+          }
+        ]
+      }
+    },
+    {
+      "name": "invalid_email",
+      "params": {
+        "secContactEmail": "not-an-email"
+      },
+      "error": {
+        "code": "INVALID_ARGUMENT",
+        "message": "联系邮箱格式不正确",
+        "data": {
+          "retryable": false,
+          "field": "secContactEmail"
+        }
+      }
+    }
+  ]
+}

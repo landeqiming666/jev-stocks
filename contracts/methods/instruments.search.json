@@ -1,0 +1,121 @@
+{
+  "method": "instruments.search",
+  "summary": "搜索标的",
+  "owner": "D-02",
+  "phase": "mvp0",
+  "timeoutMs": 30000,
+  "params": {
+    "type": "object",
+    "required": [
+      "query"
+    ],
+    "properties": {
+      "query": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 64
+      },
+      "limit": {
+        "type": "integer",
+        "minimum": 1,
+        "maximum": 50
+      }
+    },
+    "additionalProperties": false
+  },
+  "result": {
+    "type": "object",
+    "required": [
+      "items"
+    ],
+    "properties": {
+      "items": {
+        "type": "array",
+        "items": {
+          "$ref": "types.schema.json#/$defs/Instrument"
+        }
+      }
+    },
+    "additionalProperties": false
+  },
+  "errors": [
+    "INVALID_ARGUMENT",
+    "CANCELLED"
+  ],
+  "examples": [
+    {
+      "name": "ze",
+      "params": {
+        "query": "ze",
+        "limit": 20
+      },
+      "result": {
+        "items": [
+          {
+            "instrumentId": "us:ZZAR",
+            "market": "us",
+            "symbol": "ZZAR",
+            "name": "Zenith Arc Robotics Inc.",
+            "nameZh": "天顶弧机器人",
+            "exchange": "NASDAQ",
+            "currency": "USD",
+            "isActive": true
+          },
+          {
+            "instrumentId": "us:ZZEN",
+            "market": "us",
+            "symbol": "ZZEN",
+            "name": "Zeta Energy Partners",
+            "nameZh": "泽塔能源",
+            "exchange": "NYSE",
+            "currency": "USD",
+            "isActive": true
+          },
+          {
+            "instrumentId": "us:ZZMD",
+            "market": "us",
+            "symbol": "ZZMD",
+            "name": "Zenmed Diagnostics Inc.",
+            "nameZh": "泽美诊断",
+            "exchange": "NASDAQ",
+            "currency": "USD",
+            "isActive": true
+          },
+          {
+            "instrumentId": "us:ZZNW",
+            "market": "us",
+            "symbol": "ZZNW",
+            "name": "Zenwave Networks Corp.",
+            "nameZh": "泽波网络",
+            "exchange": "NASDAQ",
+            "currency": "USD",
+            "isActive": true
+          }
+        ]
+      }
+    },
+    {
+      "name": "empty",
+      "params": {
+        "query": "qqqq",
+        "limit": 20
+      },
+      "result": {
+        "items": []
+      }
+    },
+    {
+      "name": "cancelled",
+      "params": {
+        "query": "zenith"
+      },
+      "error": {
+        "code": "CANCELLED",
+        "message": "已取消",
+        "data": {
+          "retryable": false
+        }
+      }
+    }
+  ]
+}

@@ -1,0 +1,47 @@
+{
+  "method": "holdings.archive",
+  "summary": "归档持仓",
+  "owner": "P-01",
+  "phase": "mvp0",
+  "timeoutMs": 30000,
+  "params": {
+    "type": "object",
+    "required": [
+      "instrumentId"
+    ],
+    "properties": {
+      "instrumentId": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "additionalProperties": false
+  },
+  "result": {
+    "type": "object",
+    "required": [
+      "ok"
+    ],
+    "properties": {
+      "ok": {
+        "type": "boolean",
+        "const": true
+      }
+    },
+    "additionalProperties": false
+  },
+  "errors": [
+    "NOT_FOUND"
+  ],
+  "examples": [
+    {
+      "name": "ok",
+      "params": {
+        "instrumentId": "us:ZZMD"
+      },
+      "result": {
+        "ok": true
+      }
+    }
+  ]
+}

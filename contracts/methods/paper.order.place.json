@@ -1,0 +1,144 @@
+{
+  "method": "paper.order.place",
+  "summary": "提交模拟开盘订单",
+  "owner": "P-05",
+  "phase": "mvp0",
+  "timeoutMs": 30000,
+  "params": {
+    "type": "object",
+    "required": [
+      "accountId",
+      "instrumentId",
+      "side",
+      "quantity",
+      "orderType",
+      "idempotencyKey"
+    ],
+    "properties": {
+      "accountId": {
+        "type": "string",
+        "minLength": 1
+      },
+      "instrumentId": {
+        "type": "string",
+        "minLength": 1
+      },
+      "side": {
+        "type": "string",
+        "enum": [
+          "buy",
+          "sell"
+        ]
+      },
+      "quantity": {
+        "type": "integer",
+        "minimum": 1,
+        "maximum": 1000000
+      },
+      "orderType": {
+        "type": "string",
+        "enum": [
+          "market_open"
+        ]
+      },
+      "idempotencyKey": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 64
+      }
+    },
+    "additionalProperties": false
+  },
+  "result": {
+    "$ref": "types.schema.json#/$defs/PaperOrder"
+  },
+  "errors": [
+    "INVALID_ARGUMENT",
+    "NOT_FOUND",
+    "CONFLICT",
+    "ORDER_REJECTED"
+  ],
+  "examples": [
+    {
+      "name": "pending",
+      "params": {
+        "accountId": "01JC8Z5V3Q000000000000J9Y1",
+        "instrumentId": "us:ZZCL",
+        "side": "buy",
+        "quantity": 100,
+        "orderType": "market_open",
+        "idempotencyKey": "idem-004"
+      },
+      "result": {
+        "orderId": "01JC8Z5V3Q000000000000RD84",
+        "accountId": "01JC8Z5V3Q000000000000J9Y1",
+        "instrument": {
+          "instrumentId": "us:ZZCL",
+          "market": "us",
+          "symbol": "ZZCL",
+          "name": "Zhongzhi Cloud Ltd.",
+          "nameZh": "众智云",
+          "exchange": "NASDAQ",
+          "currency": "USD",
+          "isActive": true
+        },
+        "side": "buy",
+        "quantity": 100,
+        "orderType": "market_open",
+        "status": "pending",
+        "rejectReason": null,
+        "createdClockDate": "2026-10-14",
+        "reservedCash": "2841.4200",
+        "idempotencyKey": "idem-004",
+        "fills": [],
+        "estimate": {
+          "price": "28.414200",
+          "amount": "2841.4200",
+          "fee": "0.0000"
+        }
+      }
+    },
+    {
+      "name": "insufficient_cash",
+      "params": {
+        "accountId": "01JC8Z5V3Q000000000000J9Y1",
+        "instrumentId": "us:ZZAR",
+        "side": "buy",
+        "quantity": 1800,
+        "orderType": "market_open",
+        "idempotencyKey": "idem-005"
+      },
+      "error": {
+        "code": "ORDER_REJECTED",
+        "message": "资金不足：预计需要 $92,025.99，可用现金 $90,185.10。",
+        "data": {
+          "retryable": false,
+          "reason": "INSUFFICIENT_CASH",
+          "required": "92025.9900",
+          "available": "90185.0950"
+        }
+      }
+    },
+    {
+      "name": "insufficient_position",
+      "params": {
+        "accountId": "01JC8Z5V3Q000000000000J9Y1",
+        "instrumentId": "us:ZZCL",
+        "side": "sell",
+        "quantity": 500,
+        "orderType": "market_open",
+        "idempotencyKey": "idem-003"
+      },
+      "error": {
+        "code": "ORDER_REJECTED",
+        "message": "可卖数量不足：持仓 0 股，要卖出 500 股。",
+        "data": {
+          "retryable": false,
+          "reason": "INSUFFICIENT_POSITION",
+          "held": 0,
+          "requested": 500
+        }
+      }
+    }
+  ]
+}

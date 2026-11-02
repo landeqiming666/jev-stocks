@@ -1,0 +1,89 @@
+{
+  "method": "settings.get",
+  "summary": "读取设置",
+  "owner": "C-04",
+  "phase": "mvp0",
+  "timeoutMs": 30000,
+  "params": {
+    "type": "object",
+    "required": [],
+    "properties": {},
+    "additionalProperties": false
+  },
+  "result": {
+    "$ref": "types.schema.json#/$defs/Settings"
+  },
+  "errors": [],
+  "examples": [
+    {
+      "name": "configured",
+      "params": {},
+      "result": {
+        "engine": "auto",
+        "modelId": "jev-1.14.0",
+        "secContactEmail": "name@example.com",
+        "dailyTokenBudget": 2000000,
+        "firstScanLookbackDays": 7,
+        "demoDataLoaded": true,
+        "language": "zh-CN",
+        "allowedDomains": [
+          {
+            "domain": "api.typesafe.ai",
+            "purpose": "Jev 判定",
+            "sends": "逻辑正文、失效条件、披露段落；不含持仓数量、成本、备注"
+          },
+          {
+            "domain": "www.sec.gov",
+            "purpose": "披露原文",
+            "sends": "请求地址和含联系邮箱的 User-Agent"
+          },
+          {
+            "domain": "data.sec.gov",
+            "purpose": "披露列表与标的表",
+            "sends": "请求地址和含联系邮箱的 User-Agent"
+          },
+          {
+            "domain": "（行情源，待 G1-US 确定）",
+            "purpose": "日线行情",
+            "sends": "股票代码"
+          }
+        ]
+      }
+    },
+    {
+      "name": "unconfigured",
+      "params": {},
+      "result": {
+        "engine": "auto",
+        "modelId": "jev-1.14.0",
+        "secContactEmail": null,
+        "dailyTokenBudget": 2000000,
+        "firstScanLookbackDays": 7,
+        "demoDataLoaded": false,
+        "language": "zh-CN",
+        "allowedDomains": [
+          {
+            "domain": "api.typesafe.ai",
+            "purpose": "Jev 判定",
+            "sends": "逻辑正文、失效条件、披露段落；不含持仓数量、成本、备注"
+          },
+          {
+            "domain": "www.sec.gov",
+            "purpose": "披露原文",
+            "sends": "请求地址和含联系邮箱的 User-Agent"
+          },
+          {
+            "domain": "data.sec.gov",
+            "purpose": "披露列表与标的表",
+            "sends": "请求地址和含联系邮箱的 User-Agent"
+          },
+          {
+            "domain": "（行情源，待 G1-US 确定）",
+            "purpose": "日线行情",
+            "sends": "股票代码"
+          }
+        ]
+      }
+    }
+  ]
+}

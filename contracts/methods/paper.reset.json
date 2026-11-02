@@ -1,0 +1,53 @@
+{
+  "method": "paper.reset",
+  "summary": "确认并重置模拟账户",
+  "owner": "P-05",
+  "phase": "mvp0",
+  "timeoutMs": 30000,
+  "params": {
+    "type": "object",
+    "required": [
+      "accountId",
+      "confirmText"
+    ],
+    "properties": {
+      "accountId": {
+        "type": "string",
+        "minLength": 1
+      },
+      "confirmText": {
+        "type": "string"
+      }
+    },
+    "additionalProperties": false
+  },
+  "result": {
+    "type": "object",
+    "required": [
+      "ok"
+    ],
+    "properties": {
+      "ok": {
+        "type": "boolean",
+        "const": true
+      }
+    },
+    "additionalProperties": false
+  },
+  "errors": [
+    "INVALID_ARGUMENT",
+    "NOT_FOUND"
+  ],
+  "examples": [
+    {
+      "name": "ok",
+      "params": {
+        "accountId": "01JC8Z5V3Q000000000000J9Y1",
+        "confirmText": "回放账户 A"
+      },
+      "result": {
+        "ok": true
+      }
+    }
+  ]
+}

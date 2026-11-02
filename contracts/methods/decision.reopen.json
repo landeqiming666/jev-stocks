@@ -1,0 +1,83 @@
+{
+  "method": "decision.reopen",
+  "summary": "重新打开判定",
+  "owner": "P-03",
+  "phase": "mvp0",
+  "timeoutMs": 30000,
+  "params": {
+    "type": "object",
+    "required": [
+      "decisionId"
+    ],
+    "properties": {
+      "decisionId": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "additionalProperties": false
+  },
+  "result": {
+    "$ref": "types.schema.json#/$defs/DecisionSummary"
+  },
+  "errors": [
+    "NOT_FOUND"
+  ],
+  "examples": [
+    {
+      "name": "ok",
+      "params": {
+        "decisionId": "01JC8Z5V3Q00000000000094Z6"
+      },
+      "result": {
+        "decisionId": "01JC8Z5V3Q00000000000094Z6",
+        "thesisId": "01JC8Z5V3Q00000000000063A5",
+        "thesisVersion": 1,
+        "thesisCurrentVersion": 1,
+        "instrument": {
+          "instrumentId": "us:ZZBK",
+          "market": "us",
+          "symbol": "ZZBK",
+          "name": "Zinc Bay Bancorp",
+          "nameZh": "锌湾银行",
+          "exchange": "NASDAQ",
+          "currency": "USD",
+          "isActive": true
+        },
+        "thesisStatement": "存款成本保持稳定，净息差不收窄",
+        "killCondition": null,
+        "relation": "weaken",
+        "headline": 0.72,
+        "probabilities": {
+          "relevant": 0.96,
+          "against": 0.72,
+          "contradicts": 0.3,
+          "killMet": null,
+          "supports": 0.08
+        },
+        "engine": "jev_direct",
+        "modelId": "jev-1.14.0",
+        "questionSetVersion": "qs-2026-11-02.1",
+        "event": {
+          "eventId": "us:0009990001-26-000005",
+          "instrumentId": "us:ZZBK",
+          "title": "8-K: Third quarter 2026 net interest margin",
+          "formType": "8-K",
+          "publishedAt": "2026-10-27T21:15:00Z",
+          "url": "https://www.sec.gov/Archives/edgar/data/9990001/000999000126000005/zzbk-ex991.htm"
+        },
+        "evidence": {
+          "kind": "sentence",
+          "text": "Zinc Bay Bancorp announced that its net interest margin was 3.12% for the third quarter, compared with 3.15% in the second quarter.",
+          "passageText": "Zinc Bay Bancorp announced that its net interest margin was 3.12% for the third quarter, compared with 3.15% in the second quarter. The average cost of deposits was unchanged at 1.84%. Management said it expects the margin to stabilize in the fourth quarter.",
+          "sentenceStart": 0,
+          "sentenceEnd": 131,
+          "filePart": "EX-99.1"
+        },
+        "contentStatus": "full_text",
+        "createdAt": "2026-10-28T00:20:00Z",
+        "action": null
+      }
+    }
+  ]
+}

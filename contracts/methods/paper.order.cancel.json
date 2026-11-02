@@ -1,0 +1,63 @@
+{
+  "method": "paper.order.cancel",
+  "summary": "取消模拟挂单",
+  "owner": "P-05",
+  "phase": "mvp0",
+  "timeoutMs": 30000,
+  "params": {
+    "type": "object",
+    "required": [
+      "orderId"
+    ],
+    "properties": {
+      "orderId": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "additionalProperties": false
+  },
+  "result": {
+    "$ref": "types.schema.json#/$defs/PaperOrder"
+  },
+  "errors": [
+    "NOT_FOUND",
+    "CONFLICT"
+  ],
+  "examples": [
+    {
+      "name": "ok",
+      "params": {
+        "orderId": "01JC8Z5V3Q000000000000RD84"
+      },
+      "result": {
+        "orderId": "01JC8Z5V3Q000000000000RD84",
+        "accountId": "01JC8Z5V3Q000000000000J9Y1",
+        "instrument": {
+          "instrumentId": "us:ZZCL",
+          "market": "us",
+          "symbol": "ZZCL",
+          "name": "Zhongzhi Cloud Ltd.",
+          "nameZh": "众智云",
+          "exchange": "NASDAQ",
+          "currency": "USD",
+          "isActive": true
+        },
+        "side": "buy",
+        "quantity": 100,
+        "orderType": "market_open",
+        "status": "cancelled",
+        "rejectReason": null,
+        "createdClockDate": "2026-10-14",
+        "reservedCash": null,
+        "idempotencyKey": "idem-004",
+        "fills": [],
+        "estimate": {
+          "price": "28.414200",
+          "amount": "2841.4200",
+          "fee": "0.0000"
+        }
+      }
+    }
+  ]
+}

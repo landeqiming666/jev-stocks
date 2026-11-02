@@ -1,0 +1,336 @@
+{
+  "method": "decision.get",
+  "summary": "读取判定与证据详情",
+  "owner": "P-03",
+  "phase": "mvp0",
+  "timeoutMs": 30000,
+  "params": {
+    "type": "object",
+    "required": [
+      "decisionId"
+    ],
+    "properties": {
+      "decisionId": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "additionalProperties": false
+  },
+  "result": {
+    "$ref": "types.schema.json#/$defs/DecisionDetail"
+  },
+  "errors": [
+    "NOT_FOUND"
+  ],
+  "examples": [
+    {
+      "name": "overturn",
+      "params": {
+        "decisionId": "01JC8Z5V3Q00000000000094Z1"
+      },
+      "result": {
+        "decisionId": "01JC8Z5V3Q00000000000094Z1",
+        "thesisId": "01JC8Z5V3Q00000000000063A1",
+        "thesisVersion": 2,
+        "thesisCurrentVersion": 2,
+        "instrument": {
+          "instrumentId": "us:ZZAR",
+          "market": "us",
+          "symbol": "ZZAR",
+          "name": "Zenith Arc Robotics Inc.",
+          "nameZh": "天顶弧机器人",
+          "exchange": "NASDAQ",
+          "currency": "USD",
+          "isActive": true
+        },
+        "thesisStatement": "控股股东长期持股，不会大幅减持",
+        "killCondition": "控股股东减持超过 2%",
+        "relation": "overturn",
+        "headline": 0.93,
+        "probabilities": {
+          "relevant": 0.97,
+          "against": 0.89,
+          "contradicts": 0.84,
+          "killMet": 0.93,
+          "supports": 0.03
+        },
+        "engine": "jev_direct",
+        "modelId": "jev-1.14.0",
+        "questionSetVersion": "qs-2026-11-02.1",
+        "event": {
+          "eventId": "us:0009990001-26-000001",
+          "instrumentId": "us:ZZAR",
+          "title": "8-K: Other Events — Notice of proposed sale by controlling stockholder",
+          "formType": "8-K",
+          "publishedAt": "2026-10-30T20:12:00Z",
+          "url": "https://www.sec.gov/Archives/edgar/data/9990001/000999000126000001/zzar-8k.htm"
+        },
+        "evidence": {
+          "kind": "sentence",
+          "text": "On October 29, 2026, Zenith Arc Robotics Inc. (the \"Company\") was notified by Atlas Holdings LP, its controlling stockholder, that Atlas intends to sell up to 4.5% of the Company's outstanding common stock in a registered secondary offering during the next sixty days.",
+          "passageText": "Item 8.01 Other Events. On October 29, 2026, Zenith Arc Robotics Inc. (the \"Company\") was notified by Atlas Holdings LP, its controlling stockholder, that Atlas intends to sell up to 4.5% of the Company's outstanding common stock in a registered secondary offering during the next sixty days. Following the proposed sale, Atlas would continue to hold approximately 31.0% of the outstanding common stock. The Company will not receive any proceeds from the sale.",
+          "sentenceStart": 24,
+          "sentenceEnd": 292,
+          "filePart": "主文档"
+        },
+        "contentStatus": "full_text",
+        "createdAt": "2026-11-02T00:31:12Z",
+        "action": null,
+        "actions": [],
+        "thesisIsLatest": true
+      }
+    },
+    {
+      "name": "weaken",
+      "params": {
+        "decisionId": "01JC8Z5V3Q00000000000094Z3"
+      },
+      "result": {
+        "decisionId": "01JC8Z5V3Q00000000000094Z3",
+        "thesisId": "01JC8Z5V3Q00000000000063A2",
+        "thesisVersion": 1,
+        "thesisCurrentVersion": 1,
+        "instrument": {
+          "instrumentId": "us:ZZAR",
+          "market": "us",
+          "symbol": "ZZAR",
+          "name": "Zenith Arc Robotics Inc.",
+          "nameZh": "天顶弧机器人",
+          "exchange": "NASDAQ",
+          "currency": "USD",
+          "isActive": true
+        },
+        "thesisStatement": "Management keeps R&D spending above 15% of revenue",
+        "killCondition": null,
+        "relation": "weaken",
+        "headline": 0.74,
+        "probabilities": {
+          "relevant": 0.95,
+          "against": 0.74,
+          "contradicts": 0.41,
+          "killMet": null,
+          "supports": 0.06
+        },
+        "engine": "jev_direct",
+        "modelId": "jev-1.14.0",
+        "questionSetVersion": "qs-2026-11-02.1",
+        "event": {
+          "eventId": "us:0009990001-26-000003",
+          "instrumentId": "us:ZZAR",
+          "title": "8-K: Results of Operations — Third Quarter 2026",
+          "formType": "8-K",
+          "publishedAt": "2026-10-29T20:05:00Z",
+          "url": "https://www.sec.gov/Archives/edgar/data/9990001/000999000126000003/zzar-ex991.htm"
+        },
+        "evidence": {
+          "kind": "sentence",
+          "text": "Research and development expenses were $28.8 million, or 13.4% of revenue, compared with $31.9 million, or 16.1% of revenue, in the prior-year quarter.",
+          "passageText": "Zenith Arc Robotics reported third quarter revenue of $214.6 million, up 9% from a year earlier. Research and development expenses were $28.8 million, or 13.4% of revenue, compared with $31.9 million, or 16.1% of revenue, in the prior-year quarter. The Company said it is prioritizing near-term profitability and has paused two early-stage programs.",
+          "sentenceStart": 97,
+          "sentenceEnd": 248,
+          "filePart": "EX-99.1"
+        },
+        "contentStatus": "full_text",
+        "createdAt": "2026-11-02T00:31:12Z",
+        "action": null,
+        "actions": [],
+        "thesisIsLatest": true
+      }
+    },
+    {
+      "name": "uncertain",
+      "params": {
+        "decisionId": "01JC8Z5V3Q00000000000094Z4"
+      },
+      "result": {
+        "decisionId": "01JC8Z5V3Q00000000000094Z4",
+        "thesisId": "01JC8Z5V3Q00000000000063A3",
+        "thesisVersion": 1,
+        "thesisCurrentVersion": 1,
+        "instrument": {
+          "instrumentId": "us:ZZFD",
+          "market": "us",
+          "symbol": "ZZFD",
+          "name": "Zephyr Foods Corp.",
+          "nameZh": "和风食品",
+          "exchange": "NYSE",
+          "currency": "USD",
+          "isActive": true
+        },
+        "thesisStatement": "公司持续回购股票并维持分红",
+        "killCondition": "暂停回购或削减分红",
+        "relation": "uncertain",
+        "headline": 0.55,
+        "probabilities": {
+          "relevant": 0.93,
+          "against": 0.55,
+          "contradicts": 0.22,
+          "killMet": 0.31,
+          "supports": 0.18
+        },
+        "engine": "jev_direct",
+        "modelId": "jev-1.14.0",
+        "questionSetVersion": "qs-2026-11-02.1",
+        "event": {
+          "eventId": "us:0009990001-26-000004",
+          "instrumentId": "us:ZZFD",
+          "title": "8-K: Quarterly dividend and share repurchase update",
+          "formType": "8-K",
+          "publishedAt": "2026-10-29T13:02:00Z",
+          "url": "https://www.sec.gov/Archives/edgar/data/9990001/000999000126000004/zzfd-8k.htm"
+        },
+        "evidence": {
+          "kind": "passage",
+          "text": "The Board of Directors of Zephyr Foods Corp. declared a quarterly cash dividend of $0.20 per share, unchanged from the prior quarter, payable on December 15, 2026 to stockholders of record on November 30, 2026. During the quarter the Company repurchased 0.4 million shares, compared with 1.1 million shares in the prior quarter. The Company said the pace of repurchases may vary with market conditions.",
+          "passageText": "The Board of Directors of Zephyr Foods Corp. declared a quarterly cash dividend of $0.20 per share, unchanged from the prior quarter, payable on December 15, 2026 to stockholders of record on November 30, 2026. During the quarter the Company repurchased 0.4 million shares, compared with 1.1 million shares in the prior quarter. The Company said the pace of repurchases may vary with market conditions.",
+          "sentenceStart": null,
+          "sentenceEnd": null,
+          "filePart": "主文档"
+        },
+        "contentStatus": "full_text",
+        "createdAt": "2026-11-02T00:31:12Z",
+        "action": null,
+        "actions": [],
+        "thesisIsLatest": true
+      }
+    },
+    {
+      "name": "title_only",
+      "params": {
+        "decisionId": "01JC8Z5V3Q00000000000094Z5"
+      },
+      "result": {
+        "decisionId": "01JC8Z5V3Q00000000000094Z5",
+        "thesisId": "01JC8Z5V3Q00000000000063A4",
+        "thesisVersion": 1,
+        "thesisCurrentVersion": 2,
+        "instrument": {
+          "instrumentId": "us:ZZCL",
+          "market": "us",
+          "symbol": "ZZCL",
+          "name": "Zhongzhi Cloud Ltd.",
+          "nameZh": "众智云",
+          "exchange": "NASDAQ",
+          "currency": "USD",
+          "isActive": true
+        },
+        "thesisStatement": "云业务收入保持两位数增长",
+        "killCondition": "云业务收入同比增速低于 10%",
+        "relation": "uncertain",
+        "headline": 0.42,
+        "probabilities": {
+          "relevant": 0.58,
+          "against": 0.42,
+          "contradicts": 0.2,
+          "killMet": 0.35,
+          "supports": 0.1
+        },
+        "engine": "jev_direct",
+        "modelId": "jev-1.14.0",
+        "questionSetVersion": "qs-2026-11-02.1",
+        "event": {
+          "eventId": "us:0009990001-26-000006",
+          "instrumentId": "us:ZZCL",
+          "title": "6-K: Notice of Extraordinary General Meeting",
+          "formType": "6-K",
+          "publishedAt": "2026-10-28T09:45:00Z",
+          "url": "https://www.sec.gov/Archives/edgar/data/9990001/000999000126000006/zzcl-6k.htm"
+        },
+        "evidence": {
+          "kind": "title",
+          "text": "6-K: Notice of Extraordinary General Meeting",
+          "passageText": "6-K: Notice of Extraordinary General Meeting",
+          "sentenceStart": null,
+          "sentenceEnd": null,
+          "filePart": "标题"
+        },
+        "contentStatus": "title_only",
+        "createdAt": "2026-11-02T00:31:12Z",
+        "action": null,
+        "actions": [],
+        "thesisIsLatest": true
+      }
+    },
+    {
+      "name": "processed",
+      "params": {
+        "decisionId": "01JC8Z5V3Q00000000000094Z6"
+      },
+      "result": {
+        "decisionId": "01JC8Z5V3Q00000000000094Z6",
+        "thesisId": "01JC8Z5V3Q00000000000063A5",
+        "thesisVersion": 1,
+        "thesisCurrentVersion": 1,
+        "instrument": {
+          "instrumentId": "us:ZZBK",
+          "market": "us",
+          "symbol": "ZZBK",
+          "name": "Zinc Bay Bancorp",
+          "nameZh": "锌湾银行",
+          "exchange": "NASDAQ",
+          "currency": "USD",
+          "isActive": true
+        },
+        "thesisStatement": "存款成本保持稳定，净息差不收窄",
+        "killCondition": null,
+        "relation": "weaken",
+        "headline": 0.72,
+        "probabilities": {
+          "relevant": 0.96,
+          "against": 0.72,
+          "contradicts": 0.3,
+          "killMet": null,
+          "supports": 0.08
+        },
+        "engine": "jev_direct",
+        "modelId": "jev-1.14.0",
+        "questionSetVersion": "qs-2026-11-02.1",
+        "event": {
+          "eventId": "us:0009990001-26-000005",
+          "instrumentId": "us:ZZBK",
+          "title": "8-K: Third quarter 2026 net interest margin",
+          "formType": "8-K",
+          "publishedAt": "2026-10-27T21:15:00Z",
+          "url": "https://www.sec.gov/Archives/edgar/data/9990001/000999000126000005/zzbk-ex991.htm"
+        },
+        "evidence": {
+          "kind": "sentence",
+          "text": "Zinc Bay Bancorp announced that its net interest margin was 3.12% for the third quarter, compared with 3.15% in the second quarter.",
+          "passageText": "Zinc Bay Bancorp announced that its net interest margin was 3.12% for the third quarter, compared with 3.15% in the second quarter. The average cost of deposits was unchanged at 1.84%. Management said it expects the margin to stabilize in the fourth quarter.",
+          "sentenceStart": 0,
+          "sentenceEnd": 131,
+          "filePart": "EX-99.1"
+        },
+        "contentStatus": "full_text",
+        "createdAt": "2026-10-28T00:20:00Z",
+        "action": {
+          "action": "still_valid",
+          "note": "只收窄了 3 个基点，管理层预计稳定",
+          "actedAt": "2026-10-28T02:40:00Z"
+        },
+        "actions": [
+          {
+            "action": "still_valid",
+            "note": "只收窄了 3 个基点，管理层预计稳定",
+            "actedAt": "2026-10-28T02:40:00Z"
+          }
+        ],
+        "thesisIsLatest": true
+      }
+    },
+    {
+      "name": "not_found",
+      "params": {
+        "decisionId": "01JC8Z5V3QZZZZZZZZZZZZZZZZ"
+      },
+      "error": {
+        "code": "NOT_FOUND",
+        "message": "没有找到这条判定",
+        "data": {
+          "retryable": false
+        }
+      }
+    }
+  ]
+}

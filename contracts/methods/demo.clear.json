@@ -1,0 +1,36 @@
+{
+  "method": "demo.clear",
+  "summary": "清除演示数据",
+  "owner": "E-01",
+  "phase": "mvp0",
+  "timeoutMs": 30000,
+  "params": {
+    "type": "object",
+    "required": [],
+    "properties": {},
+    "additionalProperties": false
+  },
+  "result": {
+    "type": "object",
+    "required": [
+      "ok"
+    ],
+    "properties": {
+      "ok": {
+        "type": "boolean",
+        "const": true
+      }
+    },
+    "additionalProperties": false
+  },
+  "errors": [],
+  "examples": [
+    {
+      "name": "ok",
+      "params": {},
+      "result": {
+        "ok": true
+      }
+    }
+  ]
+}

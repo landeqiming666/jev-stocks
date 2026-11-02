@@ -1,0 +1,145 @@
+{
+  "method": "scan.start",
+  "summary": "启动异步扫描",
+  "owner": "P-02",
+  "phase": "mvp0",
+  "timeoutMs": 30000,
+  "params": {
+    "type": "object",
+    "required": [
+      "market"
+    ],
+    "properties": {
+      "market": {
+        "type": "string",
+        "enum": [
+          "us"
+        ]
+      },
+      "from": {
+        "$ref": "types.schema.json#/$defs/IsoTime"
+      }
+    },
+    "additionalProperties": false
+  },
+  "result": {
+    "type": "object",
+    "required": [
+      "runId"
+    ],
+    "properties": {
+      "runId": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "additionalProperties": false
+  },
+  "errors": [
+    "INVALID_ARGUMENT",
+    "CONFIG_REQUIRED",
+    "CONFLICT",
+    "BUDGET_EXCEEDED",
+    "RATE_LIMITED",
+    "UNAUTHENTICATED",
+    "ENGINE_UNAVAILABLE"
+  ],
+  "examples": [
+    {
+      "name": "ok",
+      "params": {
+        "market": "us"
+      },
+      "result": {
+        "runId": "01JC8Z5V3Q000000000000C6M5"
+      }
+    },
+    {
+      "name": "config_required",
+      "params": {
+        "market": "us"
+      },
+      "error": {
+        "code": "CONFIG_REQUIRED",
+        "message": "请先填写 Jev 密钥和 SEC 联系邮箱",
+        "data": {
+          "retryable": false,
+          "missing": [
+            "jevKey",
+            "secEmail"
+          ]
+        }
+      }
+    },
+    {
+      "name": "conflict",
+      "params": {
+        "market": "us"
+      },
+      "error": {
+        "code": "CONFLICT",
+        "message": "扫描正在进行",
+        "data": {
+          "retryable": false
+        }
+      }
+    },
+    {
+      "name": "budget",
+      "params": {
+        "market": "us"
+      },
+      "error": {
+        "code": "BUDGET_EXCEEDED",
+        "message": "今日预算已用完（2,000,000 / 2,000,000 tokens），明天 08:00 后可继续",
+        "data": {
+          "retryable": false,
+          "usedTokens": 2000000,
+          "limitTokens": 2000000
+        }
+      }
+    },
+    {
+      "name": "rate_limited",
+      "params": {
+        "market": "us"
+      },
+      "error": {
+        "code": "RATE_LIMITED",
+        "message": "请求过于频繁，约 20 秒后重试",
+        "data": {
+          "retryable": true,
+          "retryAfterSec": 20,
+          "source": "SEC EDGAR"
+        }
+      }
+    },
+    {
+      "name": "unauthenticated",
+      "params": {
+        "market": "us"
+      },
+      "error": {
+        "code": "UNAUTHENTICATED",
+        "message": "Jev 密钥无效（401）。请重新填写 Jev 密钥。",
+        "data": {
+          "retryable": false
+        }
+      }
+    },
+    {
+      "name": "engine_unavailable",
+      "params": {
+        "market": "us"
+      },
+      "error": {
+        "code": "ENGINE_UNAVAILABLE",
+        "message": "JEVDB 扩展无法加载。请在设置里把引擎改为“自动”或“Jev 直连”。",
+        "data": {
+          "retryable": false,
+          "engine": "jevdb"
+        }
+      }
+    }
+  ]
+}

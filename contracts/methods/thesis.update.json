@@ -1,0 +1,96 @@
+{
+  "method": "thesis.update",
+  "summary": "按版本更新投资逻辑",
+  "owner": "P-01",
+  "phase": "mvp0",
+  "timeoutMs": 30000,
+  "params": {
+    "type": "object",
+    "required": [
+      "thesisId",
+      "statement",
+      "expectedVersion"
+    ],
+    "properties": {
+      "thesisId": {
+        "type": "string",
+        "minLength": 1
+      },
+      "statement": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 500,
+        "pattern": "\\S"
+      },
+      "killCondition": {
+        "anyOf": [
+          {
+            "type": "string",
+            "maxLength": 300
+          },
+          {
+            "type": "null"
+          }
+        ]
+      },
+      "expectedVersion": {
+        "type": "integer",
+        "minimum": 1
+      }
+    },
+    "additionalProperties": false
+  },
+  "result": {
+    "$ref": "types.schema.json#/$defs/Thesis"
+  },
+  "errors": [
+    "INVALID_ARGUMENT",
+    "NOT_FOUND",
+    "CONFLICT"
+  ],
+  "examples": [
+    {
+      "name": "ok",
+      "params": {
+        "thesisId": "01JC8Z5V3Q00000000000063A1",
+        "statement": "控股股东长期持股，不会大幅减持或质押股份",
+        "killCondition": "控股股东减持超过 2%",
+        "expectedVersion": 2
+      },
+      "result": {
+        "thesisId": "01JC8Z5V3Q00000000000063A1",
+        "instrumentId": "us:ZZAR",
+        "version": 3,
+        "statement": "控股股东长期持股，不会大幅减持或质押股份",
+        "killCondition": "控股股东减持超过 2%",
+        "status": "active",
+        "createdAt": "2026-09-02T02:10:00Z",
+        "updatedAt": "2026-11-02T00:35:00Z",
+        "versionCount": 3,
+        "lastDecision": {
+          "decisionId": "01JC8Z5V3Q00000000000094Z1",
+          "relation": "overturn",
+          "headline": 0.93,
+          "createdAt": "2026-11-02T00:31:12Z",
+          "eventTitle": "8-K: Other Events — Notice of proposed sale by controlling stockholder"
+        }
+      }
+    },
+    {
+      "name": "conflict",
+      "params": {
+        "thesisId": "01JC8Z5V3Q00000000000063A1",
+        "statement": "x",
+        "expectedVersion": 1
+      },
+      "error": {
+        "code": "CONFLICT",
+        "message": "这条逻辑已被修改，请刷新后再试",
+        "data": {
+          "retryable": false,
+          "currentVersion": 2
+        }
+      }
+    }
+  ]
+}

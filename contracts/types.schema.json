@@ -1,0 +1,3468 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$defs": {
+    "Decimal": {
+      "type": "string",
+      "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$"
+    },
+    "IsoTime": {
+      "type": "string",
+      "pattern": "^[0-9]{4}-(?:0[1-9]|1[0-2])-(?:0[1-9]|[12][0-9]|3[01])T(?:[01][0-9]|2[0-3]):[0-5][0-9]:[0-5][0-9](?:\\.[0-9]+)?Z$",
+      "format": "date-time"
+    },
+    "IsoDate": {
+      "type": "string",
+      "pattern": "^[0-9]{4}-(?:0[1-9]|1[0-2])-(?:0[1-9]|[12][0-9]|3[01])$",
+      "format": "date"
+    },
+    "Market": {
+      "type": "string",
+      "enum": [
+        "us",
+        "cn",
+        "hk"
+      ]
+    },
+    "Relation": {
+      "type": "string",
+      "enum": [
+        "none",
+        "support",
+        "weaken",
+        "overturn",
+        "uncertain"
+      ]
+    },
+    "Engine": {
+      "type": "string",
+      "enum": [
+        "jevdb",
+        "jev_direct"
+      ]
+    },
+    "EngineChoice": {
+      "type": "string",
+      "enum": [
+        "auto",
+        "jevdb",
+        "jev_direct"
+      ]
+    },
+    "ActionType": {
+      "type": "string",
+      "enum": [
+        "still_valid",
+        "revise",
+        "exit_intent",
+        "ignore"
+      ]
+    },
+    "Instrument": {
+      "type": "object",
+      "required": [
+        "instrumentId",
+        "market",
+        "symbol",
+        "name",
+        "nameZh",
+        "exchange",
+        "currency",
+        "isActive"
+      ],
+      "properties": {
+        "instrumentId": {
+          "type": "string",
+          "minLength": 1
+        },
+        "market": {
+          "$ref": "types.schema.json#/$defs/Market"
+        },
+        "symbol": {
+          "type": "string",
+          "minLength": 1
+        },
+        "name": {
+          "type": "string"
+        },
+        "nameZh": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "exchange": {
+          "type": "string"
+        },
+        "currency": {
+          "type": "string",
+          "enum": [
+            "USD",
+            "CNY",
+            "HKD"
+          ]
+        },
+        "isActive": {
+          "type": "boolean"
+        }
+      },
+      "additionalProperties": false
+    },
+    "Holding": {
+      "type": "object",
+      "required": [
+        "holdingId",
+        "instrument",
+        "quantity",
+        "avgCost",
+        "note",
+        "lastClose",
+        "lastCloseDate",
+        "dayChangePct",
+        "marketValue",
+        "thesisCount",
+        "pendingCount",
+        "uncertainCount",
+        "status"
+      ],
+      "properties": {
+        "holdingId": {
+          "type": "string",
+          "minLength": 1
+        },
+        "instrument": {
+          "$ref": "types.schema.json#/$defs/Instrument"
+        },
+        "quantity": {
+          "type": "string",
+          "pattern": "^(?:0|[1-9][0-9]{0,13})\\.[0-9]{4}$"
+        },
+        "avgCost": {
+          "anyOf": [
+            {
+              "type": "string",
+              "pattern": "^(?:0|[1-9][0-9]{0,13})\\.[0-9]{4}$"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "note": {
+          "anyOf": [
+            {
+              "type": "string",
+              "maxLength": 200
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "lastClose": {
+          "anyOf": [
+            {
+              "type": "number",
+              "minimum": 0
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "lastCloseDate": {
+          "anyOf": [
+            {
+              "$ref": "types.schema.json#/$defs/IsoDate"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "dayChangePct": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "marketValue": {
+          "anyOf": [
+            {
+              "type": "string",
+              "pattern": "^(?:0|[1-9][0-9]{0,13})\\.[0-9]{4}$"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "thesisCount": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "pendingCount": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "uncertainCount": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "guarded",
+            "attention",
+            "unguarded"
+          ]
+        }
+      },
+      "additionalProperties": false
+    },
+    "Thesis": {
+      "type": "object",
+      "required": [
+        "thesisId",
+        "instrumentId",
+        "version",
+        "versionCount",
+        "statement",
+        "killCondition",
+        "status",
+        "createdAt",
+        "updatedAt",
+        "lastDecision"
+      ],
+      "properties": {
+        "thesisId": {
+          "type": "string",
+          "minLength": 1
+        },
+        "instrumentId": {
+          "type": "string",
+          "minLength": 1
+        },
+        "version": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "versionCount": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "statement": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 500,
+          "pattern": "\\S"
+        },
+        "killCondition": {
+          "anyOf": [
+            {
+              "type": "string",
+              "maxLength": 300
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "active",
+            "archived"
+          ]
+        },
+        "createdAt": {
+          "$ref": "types.schema.json#/$defs/IsoTime"
+        },
+        "updatedAt": {
+          "$ref": "types.schema.json#/$defs/IsoTime"
+        },
+        "lastDecision": {
+          "anyOf": [
+            {
+              "type": "object",
+              "required": [
+                "decisionId",
+                "relation",
+                "headline",
+                "createdAt",
+                "eventTitle"
+              ],
+              "properties": {
+                "decisionId": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "relation": {
+                  "$ref": "types.schema.json#/$defs/Relation"
+                },
+                "headline": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 1
+                },
+                "createdAt": {
+                  "$ref": "types.schema.json#/$defs/IsoTime"
+                },
+                "eventTitle": {
+                  "type": "string"
+                }
+              },
+              "additionalProperties": false
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "additionalProperties": false
+    },
+    "ThesisVersionItem": {
+      "type": "object",
+      "required": [
+        "version",
+        "statement",
+        "killCondition",
+        "createdAt"
+      ],
+      "properties": {
+        "version": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "statement": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 500,
+          "pattern": "\\S"
+        },
+        "killCondition": {
+          "anyOf": [
+            {
+              "type": "string",
+              "maxLength": 300
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "createdAt": {
+          "$ref": "types.schema.json#/$defs/IsoTime"
+        }
+      },
+      "additionalProperties": false
+    },
+    "Probabilities": {
+      "type": "object",
+      "required": [
+        "relevant",
+        "against",
+        "contradicts",
+        "killMet",
+        "supports"
+      ],
+      "properties": {
+        "relevant": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "against": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "contradicts": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "killMet": {
+          "anyOf": [
+            {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "supports": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        }
+      },
+      "additionalProperties": false
+    },
+    "EventRef": {
+      "type": "object",
+      "required": [
+        "eventId",
+        "instrumentId",
+        "title",
+        "formType",
+        "publishedAt",
+        "url"
+      ],
+      "properties": {
+        "eventId": {
+          "type": "string",
+          "minLength": 1
+        },
+        "instrumentId": {
+          "type": "string",
+          "minLength": 1
+        },
+        "title": {
+          "type": "string"
+        },
+        "formType": {
+          "type": "string",
+          "enum": [
+            "8-K",
+            "8-K/A",
+            "6-K"
+          ]
+        },
+        "publishedAt": {
+          "$ref": "types.schema.json#/$defs/IsoTime"
+        },
+        "url": {
+          "type": "string",
+          "pattern": "^https://[^/\\s?#]+(?:[/\\?#][^\\s]*)?$"
+        }
+      },
+      "additionalProperties": false
+    },
+    "Evidence": {
+      "type": "object",
+      "required": [
+        "kind",
+        "text",
+        "passageText",
+        "sentenceStart",
+        "sentenceEnd",
+        "filePart"
+      ],
+      "properties": {
+        "kind": {
+          "type": "string",
+          "enum": [
+            "sentence",
+            "passage",
+            "title"
+          ]
+        },
+        "text": {
+          "type": "string"
+        },
+        "passageText": {
+          "type": "string"
+        },
+        "sentenceStart": {
+          "anyOf": [
+            {
+              "type": "integer",
+              "minimum": 0
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "sentenceEnd": {
+          "anyOf": [
+            {
+              "type": "integer",
+              "minimum": 0
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "filePart": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false
+    },
+    "ActionRecord": {
+      "type": "object",
+      "required": [
+        "action",
+        "note",
+        "actedAt"
+      ],
+      "properties": {
+        "action": {
+          "type": "string",
+          "enum": [
+            "still_valid",
+            "revise",
+            "exit_intent",
+            "ignore",
+            "reopen"
+          ]
+        },
+        "note": {
+          "anyOf": [
+            {
+              "type": "string",
+              "maxLength": 200
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "actedAt": {
+          "$ref": "types.schema.json#/$defs/IsoTime"
+        }
+      },
+      "additionalProperties": false
+    },
+    "DataStatus": {
+      "type": "object",
+      "required": [
+        "market",
+        "marketState",
+        "nextOpenAt",
+        "source",
+        "engine",
+        "budget",
+        "offline"
+      ],
+      "properties": {
+        "market": {
+          "$ref": "types.schema.json#/$defs/Market"
+        },
+        "marketState": {
+          "type": "string",
+          "enum": [
+            "open",
+            "pre",
+            "after",
+            "closed",
+            "holiday"
+          ]
+        },
+        "nextOpenAt": {
+          "anyOf": [
+            {
+              "$ref": "types.schema.json#/$defs/IsoTime"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "source": {
+          "type": "object",
+          "required": [
+            "name",
+            "state",
+            "lastSuccessAt",
+            "message"
+          ],
+          "properties": {
+            "name": {
+              "type": "string"
+            },
+            "state": {
+              "type": "string",
+              "enum": [
+                "ok",
+                "degraded",
+                "down"
+              ]
+            },
+            "lastSuccessAt": {
+              "anyOf": [
+                {
+                  "$ref": "types.schema.json#/$defs/IsoTime"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "message": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          },
+          "additionalProperties": false
+        },
+        "engine": {
+          "type": "object",
+          "required": [
+            "active",
+            "modelId",
+            "state"
+          ],
+          "properties": {
+            "active": {
+              "anyOf": [
+                {
+                  "$ref": "types.schema.json#/$defs/Engine"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "modelId": {
+              "type": "string"
+            },
+            "state": {
+              "type": "string",
+              "enum": [
+                "ok",
+                "degraded",
+                "unconfigured"
+              ]
+            }
+          },
+          "additionalProperties": false
+        },
+        "budget": {
+          "type": "object",
+          "required": [
+            "usedTokens",
+            "limitTokens",
+            "resetAt"
+          ],
+          "properties": {
+            "usedTokens": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "limitTokens": {
+              "type": "integer",
+              "minimum": 10000,
+              "maximum": 50000000
+            },
+            "resetAt": {
+              "$ref": "types.schema.json#/$defs/IsoTime"
+            }
+          },
+          "additionalProperties": false
+        },
+        "offline": {
+          "type": "boolean"
+        }
+      },
+      "additionalProperties": false
+    },
+    "ScanStatus": {
+      "type": "string",
+      "enum": [
+        "queued",
+        "running",
+        "succeeded",
+        "partial",
+        "failed",
+        "cancelled",
+        "interrupted"
+      ]
+    },
+    "ScanRun": {
+      "type": "object",
+      "required": [
+        "runId",
+        "trigger",
+        "market",
+        "status",
+        "windowStart",
+        "windowEnd",
+        "stats",
+        "engine",
+        "modelId",
+        "startedAt",
+        "finishedAt",
+        "error",
+        "batchSummary"
+      ],
+      "properties": {
+        "runId": {
+          "type": "string",
+          "minLength": 1
+        },
+        "trigger": {
+          "type": "string",
+          "enum": [
+            "manual",
+            "schedule"
+          ]
+        },
+        "market": {
+          "$ref": "types.schema.json#/$defs/Market"
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "queued",
+            "running",
+            "succeeded",
+            "partial",
+            "failed",
+            "cancelled",
+            "interrupted"
+          ]
+        },
+        "windowStart": {
+          "$ref": "types.schema.json#/$defs/IsoTime"
+        },
+        "windowEnd": {
+          "$ref": "types.schema.json#/$defs/IsoTime"
+        },
+        "stats": {
+          "type": "object",
+          "required": [
+            "instruments",
+            "skippedNoThesis",
+            "filings",
+            "passages",
+            "decisions",
+            "cachedDecisions",
+            "requests",
+            "inputTokens",
+            "estCostUsd",
+            "durationMs"
+          ],
+          "properties": {
+            "instruments": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "skippedNoThesis": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "filings": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "passages": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "decisions": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "cachedDecisions": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "requests": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "inputTokens": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "estCostUsd": {
+              "$ref": "types.schema.json#/$defs/Decimal"
+            },
+            "durationMs": {
+              "type": "integer",
+              "minimum": 0
+            }
+          },
+          "additionalProperties": false
+        },
+        "engine": {
+          "$ref": "types.schema.json#/$defs/Engine"
+        },
+        "modelId": {
+          "type": "string"
+        },
+        "startedAt": {
+          "anyOf": [
+            {
+              "$ref": "types.schema.json#/$defs/IsoTime"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "finishedAt": {
+          "anyOf": [
+            {
+              "$ref": "types.schema.json#/$defs/IsoTime"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "error": {
+          "anyOf": [
+            {
+              "type": "object",
+              "required": [
+                "code",
+                "message"
+              ],
+              "properties": {
+                "code": {
+                  "type": "string"
+                },
+                "message": {
+                  "type": "string"
+                }
+              },
+              "additionalProperties": false
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "batchSummary": {
+          "type": "object",
+          "required": [
+            "total",
+            "succeeded",
+            "failed",
+            "pending"
+          ],
+          "properties": {
+            "total": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "succeeded": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "failed": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "pending": {
+              "type": "integer",
+              "minimum": 0
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    "ScanBatch": {
+      "type": "object",
+      "required": [
+        "batchId",
+        "runId",
+        "instrumentId",
+        "eventId",
+        "eventTitle",
+        "status",
+        "attempts",
+        "error",
+        "passages",
+        "decisions",
+        "inputTokens"
+      ],
+      "properties": {
+        "batchId": {
+          "type": "string",
+          "minLength": 1
+        },
+        "runId": {
+          "type": "string",
+          "minLength": 1
+        },
+        "instrumentId": {
+          "type": "string",
+          "minLength": 1
+        },
+        "eventId": {
+          "type": "string",
+          "minLength": 1
+        },
+        "eventTitle": {
+          "type": "string"
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "pending",
+            "succeeded",
+            "failed",
+            "cancelled"
+          ]
+        },
+        "attempts": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "error": {
+          "anyOf": [
+            {
+              "type": "object",
+              "required": [
+                "code",
+                "message"
+              ],
+              "properties": {
+                "code": {
+                  "type": "string"
+                },
+                "message": {
+                  "type": "string"
+                }
+              },
+              "additionalProperties": false
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "passages": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "decisions": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "inputTokens": {
+          "type": "integer",
+          "minimum": 0
+        }
+      },
+      "additionalProperties": false
+    },
+    "PaperAccount": {
+      "type": "object",
+      "required": [
+        "accountId",
+        "name",
+        "baseCurrency",
+        "initialCash",
+        "startDate",
+        "clockDate",
+        "createdAt"
+      ],
+      "properties": {
+        "accountId": {
+          "type": "string",
+          "minLength": 1
+        },
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 30,
+          "pattern": "\\S"
+        },
+        "baseCurrency": {
+          "type": "string",
+          "enum": [
+            "USD"
+          ]
+        },
+        "initialCash": {
+          "type": "string",
+          "pattern": "^(?:0|[1-9][0-9]{0,13})\\.[0-9]{4}$"
+        },
+        "startDate": {
+          "$ref": "types.schema.json#/$defs/IsoDate"
+        },
+        "clockDate": {
+          "$ref": "types.schema.json#/$defs/IsoDate"
+        },
+        "createdAt": {
+          "$ref": "types.schema.json#/$defs/IsoTime"
+        }
+      },
+      "additionalProperties": false
+    },
+    "Fill": {
+      "type": "object",
+      "required": [
+        "fillId",
+        "filledOn",
+        "price",
+        "quantity",
+        "amount",
+        "fee"
+      ],
+      "properties": {
+        "fillId": {
+          "type": "string",
+          "minLength": 1
+        },
+        "filledOn": {
+          "$ref": "types.schema.json#/$defs/IsoDate"
+        },
+        "price": {
+          "type": "string",
+          "pattern": "^(?:0|[1-9][0-9]{0,11})\\.[0-9]{6}$"
+        },
+        "quantity": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "amount": {
+          "type": "string",
+          "pattern": "^(?:0|[1-9][0-9]{0,13})\\.[0-9]{4}$"
+        },
+        "fee": {
+          "type": "string",
+          "pattern": "^(?:0|[1-9][0-9]{0,13})\\.[0-9]{4}$"
+        }
+      },
+      "additionalProperties": false
+    },
+    "PaperOrder": {
+      "type": "object",
+      "required": [
+        "orderId",
+        "accountId",
+        "instrument",
+        "side",
+        "quantity",
+        "orderType",
+        "status",
+        "rejectReason",
+        "createdClockDate",
+        "reservedCash",
+        "idempotencyKey",
+        "fills",
+        "estimate"
+      ],
+      "properties": {
+        "orderId": {
+          "type": "string",
+          "minLength": 1
+        },
+        "accountId": {
+          "type": "string",
+          "minLength": 1
+        },
+        "instrument": {
+          "$ref": "types.schema.json#/$defs/Instrument"
+        },
+        "side": {
+          "type": "string",
+          "enum": [
+            "buy",
+            "sell"
+          ]
+        },
+        "quantity": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "orderType": {
+          "type": "string",
+          "enum": [
+            "market_open"
+          ]
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "pending",
+            "filled",
+            "rejected",
+            "cancelled"
+          ]
+        },
+        "rejectReason": {
+          "anyOf": [
+            {
+              "type": "object",
+              "required": [
+                "code",
+                "message"
+              ],
+              "properties": {
+                "code": {
+                  "type": "string",
+                  "enum": [
+                    "NO_PRICE",
+                    "INSUFFICIENT_CASH",
+                    "INSUFFICIENT_POSITION",
+                    "NO_PRICE_AT_FILL",
+                    "INSUFFICIENT_CASH_AT_FILL",
+                    "INSUFFICIENT_POSITION_AT_FILL"
+                  ]
+                },
+                "message": {
+                  "type": "string"
+                }
+              },
+              "additionalProperties": false
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "createdClockDate": {
+          "$ref": "types.schema.json#/$defs/IsoDate"
+        },
+        "reservedCash": {
+          "anyOf": [
+            {
+              "type": "string",
+              "pattern": "^(?:0|[1-9][0-9]{0,13})\\.[0-9]{4}$"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "idempotencyKey": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 64
+        },
+        "fills": {
+          "type": "array",
+          "items": {
+            "$ref": "types.schema.json#/$defs/Fill"
+          }
+        },
+        "estimate": {
+          "anyOf": [
+            {
+              "type": "object",
+              "required": [
+                "price",
+                "amount",
+                "fee"
+              ],
+              "properties": {
+                "price": {
+                  "type": "string",
+                  "pattern": "^(?:0|[1-9][0-9]{0,11})\\.[0-9]{6}$"
+                },
+                "amount": {
+                  "type": "string",
+                  "pattern": "^(?:0|[1-9][0-9]{0,13})\\.[0-9]{4}$"
+                },
+                "fee": {
+                  "type": "string",
+                  "pattern": "^(?:0|[1-9][0-9]{0,13})\\.[0-9]{4}$"
+                }
+              },
+              "additionalProperties": false
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "additionalProperties": false
+    },
+    "Position": {
+      "type": "object",
+      "required": [
+        "instrument",
+        "quantity",
+        "sellableQuantity",
+        "avgCost",
+        "lastClose",
+        "marketValue",
+        "unrealizedPnl",
+        "unrealizedPnlPct"
+      ],
+      "properties": {
+        "instrument": {
+          "$ref": "types.schema.json#/$defs/Instrument"
+        },
+        "quantity": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "sellableQuantity": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "avgCost": {
+          "type": "string",
+          "pattern": "^(?:0|[1-9][0-9]{0,11})\\.[0-9]{6}$"
+        },
+        "lastClose": {
+          "type": "number",
+          "minimum": 0
+        },
+        "marketValue": {
+          "type": "string",
+          "pattern": "^(?:0|[1-9][0-9]{0,13})\\.[0-9]{4}$"
+        },
+        "unrealizedPnl": {
+          "type": "string",
+          "pattern": "^-?(?:0|[1-9][0-9]{0,13})\\.[0-9]{4}$"
+        },
+        "unrealizedPnlPct": {
+          "type": "number"
+        }
+      },
+      "additionalProperties": false
+    },
+    "Portfolio": {
+      "type": "object",
+      "required": [
+        "account",
+        "cash",
+        "reservedCash",
+        "availableCash",
+        "positions",
+        "equity",
+        "asOf",
+        "pendingOrders"
+      ],
+      "properties": {
+        "account": {
+          "$ref": "types.schema.json#/$defs/PaperAccount"
+        },
+        "cash": {
+          "type": "string",
+          "pattern": "^-?(?:0|[1-9][0-9]{0,13})\\.[0-9]{4}$"
+        },
+        "reservedCash": {
+          "type": "string",
+          "pattern": "^(?:0|[1-9][0-9]{0,13})\\.[0-9]{4}$"
+        },
+        "availableCash": {
+          "type": "string",
+          "pattern": "^-?(?:0|[1-9][0-9]{0,13})\\.[0-9]{4}$"
+        },
+        "positions": {
+          "type": "array",
+          "items": {
+            "$ref": "types.schema.json#/$defs/Position"
+          }
+        },
+        "equity": {
+          "type": "string",
+          "pattern": "^-?(?:0|[1-9][0-9]{0,13})\\.[0-9]{4}$"
+        },
+        "asOf": {
+          "$ref": "types.schema.json#/$defs/IsoDate"
+        },
+        "pendingOrders": {
+          "type": "integer",
+          "minimum": 0
+        }
+      },
+      "additionalProperties": false
+    },
+    "RiskResult": {
+      "type": "object",
+      "required": [
+        "asOf",
+        "window",
+        "currency",
+        "annualizedVol",
+        "maxDrawdown",
+        "effectiveHoldings",
+        "topWeights",
+        "correlation",
+        "svd",
+        "conditionNumberRaw",
+        "conditionNumberShrunk",
+        "warnings",
+        "excluded"
+      ],
+      "properties": {
+        "asOf": {
+          "$ref": "types.schema.json#/$defs/IsoDate"
+        },
+        "window": {
+          "type": "object",
+          "required": [
+            "label",
+            "from",
+            "to",
+            "observations"
+          ],
+          "properties": {
+            "label": {
+              "type": "string",
+              "enum": [
+                "6M",
+                "1Y",
+                "3Y"
+              ]
+            },
+            "from": {
+              "$ref": "types.schema.json#/$defs/IsoDate"
+            },
+            "to": {
+              "$ref": "types.schema.json#/$defs/IsoDate"
+            },
+            "observations": {
+              "type": "integer",
+              "minimum": 60
+            }
+          },
+          "additionalProperties": false
+        },
+        "currency": {
+          "type": "string",
+          "enum": [
+            "USD"
+          ]
+        },
+        "annualizedVol": {
+          "type": "number",
+          "minimum": 0
+        },
+        "maxDrawdown": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "effectiveHoldings": {
+          "type": "number",
+          "minimum": 1
+        },
+        "topWeights": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "instrumentId",
+              "symbol",
+              "weight"
+            ],
+            "properties": {
+              "instrumentId": {
+                "type": "string",
+                "minLength": 1
+              },
+              "symbol": {
+                "type": "string"
+              },
+              "weight": {
+                "type": "number",
+                "minimum": 0,
+                "maximum": 1
+              }
+            },
+            "additionalProperties": false
+          },
+          "maxItems": 3
+        },
+        "correlation": {
+          "type": "object",
+          "required": [
+            "instrumentIds",
+            "symbols",
+            "matrix"
+          ],
+          "properties": {
+            "instrumentIds": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1
+              }
+            },
+            "symbols": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "matrix": {
+              "type": "array",
+              "items": {
+                "type": "array",
+                "items": {
+                  "anyOf": [
+                    {
+                      "type": "number",
+                      "minimum": -1,
+                      "maximum": 1
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "additionalProperties": false
+        },
+        "svd": {
+          "type": "object",
+          "required": [
+            "explained",
+            "loadings"
+          ],
+          "properties": {
+            "explained": {
+              "type": "array",
+              "items": {
+                "type": "number",
+                "minimum": 0,
+                "maximum": 1
+              },
+              "maxItems": 5
+            },
+            "loadings": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "required": [
+                  "symbol",
+                  "value"
+                ],
+                "properties": {
+                  "symbol": {
+                    "type": "string"
+                  },
+                  "value": {
+                    "type": "number",
+                    "minimum": -1,
+                    "maximum": 1
+                  }
+                },
+                "additionalProperties": false
+              },
+              "maxItems": 5
+            }
+          },
+          "additionalProperties": false
+        },
+        "conditionNumberRaw": {
+          "anyOf": [
+            {
+              "type": "number",
+              "minimum": 1
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "conditionNumberShrunk": {
+          "anyOf": [
+            {
+              "type": "number",
+              "minimum": 1
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "warnings": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "excluded": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "instrumentId",
+              "symbol",
+              "reason"
+            ],
+            "properties": {
+              "instrumentId": {
+                "type": "string",
+                "minLength": 1
+              },
+              "symbol": {
+                "type": "string"
+              },
+              "reason": {
+                "type": "string"
+              }
+            },
+            "additionalProperties": false
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "Settings": {
+      "type": "object",
+      "required": [
+        "engine",
+        "modelId",
+        "secContactEmail",
+        "dailyTokenBudget",
+        "firstScanLookbackDays",
+        "demoDataLoaded",
+        "language",
+        "allowedDomains"
+      ],
+      "properties": {
+        "engine": {
+          "$ref": "types.schema.json#/$defs/EngineChoice"
+        },
+        "modelId": {
+          "type": "string",
+          "enum": [
+            "jev-1.14.0"
+          ]
+        },
+        "secContactEmail": {
+          "anyOf": [
+            {
+              "type": "string",
+              "maxLength": 120,
+              "pattern": "^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "dailyTokenBudget": {
+          "type": "integer",
+          "minimum": 10000,
+          "maximum": 50000000
+        },
+        "firstScanLookbackDays": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 30
+        },
+        "demoDataLoaded": {
+          "type": "boolean"
+        },
+        "language": {
+          "type": "string",
+          "enum": [
+            "zh-CN"
+          ]
+        },
+        "allowedDomains": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "domain",
+              "purpose",
+              "sends"
+            ],
+            "properties": {
+              "domain": {
+                "type": "string"
+              },
+              "purpose": {
+                "type": "string"
+              },
+              "sends": {
+                "type": "string"
+              }
+            },
+            "additionalProperties": false
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "Bootstrap": {
+      "type": "object",
+      "required": [
+        "protocolVersion",
+        "appVersion",
+        "dbSchemaVersion",
+        "platform",
+        "engine",
+        "markets",
+        "configured",
+        "demoDataLoaded",
+        "offline",
+        "now"
+      ],
+      "properties": {
+        "protocolVersion": {
+          "type": "string",
+          "enum": [
+            "1.0"
+          ]
+        },
+        "appVersion": {
+          "type": "string"
+        },
+        "dbSchemaVersion": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "platform": {
+          "type": "string",
+          "enum": [
+            "macos",
+            "windows"
+          ]
+        },
+        "engine": {
+          "type": "object",
+          "required": [
+            "requested",
+            "active",
+            "modelId",
+            "jevdbAvailable"
+          ],
+          "properties": {
+            "requested": {
+              "$ref": "types.schema.json#/$defs/EngineChoice"
+            },
+            "active": {
+              "anyOf": [
+                {
+                  "$ref": "types.schema.json#/$defs/Engine"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "modelId": {
+              "type": "string"
+            },
+            "jevdbAvailable": {
+              "type": "boolean"
+            }
+          },
+          "additionalProperties": false
+        },
+        "markets": {
+          "type": "array",
+          "items": {
+            "$ref": "types.schema.json#/$defs/Market"
+          }
+        },
+        "configured": {
+          "type": "object",
+          "required": [
+            "jevKey",
+            "secEmail"
+          ],
+          "properties": {
+            "jevKey": {
+              "type": "boolean"
+            },
+            "secEmail": {
+              "type": "boolean"
+            }
+          },
+          "additionalProperties": false
+        },
+        "demoDataLoaded": {
+          "type": "boolean"
+        },
+        "offline": {
+          "type": "boolean"
+        },
+        "now": {
+          "$ref": "types.schema.json#/$defs/IsoTime"
+        }
+      },
+      "additionalProperties": false
+    },
+    "EmptyParams": {
+      "type": "object",
+      "required": [],
+      "properties": {},
+      "additionalProperties": false
+    },
+    "SettingsPatch": {
+      "type": "object",
+      "required": [],
+      "properties": {
+        "engine": {
+          "$ref": "types.schema.json#/$defs/EngineChoice"
+        },
+        "secContactEmail": {
+          "anyOf": [
+            {
+              "type": "string",
+              "maxLength": 120,
+              "pattern": "^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "dailyTokenBudget": {
+          "type": "integer",
+          "minimum": 10000,
+          "maximum": 50000000
+        },
+        "firstScanLookbackDays": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 30
+        }
+      },
+      "additionalProperties": false
+    },
+    "TestConnectionResult": {
+      "type": "object",
+      "required": [
+        "ok",
+        "engine",
+        "modelId",
+        "checks"
+      ],
+      "properties": {
+        "ok": {
+          "type": "boolean"
+        },
+        "engine": {
+          "anyOf": [
+            {
+              "$ref": "types.schema.json#/$defs/Engine"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "modelId": {
+          "type": "string"
+        },
+        "checks": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "name",
+              "ok",
+              "latencyMs",
+              "message"
+            ],
+            "properties": {
+              "name": {
+                "type": "string",
+                "enum": [
+                  "Jev",
+                  "SEC",
+                  "JEVDB"
+                ]
+              },
+              "ok": {
+                "type": "boolean"
+              },
+              "latencyMs": {
+                "anyOf": [
+                  {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "message": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              }
+            },
+            "additionalProperties": false
+          },
+          "minItems": 3,
+          "maxItems": 3
+        }
+      },
+      "additionalProperties": false
+    },
+    "DecisionSummary": {
+      "type": "object",
+      "required": [
+        "decisionId",
+        "thesisId",
+        "thesisVersion",
+        "thesisCurrentVersion",
+        "instrument",
+        "thesisStatement",
+        "killCondition",
+        "relation",
+        "headline",
+        "probabilities",
+        "engine",
+        "modelId",
+        "questionSetVersion",
+        "event",
+        "evidence",
+        "contentStatus",
+        "createdAt",
+        "action"
+      ],
+      "properties": {
+        "decisionId": {
+          "type": "string",
+          "minLength": 1
+        },
+        "thesisId": {
+          "type": "string",
+          "minLength": 1
+        },
+        "thesisVersion": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "thesisCurrentVersion": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "instrument": {
+          "$ref": "types.schema.json#/$defs/Instrument"
+        },
+        "thesisStatement": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 500,
+          "pattern": "\\S"
+        },
+        "killCondition": {
+          "anyOf": [
+            {
+              "type": "string",
+              "maxLength": 300
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "relation": {
+          "$ref": "types.schema.json#/$defs/Relation"
+        },
+        "headline": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "probabilities": {
+          "$ref": "types.schema.json#/$defs/Probabilities"
+        },
+        "engine": {
+          "$ref": "types.schema.json#/$defs/Engine"
+        },
+        "modelId": {
+          "type": "string"
+        },
+        "questionSetVersion": {
+          "type": "string"
+        },
+        "event": {
+          "$ref": "types.schema.json#/$defs/EventRef"
+        },
+        "evidence": {
+          "$ref": "types.schema.json#/$defs/Evidence"
+        },
+        "contentStatus": {
+          "type": "string",
+          "enum": [
+            "full_text",
+            "title_only"
+          ]
+        },
+        "createdAt": {
+          "$ref": "types.schema.json#/$defs/IsoTime"
+        },
+        "action": {
+          "anyOf": [
+            {
+              "$ref": "types.schema.json#/$defs/ActionRecord"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "additionalProperties": false
+    },
+    "DecisionDetail": {
+      "type": "object",
+      "required": [
+        "decisionId",
+        "thesisId",
+        "thesisVersion",
+        "thesisCurrentVersion",
+        "instrument",
+        "thesisStatement",
+        "killCondition",
+        "relation",
+        "headline",
+        "probabilities",
+        "engine",
+        "modelId",
+        "questionSetVersion",
+        "event",
+        "evidence",
+        "contentStatus",
+        "createdAt",
+        "action",
+        "actions",
+        "thesisIsLatest"
+      ],
+      "properties": {
+        "decisionId": {
+          "type": "string",
+          "minLength": 1
+        },
+        "thesisId": {
+          "type": "string",
+          "minLength": 1
+        },
+        "thesisVersion": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "thesisCurrentVersion": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "instrument": {
+          "$ref": "types.schema.json#/$defs/Instrument"
+        },
+        "thesisStatement": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 500,
+          "pattern": "\\S"
+        },
+        "killCondition": {
+          "anyOf": [
+            {
+              "type": "string",
+              "maxLength": 300
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "relation": {
+          "$ref": "types.schema.json#/$defs/Relation"
+        },
+        "headline": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "probabilities": {
+          "$ref": "types.schema.json#/$defs/Probabilities"
+        },
+        "engine": {
+          "$ref": "types.schema.json#/$defs/Engine"
+        },
+        "modelId": {
+          "type": "string"
+        },
+        "questionSetVersion": {
+          "type": "string"
+        },
+        "event": {
+          "$ref": "types.schema.json#/$defs/EventRef"
+        },
+        "evidence": {
+          "$ref": "types.schema.json#/$defs/Evidence"
+        },
+        "contentStatus": {
+          "type": "string",
+          "enum": [
+            "full_text",
+            "title_only"
+          ]
+        },
+        "createdAt": {
+          "$ref": "types.schema.json#/$defs/IsoTime"
+        },
+        "action": {
+          "anyOf": [
+            {
+              "$ref": "types.schema.json#/$defs/ActionRecord"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "actions": {
+          "type": "array",
+          "items": {
+            "$ref": "types.schema.json#/$defs/ActionRecord"
+          }
+        },
+        "thesisIsLatest": {
+          "type": "boolean"
+        }
+      },
+      "additionalProperties": false
+    },
+    "Inbox": {
+      "type": "object",
+      "required": [
+        "asOf",
+        "summary",
+        "items",
+        "uncertain",
+        "processed",
+        "lastScan",
+        "dataStatus",
+        "setup"
+      ],
+      "properties": {
+        "asOf": {
+          "$ref": "types.schema.json#/$defs/IsoTime"
+        },
+        "summary": {
+          "type": "object",
+          "required": [
+            "pendingCount",
+            "overturnCount",
+            "weakenCount",
+            "uncertainCount",
+            "processedCount"
+          ],
+          "properties": {
+            "pendingCount": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "overturnCount": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "weakenCount": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "uncertainCount": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "processedCount": {
+              "type": "integer",
+              "minimum": 0
+            }
+          },
+          "additionalProperties": false
+        },
+        "items": {
+          "type": "array",
+          "items": {
+            "$ref": "types.schema.json#/$defs/DecisionSummary"
+          }
+        },
+        "uncertain": {
+          "type": "array",
+          "items": {
+            "$ref": "types.schema.json#/$defs/DecisionSummary"
+          }
+        },
+        "processed": {
+          "type": "array",
+          "items": {
+            "$ref": "types.schema.json#/$defs/DecisionSummary"
+          }
+        },
+        "lastScan": {
+          "anyOf": [
+            {
+              "type": "object",
+              "required": [
+                "runId",
+                "status",
+                "finishedAt",
+                "stats",
+                "error"
+              ],
+              "properties": {
+                "runId": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "status": {
+                  "type": "string",
+                  "enum": [
+                    "queued",
+                    "running",
+                    "succeeded",
+                    "partial",
+                    "failed",
+                    "cancelled",
+                    "interrupted"
+                  ]
+                },
+                "finishedAt": {
+                  "anyOf": [
+                    {
+                      "$ref": "types.schema.json#/$defs/IsoTime"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "stats": {
+                  "type": "object",
+                  "required": [
+                    "instruments",
+                    "skippedNoThesis",
+                    "filings",
+                    "passages",
+                    "decisions"
+                  ],
+                  "properties": {
+                    "instruments": {
+                      "type": "integer",
+                      "minimum": 0
+                    },
+                    "skippedNoThesis": {
+                      "type": "integer",
+                      "minimum": 0
+                    },
+                    "filings": {
+                      "type": "integer",
+                      "minimum": 0
+                    },
+                    "passages": {
+                      "type": "integer",
+                      "minimum": 0
+                    },
+                    "decisions": {
+                      "type": "integer",
+                      "minimum": 0
+                    }
+                  },
+                  "additionalProperties": false
+                },
+                "error": {
+                  "anyOf": [
+                    {
+                      "type": "object",
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        }
+                      },
+                      "additionalProperties": false
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                }
+              },
+              "additionalProperties": false
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "dataStatus": {
+          "$ref": "types.schema.json#/$defs/DataStatus"
+        },
+        "setup": {
+          "type": "object",
+          "required": [
+            "holdings",
+            "activeTheses",
+            "scannableInstruments"
+          ],
+          "properties": {
+            "holdings": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "activeTheses": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "scannableInstruments": {
+              "type": "integer",
+              "minimum": 0
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    "NotificationMap": {
+      "type": "object",
+      "required": [
+        "app.ready",
+        "scan.progress",
+        "scan.finished",
+        "inbox.updated",
+        "engine.changed",
+        "source.degraded",
+        "budget.updated"
+      ],
+      "properties": {
+        "app.ready": {
+          "type": "object",
+          "required": [
+            "version",
+            "migrationsApplied"
+          ],
+          "properties": {
+            "version": {
+              "type": "string"
+            },
+            "migrationsApplied": {
+              "type": "integer",
+              "minimum": 0
+            }
+          },
+          "additionalProperties": false
+        },
+        "scan.progress": {
+          "type": "object",
+          "required": [
+            "runId",
+            "market",
+            "stage",
+            "done",
+            "total",
+            "message"
+          ],
+          "properties": {
+            "runId": {
+              "type": "string",
+              "minLength": 1
+            },
+            "market": {
+              "$ref": "types.schema.json#/$defs/Market"
+            },
+            "stage": {
+              "type": "string",
+              "enum": [
+                "fetch",
+                "parse",
+                "decide",
+                "evidence",
+                "finish"
+              ]
+            },
+            "done": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "total": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "message": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": false
+        },
+        "scan.finished": {
+          "type": "object",
+          "required": [
+            "runId",
+            "trigger",
+            "market",
+            "status",
+            "windowStart",
+            "windowEnd",
+            "stats",
+            "engine",
+            "modelId",
+            "startedAt",
+            "finishedAt",
+            "error",
+            "batchSummary"
+          ],
+          "properties": {
+            "runId": {
+              "type": "string",
+              "minLength": 1
+            },
+            "trigger": {
+              "type": "string",
+              "enum": [
+                "manual",
+                "schedule"
+              ]
+            },
+            "market": {
+              "$ref": "types.schema.json#/$defs/Market"
+            },
+            "status": {
+              "type": "string",
+              "enum": [
+                "queued",
+                "running",
+                "succeeded",
+                "partial",
+                "failed",
+                "cancelled",
+                "interrupted"
+              ]
+            },
+            "windowStart": {
+              "$ref": "types.schema.json#/$defs/IsoTime"
+            },
+            "windowEnd": {
+              "$ref": "types.schema.json#/$defs/IsoTime"
+            },
+            "stats": {
+              "type": "object",
+              "required": [
+                "instruments",
+                "skippedNoThesis",
+                "filings",
+                "passages",
+                "decisions",
+                "cachedDecisions",
+                "requests",
+                "inputTokens",
+                "estCostUsd",
+                "durationMs"
+              ],
+              "properties": {
+                "instruments": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "skippedNoThesis": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "filings": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "passages": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "decisions": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "cachedDecisions": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "requests": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "inputTokens": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "estCostUsd": {
+                  "$ref": "types.schema.json#/$defs/Decimal"
+                },
+                "durationMs": {
+                  "type": "integer",
+                  "minimum": 0
+                }
+              },
+              "additionalProperties": false
+            },
+            "engine": {
+              "$ref": "types.schema.json#/$defs/Engine"
+            },
+            "modelId": {
+              "type": "string"
+            },
+            "startedAt": {
+              "anyOf": [
+                {
+                  "$ref": "types.schema.json#/$defs/IsoTime"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "finishedAt": {
+              "anyOf": [
+                {
+                  "$ref": "types.schema.json#/$defs/IsoTime"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "error": {
+              "anyOf": [
+                {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "message"
+                  ],
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "additionalProperties": false
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "batchSummary": {
+              "type": "object",
+              "required": [
+                "total",
+                "succeeded",
+                "failed",
+                "pending"
+              ],
+              "properties": {
+                "total": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "succeeded": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "failed": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "pending": {
+                  "type": "integer",
+                  "minimum": 0
+                }
+              },
+              "additionalProperties": false
+            }
+          },
+          "additionalProperties": false
+        },
+        "inbox.updated": {
+          "type": "object",
+          "required": [
+            "newItems",
+            "pendingCount"
+          ],
+          "properties": {
+            "newItems": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "pendingCount": {
+              "type": "integer",
+              "minimum": 0
+            }
+          },
+          "additionalProperties": false
+        },
+        "engine.changed": {
+          "type": "object",
+          "required": [
+            "from",
+            "to",
+            "reason"
+          ],
+          "properties": {
+            "from": {
+              "anyOf": [
+                {
+                  "$ref": "types.schema.json#/$defs/Engine"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "to": {
+              "anyOf": [
+                {
+                  "$ref": "types.schema.json#/$defs/Engine"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "reason": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": false
+        },
+        "source.degraded": {
+          "type": "object",
+          "required": [
+            "source",
+            "reason"
+          ],
+          "properties": {
+            "source": {
+              "type": "string"
+            },
+            "reason": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": false
+        },
+        "budget.updated": {
+          "type": "object",
+          "required": [
+            "usedTokens",
+            "limitTokens",
+            "resetAt"
+          ],
+          "properties": {
+            "usedTokens": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "limitTokens": {
+              "type": "integer",
+              "minimum": 10000,
+              "maximum": 50000000
+            },
+            "resetAt": {
+              "$ref": "types.schema.json#/$defs/IsoTime"
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    "RpcError": {
+      "oneOf": [
+        {
+          "type": "object",
+          "required": [
+            "code",
+            "message",
+            "data"
+          ],
+          "properties": {
+            "code": {
+              "type": "string",
+              "enum": [
+                "INVALID_ARGUMENT"
+              ]
+            },
+            "message": {
+              "type": "string",
+              "minLength": 1,
+              "pattern": "[一-鿿]"
+            },
+            "data": {
+              "type": "object",
+              "required": [
+                "retryable"
+              ],
+              "properties": {
+                "retryable": {
+                  "type": "boolean",
+                  "const": false
+                },
+                "field": {
+                  "type": "string"
+                },
+                "reason": {
+                  "type": "string"
+                },
+                "requestId": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "detail": {
+                  "type": "string"
+                },
+                "length": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "max": {
+                  "type": "integer",
+                  "minimum": 0
+                }
+              },
+              "additionalProperties": false
+            }
+          },
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "required": [
+            "code",
+            "message",
+            "data"
+          ],
+          "properties": {
+            "code": {
+              "type": "string",
+              "enum": [
+                "NOT_FOUND"
+              ]
+            },
+            "message": {
+              "type": "string",
+              "minLength": 1,
+              "pattern": "[一-鿿]"
+            },
+            "data": {
+              "type": "object",
+              "required": [
+                "retryable"
+              ],
+              "properties": {
+                "retryable": {
+                  "type": "boolean",
+                  "const": false
+                },
+                "field": {
+                  "type": "string"
+                },
+                "reason": {
+                  "type": "string"
+                },
+                "requestId": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "detail": {
+                  "type": "string"
+                }
+              },
+              "additionalProperties": false
+            }
+          },
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "required": [
+            "code",
+            "message",
+            "data"
+          ],
+          "properties": {
+            "code": {
+              "type": "string",
+              "enum": [
+                "CONFLICT"
+              ]
+            },
+            "message": {
+              "type": "string",
+              "minLength": 1,
+              "pattern": "[一-鿿]"
+            },
+            "data": {
+              "type": "object",
+              "required": [
+                "retryable"
+              ],
+              "properties": {
+                "retryable": {
+                  "type": "boolean",
+                  "const": false
+                },
+                "field": {
+                  "type": "string"
+                },
+                "reason": {
+                  "type": "string"
+                },
+                "requestId": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "detail": {
+                  "type": "string"
+                },
+                "currentVersion": {
+                  "type": "integer",
+                  "minimum": 1
+                }
+              },
+              "additionalProperties": false
+            }
+          },
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "required": [
+            "code",
+            "message",
+            "data"
+          ],
+          "properties": {
+            "code": {
+              "type": "string",
+              "enum": [
+                "CONFIG_REQUIRED"
+              ]
+            },
+            "message": {
+              "type": "string",
+              "minLength": 1,
+              "pattern": "[一-鿿]"
+            },
+            "data": {
+              "type": "object",
+              "required": [
+                "retryable",
+                "missing"
+              ],
+              "properties": {
+                "retryable": {
+                  "type": "boolean",
+                  "const": false
+                },
+                "field": {
+                  "type": "string"
+                },
+                "reason": {
+                  "type": "string"
+                },
+                "requestId": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "detail": {
+                  "type": "string"
+                },
+                "missing": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "enum": [
+                      "jevKey",
+                      "secEmail"
+                    ]
+                  },
+                  "minItems": 1,
+                  "uniqueItems": true
+                }
+              },
+              "additionalProperties": false
+            }
+          },
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "required": [
+            "code",
+            "message",
+            "data"
+          ],
+          "properties": {
+            "code": {
+              "type": "string",
+              "enum": [
+                "UNAUTHENTICATED"
+              ]
+            },
+            "message": {
+              "type": "string",
+              "minLength": 1,
+              "pattern": "[一-鿿]"
+            },
+            "data": {
+              "type": "object",
+              "required": [
+                "retryable"
+              ],
+              "properties": {
+                "retryable": {
+                  "type": "boolean",
+                  "const": false
+                },
+                "field": {
+                  "type": "string"
+                },
+                "reason": {
+                  "type": "string"
+                },
+                "requestId": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "detail": {
+                  "type": "string"
+                }
+              },
+              "additionalProperties": false
+            }
+          },
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "required": [
+            "code",
+            "message",
+            "data"
+          ],
+          "properties": {
+            "code": {
+              "type": "string",
+              "enum": [
+                "ENGINE_UNAVAILABLE"
+              ]
+            },
+            "message": {
+              "type": "string",
+              "minLength": 1,
+              "pattern": "[一-鿿]"
+            },
+            "data": {
+              "type": "object",
+              "required": [
+                "retryable"
+              ],
+              "properties": {
+                "retryable": {
+                  "type": "boolean",
+                  "const": false
+                },
+                "field": {
+                  "type": "string"
+                },
+                "reason": {
+                  "type": "string"
+                },
+                "requestId": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "detail": {
+                  "type": "string"
+                },
+                "engine": {
+                  "$ref": "types.schema.json#/$defs/EngineChoice"
+                }
+              },
+              "additionalProperties": false
+            }
+          },
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "required": [
+            "code",
+            "message",
+            "data"
+          ],
+          "properties": {
+            "code": {
+              "type": "string",
+              "enum": [
+                "SOURCE_UNAVAILABLE"
+              ]
+            },
+            "message": {
+              "type": "string",
+              "minLength": 1,
+              "pattern": "[一-鿿]"
+            },
+            "data": {
+              "type": "object",
+              "required": [
+                "retryable"
+              ],
+              "properties": {
+                "retryable": {
+                  "type": "boolean",
+                  "const": true
+                },
+                "field": {
+                  "type": "string"
+                },
+                "reason": {
+                  "type": "string"
+                },
+                "requestId": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "detail": {
+                  "type": "string"
+                },
+                "source": {
+                  "type": "string"
+                }
+              },
+              "additionalProperties": false
+            }
+          },
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "required": [
+            "code",
+            "message",
+            "data"
+          ],
+          "properties": {
+            "code": {
+              "type": "string",
+              "enum": [
+                "RATE_LIMITED"
+              ]
+            },
+            "message": {
+              "type": "string",
+              "minLength": 1,
+              "pattern": "[一-鿿]"
+            },
+            "data": {
+              "type": "object",
+              "required": [
+                "retryable",
+                "retryAfterSec"
+              ],
+              "properties": {
+                "retryable": {
+                  "type": "boolean",
+                  "const": true
+                },
+                "field": {
+                  "type": "string"
+                },
+                "reason": {
+                  "type": "string"
+                },
+                "requestId": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "detail": {
+                  "type": "string"
+                },
+                "retryAfterSec": {
+                  "type": "number",
+                  "minimum": 0
+                },
+                "source": {
+                  "type": "string"
+                }
+              },
+              "additionalProperties": false
+            }
+          },
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "required": [
+            "code",
+            "message",
+            "data"
+          ],
+          "properties": {
+            "code": {
+              "type": "string",
+              "enum": [
+                "MODEL_ERROR"
+              ]
+            },
+            "message": {
+              "type": "string",
+              "minLength": 1,
+              "pattern": "[一-鿿]"
+            },
+            "data": {
+              "type": "object",
+              "required": [
+                "retryable"
+              ],
+              "properties": {
+                "retryable": {
+                  "type": "boolean",
+                  "const": true
+                },
+                "field": {
+                  "type": "string"
+                },
+                "reason": {
+                  "type": "string"
+                },
+                "requestId": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "detail": {
+                  "type": "string"
+                },
+                "status": {
+                  "type": "integer",
+                  "minimum": 100,
+                  "maximum": 599
+                }
+              },
+              "additionalProperties": false
+            }
+          },
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "required": [
+            "code",
+            "message",
+            "data"
+          ],
+          "properties": {
+            "code": {
+              "type": "string",
+              "enum": [
+                "BUDGET_EXCEEDED"
+              ]
+            },
+            "message": {
+              "type": "string",
+              "minLength": 1,
+              "pattern": "[一-鿿]"
+            },
+            "data": {
+              "type": "object",
+              "required": [
+                "retryable"
+              ],
+              "properties": {
+                "retryable": {
+                  "type": "boolean",
+                  "const": false
+                },
+                "field": {
+                  "type": "string"
+                },
+                "reason": {
+                  "type": "string"
+                },
+                "requestId": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "detail": {
+                  "type": "string"
+                },
+                "usedTokens": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "limitTokens": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "resetAt": {
+                  "$ref": "types.schema.json#/$defs/IsoTime"
+                }
+              },
+              "additionalProperties": false
+            }
+          },
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "required": [
+            "code",
+            "message",
+            "data"
+          ],
+          "properties": {
+            "code": {
+              "type": "string",
+              "enum": [
+                "DATA_INSUFFICIENT"
+              ]
+            },
+            "message": {
+              "type": "string",
+              "minLength": 1,
+              "pattern": "[一-鿿]"
+            },
+            "data": {
+              "type": "object",
+              "required": [
+                "retryable"
+              ],
+              "properties": {
+                "retryable": {
+                  "type": "boolean",
+                  "const": false
+                },
+                "field": {
+                  "type": "string"
+                },
+                "reason": {
+                  "type": "string"
+                },
+                "requestId": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "detail": {
+                  "type": "string"
+                },
+                "observations": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "required": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "nextDay": {
+                  "$ref": "types.schema.json#/$defs/IsoDate"
+                }
+              },
+              "additionalProperties": false
+            }
+          },
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "required": [
+            "code",
+            "message",
+            "data"
+          ],
+          "properties": {
+            "code": {
+              "type": "string",
+              "enum": [
+                "ORDER_REJECTED"
+              ]
+            },
+            "message": {
+              "type": "string",
+              "minLength": 1,
+              "pattern": "[一-鿿]"
+            },
+            "data": {
+              "type": "object",
+              "required": [
+                "retryable",
+                "reason",
+                "orderId"
+              ],
+              "properties": {
+                "retryable": {
+                  "type": "boolean",
+                  "const": false
+                },
+                "field": {
+                  "type": "string"
+                },
+                "reason": {
+                  "type": "string",
+                  "enum": [
+                    "NO_PRICE",
+                    "INSUFFICIENT_CASH",
+                    "INSUFFICIENT_POSITION",
+                    "NO_PRICE_AT_FILL",
+                    "INSUFFICIENT_CASH_AT_FILL",
+                    "INSUFFICIENT_POSITION_AT_FILL"
+                  ]
+                },
+                "requestId": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "detail": {
+                  "type": "string"
+                },
+                "orderId": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "required": {
+                  "$ref": "types.schema.json#/$defs/Decimal"
+                },
+                "available": {
+                  "$ref": "types.schema.json#/$defs/Decimal"
+                },
+                "held": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "requested": {
+                  "type": "integer",
+                  "minimum": 1
+                }
+              },
+              "additionalProperties": false
+            }
+          },
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "required": [
+            "code",
+            "message",
+            "data"
+          ],
+          "properties": {
+            "code": {
+              "type": "string",
+              "enum": [
+                "TIMEOUT"
+              ]
+            },
+            "message": {
+              "type": "string",
+              "minLength": 1,
+              "pattern": "[一-鿿]"
+            },
+            "data": {
+              "type": "object",
+              "required": [
+                "retryable"
+              ],
+              "properties": {
+                "retryable": {
+                  "type": "boolean",
+                  "const": true
+                },
+                "field": {
+                  "type": "string"
+                },
+                "reason": {
+                  "type": "string"
+                },
+                "requestId": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "detail": {
+                  "type": "string"
+                }
+              },
+              "additionalProperties": false
+            }
+          },
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "required": [
+            "code",
+            "message",
+            "data"
+          ],
+          "properties": {
+            "code": {
+              "type": "string",
+              "enum": [
+                "CANCELLED"
+              ]
+            },
+            "message": {
+              "type": "string",
+              "minLength": 1,
+              "pattern": "[一-鿿]"
+            },
+            "data": {
+              "type": "object",
+              "required": [
+                "retryable"
+              ],
+              "properties": {
+                "retryable": {
+                  "type": "boolean",
+                  "const": false
+                },
+                "field": {
+                  "type": "string"
+                },
+                "reason": {
+                  "type": "string"
+                },
+                "requestId": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "detail": {
+                  "type": "string"
+                }
+              },
+              "additionalProperties": false
+            }
+          },
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "required": [
+            "code",
+            "message",
+            "data"
+          ],
+          "properties": {
+            "code": {
+              "type": "string",
+              "enum": [
+                "INTERNAL"
+              ]
+            },
+            "message": {
+              "type": "string",
+              "minLength": 1,
+              "pattern": "[一-鿿]"
+            },
+            "data": {
+              "type": "object",
+              "required": [
+                "retryable",
+                "requestId"
+              ],
+              "properties": {
+                "retryable": {
+                  "type": "boolean",
+                  "const": true
+                },
+                "field": {
+                  "type": "string"
+                },
+                "reason": {
+                  "type": "string"
+                },
+                "requestId": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "detail": {
+                  "type": "string"
+                }
+              },
+              "additionalProperties": false
+            }
+          },
+          "additionalProperties": false
+        }
+      ]
+    },
+    "RiskInsufficientError": {
+      "type": "object",
+      "required": [
+        "code",
+        "message",
+        "data"
+      ],
+      "properties": {
+        "code": {
+          "type": "string",
+          "enum": [
+            "DATA_INSUFFICIENT"
+          ]
+        },
+        "message": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "[一-鿿]"
+        },
+        "data": {
+          "type": "object",
+          "required": [
+            "retryable",
+            "observations",
+            "required"
+          ],
+          "properties": {
+            "retryable": {
+              "type": "boolean",
+              "const": false
+            },
+            "field": {
+              "type": "string"
+            },
+            "reason": {
+              "type": "string"
+            },
+            "requestId": {
+              "type": "string",
+              "minLength": 1
+            },
+            "detail": {
+              "type": "string"
+            },
+            "observations": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "required": {
+              "type": "integer",
+              "const": 60
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    }
+  }
+}

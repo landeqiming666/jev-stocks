@@ -1,0 +1,149 @@
+{
+  "method": "app.bootstrap",
+  "summary": "读取启动与配置状态",
+  "owner": "C-04",
+  "phase": "mvp0",
+  "timeoutMs": 30000,
+  "params": {
+    "type": "object",
+    "required": [],
+    "properties": {},
+    "additionalProperties": false
+  },
+  "result": {
+    "$ref": "types.schema.json#/$defs/Bootstrap"
+  },
+  "errors": [],
+  "examples": [
+    {
+      "name": "ready",
+      "params": {},
+      "result": {
+        "protocolVersion": "1.0",
+        "appVersion": "0.1.0",
+        "dbSchemaVersion": 1,
+        "platform": "macos",
+        "engine": {
+          "requested": "auto",
+          "active": "jev_direct",
+          "modelId": "jev-1.14.0",
+          "jevdbAvailable": false
+        },
+        "markets": [
+          "us"
+        ],
+        "configured": {
+          "jevKey": true,
+          "secEmail": true
+        },
+        "demoDataLoaded": true,
+        "offline": false,
+        "now": "2026-11-02T00:35:00Z"
+      }
+    },
+    {
+      "name": "unconfigured",
+      "params": {},
+      "result": {
+        "protocolVersion": "1.0",
+        "appVersion": "0.1.0",
+        "dbSchemaVersion": 1,
+        "platform": "macos",
+        "engine": {
+          "requested": "auto",
+          "active": "jev_direct",
+          "modelId": "jev-1.14.0",
+          "jevdbAvailable": false
+        },
+        "markets": [
+          "us"
+        ],
+        "configured": {
+          "jevKey": false,
+          "secEmail": false
+        },
+        "demoDataLoaded": false,
+        "offline": false,
+        "now": "2026-11-02T00:35:00Z"
+      }
+    },
+    {
+      "name": "engine_fallback",
+      "params": {},
+      "result": {
+        "protocolVersion": "1.0",
+        "appVersion": "0.1.0",
+        "dbSchemaVersion": 1,
+        "platform": "macos",
+        "engine": {
+          "requested": "jevdb",
+          "active": "jev_direct",
+          "modelId": "jev-1.14.0",
+          "jevdbAvailable": false
+        },
+        "markets": [
+          "us"
+        ],
+        "configured": {
+          "jevKey": true,
+          "secEmail": true
+        },
+        "demoDataLoaded": true,
+        "offline": false,
+        "now": "2026-11-02T00:35:00Z"
+      }
+    },
+    {
+      "name": "offline",
+      "params": {},
+      "result": {
+        "protocolVersion": "1.0",
+        "appVersion": "0.1.0",
+        "dbSchemaVersion": 1,
+        "platform": "macos",
+        "engine": {
+          "requested": "auto",
+          "active": "jev_direct",
+          "modelId": "jev-1.14.0",
+          "jevdbAvailable": false
+        },
+        "markets": [
+          "us"
+        ],
+        "configured": {
+          "jevKey": true,
+          "secEmail": true
+        },
+        "demoDataLoaded": true,
+        "offline": true,
+        "now": "2026-11-02T00:35:00Z"
+      }
+    },
+    {
+      "name": "windows",
+      "params": {},
+      "result": {
+        "protocolVersion": "1.0",
+        "appVersion": "0.1.0",
+        "dbSchemaVersion": 1,
+        "platform": "windows",
+        "engine": {
+          "requested": "auto",
+          "active": "jev_direct",
+          "modelId": "jev-1.14.0",
+          "jevdbAvailable": false
+        },
+        "markets": [
+          "us"
+        ],
+        "configured": {
+          "jevKey": true,
+          "secEmail": true
+        },
+        "demoDataLoaded": true,
+        "offline": false,
+        "now": "2026-11-02T00:35:00Z"
+      }
+    }
+  ]
+}

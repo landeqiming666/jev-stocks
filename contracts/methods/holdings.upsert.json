@@ -1,0 +1,182 @@
+{
+  "method": "holdings.upsert",
+  "summary": "添加或更新持仓",
+  "owner": "P-01",
+  "phase": "mvp0",
+  "timeoutMs": 30000,
+  "params": {
+    "type": "object",
+    "required": [
+      "instrumentId",
+      "quantity"
+    ],
+    "properties": {
+      "instrumentId": {
+        "type": "string",
+        "minLength": 1
+      },
+      "quantity": {
+        "type": "string",
+        "pattern": "^(?:0|[1-9][0-9]{0,13})(?:\\.[0-9]{1,4})?$"
+      },
+      "avgCost": {
+        "anyOf": [
+          {
+            "type": "string",
+            "pattern": "^(?:0|[1-9][0-9]{0,13})(?:\\.[0-9]{1,4})?$"
+          },
+          {
+            "type": "null"
+          }
+        ]
+      },
+      "note": {
+        "anyOf": [
+          {
+            "type": "string",
+            "maxLength": 200
+          },
+          {
+            "type": "null"
+          }
+        ]
+      }
+    },
+    "additionalProperties": false,
+    "allOf": [
+      {
+        "anyOf": [
+          {
+            "type": "object",
+            "required": [
+              "instrumentId",
+              "quantity"
+            ],
+            "properties": {
+              "instrumentId": {
+                "type": "string",
+                "minLength": 1
+              },
+              "quantity": {
+                "type": "string",
+                "pattern": "^(?=.*[1-9])(?:0|[1-9][0-9]{0,13})(?:\\.[0-9]{1,4})?$"
+              },
+              "avgCost": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "pattern": "^(?:0|[1-9][0-9]{0,13})(?:\\.[0-9]{1,4})?$"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "note": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "maxLength": 200
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              }
+            },
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "required": [
+              "instrumentId",
+              "quantity"
+            ],
+            "properties": {
+              "instrumentId": {
+                "type": "string",
+                "minLength": 1
+              },
+              "quantity": {
+                "type": "string",
+                "pattern": "^0(?:\\.0{1,4})?$"
+              },
+              "avgCost": {
+                "type": "null"
+              },
+              "note": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "maxLength": 200
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              }
+            },
+            "additionalProperties": false
+          }
+        ]
+      }
+    ]
+  },
+  "result": {
+    "$ref": "types.schema.json#/$defs/Holding"
+  },
+  "errors": [
+    "INVALID_ARGUMENT",
+    "NOT_FOUND"
+  ],
+  "examples": [
+    {
+      "name": "ok",
+      "params": {
+        "instrumentId": "us:ZZAR",
+        "quantity": "120",
+        "avgCost": "48.20",
+        "note": "核心仓位"
+      },
+      "result": {
+        "holdingId": "01JC8Z5V3Q00000000000032BJ",
+        "instrument": {
+          "instrumentId": "us:ZZAR",
+          "market": "us",
+          "symbol": "ZZAR",
+          "name": "Zenith Arc Robotics Inc.",
+          "nameZh": "天顶弧机器人",
+          "exchange": "NASDAQ",
+          "currency": "USD",
+          "isActive": true
+        },
+        "quantity": "120.0000",
+        "avgCost": "48.2000",
+        "note": "核心仓位",
+        "lastClose": 52.38,
+        "lastCloseDate": "2026-10-30",
+        "dayChangePct": 0.012,
+        "marketValue": "6285.6000",
+        "thesisCount": 2,
+        "pendingCount": 2,
+        "uncertainCount": 0,
+        "status": "attention"
+      }
+    },
+    {
+      "name": "negative",
+      "params": {
+        "instrumentId": "us:ZZAR",
+        "quantity": "-5"
+      },
+      "error": {
+        "code": "INVALID_ARGUMENT",
+        "message": "数量不能为负数",
+        "data": {
+          "retryable": false,
+          "field": "quantity"
+        }
+      }
+    }
+  ]
+}

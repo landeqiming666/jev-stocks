@@ -1,0 +1,187 @@
+{
+  "method": "thesis.list",
+  "summary": "读取投资逻辑",
+  "owner": "P-01",
+  "phase": "mvp0",
+  "timeoutMs": 30000,
+  "params": {
+    "type": "object",
+    "required": [],
+    "properties": {
+      "instrumentId": {
+        "type": "string",
+        "minLength": 1
+      },
+      "status": {
+        "type": "string",
+        "enum": [
+          "active",
+          "archived"
+        ]
+      }
+    },
+    "additionalProperties": false
+  },
+  "result": {
+    "type": "object",
+    "required": [
+      "items"
+    ],
+    "properties": {
+      "items": {
+        "type": "array",
+        "items": {
+          "$ref": "types.schema.json#/$defs/Thesis"
+        }
+      }
+    },
+    "additionalProperties": false
+  },
+  "errors": [],
+  "examples": [
+    {
+      "name": "zzar",
+      "params": {
+        "instrumentId": "us:ZZAR",
+        "status": "active"
+      },
+      "result": {
+        "items": [
+          {
+            "thesisId": "01JC8Z5V3Q00000000000063A1",
+            "instrumentId": "us:ZZAR",
+            "version": 2,
+            "statement": "控股股东长期持股，不会大幅减持",
+            "killCondition": "控股股东减持超过 2%",
+            "status": "active",
+            "createdAt": "2026-09-02T02:10:00Z",
+            "updatedAt": "2026-10-12T11:03:00Z",
+            "versionCount": 2,
+            "lastDecision": {
+              "decisionId": "01JC8Z5V3Q00000000000094Z1",
+              "relation": "overturn",
+              "headline": 0.93,
+              "createdAt": "2026-11-02T00:31:12Z",
+              "eventTitle": "8-K: Other Events — Notice of proposed sale by controlling stockholder"
+            }
+          },
+          {
+            "thesisId": "01JC8Z5V3Q00000000000063A2",
+            "instrumentId": "us:ZZAR",
+            "version": 1,
+            "statement": "Management keeps R&D spending above 15% of revenue",
+            "killCondition": null,
+            "status": "active",
+            "createdAt": "2026-09-02T02:15:00Z",
+            "updatedAt": "2026-09-02T02:15:00Z",
+            "versionCount": 1,
+            "lastDecision": {
+              "decisionId": "01JC8Z5V3Q00000000000094Z3",
+              "relation": "weaken",
+              "headline": 0.74,
+              "createdAt": "2026-11-02T00:31:12Z",
+              "eventTitle": "8-K: Results of Operations — Third Quarter 2026"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "zzfd",
+      "params": {
+        "instrumentId": "us:ZZFD",
+        "status": "active"
+      },
+      "result": {
+        "items": [
+          {
+            "thesisId": "01JC8Z5V3Q00000000000063A3",
+            "instrumentId": "us:ZZFD",
+            "version": 1,
+            "statement": "公司持续回购股票并维持分红",
+            "killCondition": "暂停回购或削减分红",
+            "status": "active",
+            "createdAt": "2026-09-03T08:20:00Z",
+            "updatedAt": "2026-09-03T08:20:00Z",
+            "versionCount": 1,
+            "lastDecision": {
+              "decisionId": "01JC8Z5V3Q00000000000094Z4",
+              "relation": "uncertain",
+              "headline": 0.55,
+              "createdAt": "2026-11-02T00:31:12Z",
+              "eventTitle": "8-K: Quarterly dividend and share repurchase update"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "zzcl",
+      "params": {
+        "instrumentId": "us:ZZCL",
+        "status": "active"
+      },
+      "result": {
+        "items": [
+          {
+            "thesisId": "01JC8Z5V3Q00000000000063A4",
+            "instrumentId": "us:ZZCL",
+            "version": 2,
+            "statement": "云业务收入保持两位数增长，同比不低于 10%",
+            "killCondition": "云业务收入同比增速低于 10%",
+            "status": "active",
+            "createdAt": "2026-09-05T01:40:00Z",
+            "updatedAt": "2026-10-20T03:00:00Z",
+            "versionCount": 2,
+            "lastDecision": {
+              "decisionId": "01JC8Z5V3Q00000000000094Z2",
+              "relation": "overturn",
+              "headline": 0.92,
+              "createdAt": "2026-11-02T00:31:12Z",
+              "eventTitle": "6-K: Zhongzhi Cloud Reports Third Quarter 2026 Results"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "zzbk",
+      "params": {
+        "instrumentId": "us:ZZBK",
+        "status": "active"
+      },
+      "result": {
+        "items": [
+          {
+            "thesisId": "01JC8Z5V3Q00000000000063A5",
+            "instrumentId": "us:ZZBK",
+            "version": 1,
+            "statement": "存款成本保持稳定，净息差不收窄",
+            "killCondition": null,
+            "status": "active",
+            "createdAt": "2026-09-08T03:00:00Z",
+            "updatedAt": "2026-09-08T03:00:00Z",
+            "versionCount": 1,
+            "lastDecision": {
+              "decisionId": "01JC8Z5V3Q00000000000094Z6",
+              "relation": "weaken",
+              "headline": 0.72,
+              "createdAt": "2026-10-28T00:20:00Z",
+              "eventTitle": "8-K: Third quarter 2026 net interest margin"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "empty",
+      "params": {
+        "instrumentId": "us:ZZMD",
+        "status": "active"
+      },
+      "result": {
+        "items": []
+      }
+    }
+  ]
+}

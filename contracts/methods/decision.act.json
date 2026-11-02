@@ -1,0 +1,105 @@
+{
+  "method": "decision.act",
+  "summary": "记录判定处理动作",
+  "owner": "P-03",
+  "phase": "mvp0",
+  "timeoutMs": 30000,
+  "params": {
+    "type": "object",
+    "required": [
+      "decisionId",
+      "action"
+    ],
+    "properties": {
+      "decisionId": {
+        "type": "string",
+        "minLength": 1
+      },
+      "action": {
+        "$ref": "types.schema.json#/$defs/ActionType"
+      },
+      "note": {
+        "anyOf": [
+          {
+            "type": "string",
+            "maxLength": 200
+          },
+          {
+            "type": "null"
+          }
+        ]
+      }
+    },
+    "additionalProperties": false
+  },
+  "result": {
+    "$ref": "types.schema.json#/$defs/DecisionSummary"
+  },
+  "errors": [
+    "INVALID_ARGUMENT",
+    "NOT_FOUND"
+  ],
+  "examples": [
+    {
+      "name": "still_valid",
+      "params": {
+        "decisionId": "01JC8Z5V3Q00000000000094Z1",
+        "action": "still_valid",
+        "note": null
+      },
+      "result": {
+        "decisionId": "01JC8Z5V3Q00000000000094Z1",
+        "thesisId": "01JC8Z5V3Q00000000000063A1",
+        "thesisVersion": 2,
+        "thesisCurrentVersion": 2,
+        "instrument": {
+          "instrumentId": "us:ZZAR",
+          "market": "us",
+          "symbol": "ZZAR",
+          "name": "Zenith Arc Robotics Inc.",
+          "nameZh": "天顶弧机器人",
+          "exchange": "NASDAQ",
+          "currency": "USD",
+          "isActive": true
+        },
+        "thesisStatement": "控股股东长期持股，不会大幅减持",
+        "killCondition": "控股股东减持超过 2%",
+        "relation": "overturn",
+        "headline": 0.93,
+        "probabilities": {
+          "relevant": 0.97,
+          "against": 0.89,
+          "contradicts": 0.84,
+          "killMet": 0.93,
+          "supports": 0.03
+        },
+        "engine": "jev_direct",
+        "modelId": "jev-1.14.0",
+        "questionSetVersion": "qs-2026-11-02.1",
+        "event": {
+          "eventId": "us:0009990001-26-000001",
+          "instrumentId": "us:ZZAR",
+          "title": "8-K: Other Events — Notice of proposed sale by controlling stockholder",
+          "formType": "8-K",
+          "publishedAt": "2026-10-30T20:12:00Z",
+          "url": "https://www.sec.gov/Archives/edgar/data/9990001/000999000126000001/zzar-8k.htm"
+        },
+        "evidence": {
+          "kind": "sentence",
+          "text": "On October 29, 2026, Zenith Arc Robotics Inc. (the \"Company\") was notified by Atlas Holdings LP, its controlling stockholder, that Atlas intends to sell up to 4.5% of the Company's outstanding common stock in a registered secondary offering during the next sixty days.",
+          "passageText": "Item 8.01 Other Events. On October 29, 2026, Zenith Arc Robotics Inc. (the \"Company\") was notified by Atlas Holdings LP, its controlling stockholder, that Atlas intends to sell up to 4.5% of the Company's outstanding common stock in a registered secondary offering during the next sixty days. Following the proposed sale, Atlas would continue to hold approximately 31.0% of the outstanding common stock. The Company will not receive any proceeds from the sale.",
+          "sentenceStart": 24,
+          "sentenceEnd": 292,
+          "filePart": "主文档"
+        },
+        "contentStatus": "full_text",
+        "createdAt": "2026-11-02T00:31:12Z",
+        "action": {
+          "action": "still_valid",
+          "note": null,
+          "actedAt": "2026-11-02T00:37:00Z"
+        }
+      }
+    }
+  ]
+}

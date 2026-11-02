@@ -1,0 +1,393 @@
+{
+  "method": "risk.compute",
+  "summary": "计算持仓风险",
+  "owner": "P-06",
+  "phase": "mvp0",
+  "timeoutMs": 30000,
+  "params": {
+    "type": "object",
+    "required": [
+      "scope",
+      "window",
+      "currency"
+    ],
+    "properties": {
+      "scope": {
+        "type": "string",
+        "enum": [
+          "holdings"
+        ]
+      },
+      "window": {
+        "type": "string",
+        "enum": [
+          "6M",
+          "1Y",
+          "3Y"
+        ]
+      },
+      "currency": {
+        "type": "string",
+        "enum": [
+          "USD"
+        ]
+      }
+    },
+    "additionalProperties": false
+  },
+  "result": {
+    "$ref": "types.schema.json#/$defs/RiskResult"
+  },
+  "errors": [
+    "DATA_INSUFFICIENT"
+  ],
+  "examples": [
+    {
+      "name": "ok",
+      "params": {
+        "scope": "holdings",
+        "window": "1Y",
+        "currency": "USD"
+      },
+      "result": {
+        "asOf": "2026-10-30",
+        "window": {
+          "label": "1Y",
+          "from": "2025-10-30",
+          "to": "2026-10-30",
+          "observations": 251
+        },
+        "currency": "USD",
+        "annualizedVol": 0.187,
+        "maxDrawdown": 0.214,
+        "effectiveHoldings": 4.67,
+        "topWeights": [
+          {
+            "instrumentId": "us:ZZFD",
+            "symbol": "ZZFD",
+            "weight": 0.2782
+          },
+          {
+            "instrumentId": "us:ZZAR",
+            "symbol": "ZZAR",
+            "weight": 0.2491
+          },
+          {
+            "instrumentId": "us:ZZCL",
+            "symbol": "ZZCL",
+            "weight": 0.1662
+          }
+        ],
+        "correlation": {
+          "instrumentIds": [
+            "us:ZZAR",
+            "us:ZZFD",
+            "us:ZZCL",
+            "us:ZZBK",
+            "us:ZZEN"
+          ],
+          "symbols": [
+            "ZZAR",
+            "ZZFD",
+            "ZZCL",
+            "ZZBK",
+            "ZZEN"
+          ],
+          "matrix": [
+            [
+              1.0,
+              0.21,
+              0.58,
+              0.34,
+              0.12
+            ],
+            [
+              0.21,
+              1.0,
+              0.09,
+              0.27,
+              0.31
+            ],
+            [
+              0.58,
+              0.09,
+              1.0,
+              0.22,
+              -0.05
+            ],
+            [
+              0.34,
+              0.27,
+              0.22,
+              1.0,
+              0.41
+            ],
+            [
+              0.12,
+              0.31,
+              -0.05,
+              0.41,
+              1.0
+            ]
+          ]
+        },
+        "svd": {
+          "explained": [
+            0.46,
+            0.22,
+            0.15,
+            0.1,
+            0.07
+          ],
+          "loadings": [
+            {
+              "symbol": "ZZAR",
+              "value": 0.55
+            },
+            {
+              "symbol": "ZZCL",
+              "value": 0.5
+            },
+            {
+              "symbol": "ZZBK",
+              "value": 0.47
+            },
+            {
+              "symbol": "ZZEN",
+              "value": 0.4
+            },
+            {
+              "symbol": "ZZFD",
+              "value": 0.26
+            }
+          ]
+        },
+        "conditionNumberRaw": 14.8,
+        "conditionNumberShrunk": 9.3,
+        "warnings": [],
+        "excluded": [
+          {
+            "instrumentId": "us:ZZMD",
+            "symbol": "ZZMD",
+            "reason": "只关注，数量为 0，不计入权重"
+          }
+        ]
+      }
+    },
+    {
+      "name": "three_year",
+      "params": {
+        "scope": "holdings",
+        "window": "3Y",
+        "currency": "USD"
+      },
+      "result": {
+        "asOf": "2026-10-30",
+        "window": {
+          "label": "3Y",
+          "from": "2025-10-30",
+          "to": "2026-10-30",
+          "observations": 251
+        },
+        "currency": "USD",
+        "annualizedVol": 0.187,
+        "maxDrawdown": 0.214,
+        "effectiveHoldings": 4.67,
+        "topWeights": [
+          {
+            "instrumentId": "us:ZZFD",
+            "symbol": "ZZFD",
+            "weight": 0.2782
+          },
+          {
+            "instrumentId": "us:ZZAR",
+            "symbol": "ZZAR",
+            "weight": 0.2491
+          },
+          {
+            "instrumentId": "us:ZZCL",
+            "symbol": "ZZCL",
+            "weight": 0.1662
+          }
+        ],
+        "correlation": {
+          "instrumentIds": [
+            "us:ZZAR",
+            "us:ZZFD",
+            "us:ZZCL",
+            "us:ZZBK",
+            "us:ZZEN"
+          ],
+          "symbols": [
+            "ZZAR",
+            "ZZFD",
+            "ZZCL",
+            "ZZBK",
+            "ZZEN"
+          ],
+          "matrix": [
+            [
+              1.0,
+              0.21,
+              0.58,
+              0.34,
+              0.12
+            ],
+            [
+              0.21,
+              1.0,
+              0.09,
+              0.27,
+              0.31
+            ],
+            [
+              0.58,
+              0.09,
+              1.0,
+              0.22,
+              -0.05
+            ],
+            [
+              0.34,
+              0.27,
+              0.22,
+              1.0,
+              0.41
+            ],
+            [
+              0.12,
+              0.31,
+              -0.05,
+              0.41,
+              1.0
+            ]
+          ]
+        },
+        "svd": {
+          "explained": [
+            0.46,
+            0.22,
+            0.15,
+            0.1,
+            0.07
+          ],
+          "loadings": [
+            {
+              "symbol": "ZZAR",
+              "value": 0.55
+            },
+            {
+              "symbol": "ZZCL",
+              "value": 0.5
+            },
+            {
+              "symbol": "ZZBK",
+              "value": 0.47
+            },
+            {
+              "symbol": "ZZEN",
+              "value": 0.4
+            },
+            {
+              "symbol": "ZZFD",
+              "value": 0.26
+            }
+          ]
+        },
+        "conditionNumberRaw": 14.8,
+        "conditionNumberShrunk": 9.3,
+        "warnings": [
+          "数据不足三年，实际从 2025-10-30 起"
+        ],
+        "excluded": [
+          {
+            "instrumentId": "us:ZZMD",
+            "symbol": "ZZMD",
+            "reason": "只关注，数量为 0，不计入权重"
+          }
+        ]
+      }
+    },
+    {
+      "name": "single",
+      "params": {
+        "scope": "holdings",
+        "window": "1Y",
+        "currency": "USD"
+      },
+      "result": {
+        "asOf": "2026-10-30",
+        "window": {
+          "label": "1Y",
+          "from": "2025-10-30",
+          "to": "2026-10-30",
+          "observations": 251
+        },
+        "currency": "USD",
+        "annualizedVol": 0.187,
+        "maxDrawdown": 0.214,
+        "effectiveHoldings": 1.0,
+        "topWeights": [
+          {
+            "instrumentId": "us:ZZAR",
+            "symbol": "ZZAR",
+            "weight": 1.0
+          }
+        ],
+        "correlation": {
+          "instrumentIds": [
+            "us:ZZAR"
+          ],
+          "symbols": [
+            "ZZAR"
+          ],
+          "matrix": [
+            [
+              1.0
+            ]
+          ]
+        },
+        "svd": {
+          "explained": [
+            1.0
+          ],
+          "loadings": [
+            {
+              "symbol": "ZZAR",
+              "value": 1.0
+            }
+          ]
+        },
+        "conditionNumberRaw": null,
+        "conditionNumberShrunk": null,
+        "warnings": [
+          "只有 1 只持仓，相关系数与 SVD 没有意义"
+        ],
+        "excluded": [
+          {
+            "instrumentId": "us:ZZMD",
+            "symbol": "ZZMD",
+            "reason": "只关注，数量为 0，不计入权重"
+          }
+        ]
+      }
+    },
+    {
+      "name": "insufficient",
+      "params": {
+        "scope": "holdings",
+        "window": "6M",
+        "currency": "USD"
+      },
+      "error": {
+        "code": "DATA_INSUFFICIENT",
+        "message": "样本不足：共同交易日 42 天，至少需要 60 天。",
+        "data": {
+          "retryable": false,
+          "observations": 42,
+          "required": 60
+        }
+      }
+    }
+  ]
+}

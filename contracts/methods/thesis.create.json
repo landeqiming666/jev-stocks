@@ -1,0 +1,115 @@
+{
+  "method": "thesis.create",
+  "summary": "为标的新建投资逻辑",
+  "owner": "P-01",
+  "phase": "mvp0",
+  "timeoutMs": 30000,
+  "params": {
+    "type": "object",
+    "required": [
+      "instrumentId",
+      "statement"
+    ],
+    "properties": {
+      "instrumentId": {
+        "type": "string",
+        "minLength": 1
+      },
+      "statement": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 500,
+        "pattern": "\\S"
+      },
+      "killCondition": {
+        "anyOf": [
+          {
+            "type": "string",
+            "maxLength": 300
+          },
+          {
+            "type": "null"
+          }
+        ]
+      }
+    },
+    "additionalProperties": false
+  },
+  "result": {
+    "$ref": "types.schema.json#/$defs/Thesis"
+  },
+  "errors": [
+    "INVALID_ARGUMENT",
+    "NOT_FOUND"
+  ],
+  "examples": [
+    {
+      "name": "ok",
+      "params": {
+        "instrumentId": "us:ZZEN",
+        "statement": "油价高位时公司现金流保持充裕",
+        "killCondition": "资本开支超过经营现金流"
+      },
+      "result": {
+        "thesisId": "01JC8Z5V3Q00000000000063A6",
+        "instrumentId": "us:ZZEN",
+        "version": 1,
+        "statement": "油价高位时公司现金流保持充裕",
+        "killCondition": "资本开支超过经营现金流",
+        "status": "active",
+        "createdAt": "2026-11-02T00:35:00Z",
+        "updatedAt": "2026-11-02T00:35:00Z",
+        "versionCount": 1,
+        "lastDecision": null
+      }
+    },
+    {
+      "name": "empty",
+      "params": {
+        "instrumentId": "us:ZZEN",
+        "statement": "   "
+      },
+      "error": {
+        "code": "INVALID_ARGUMENT",
+        "message": "逻辑内容不能为空",
+        "data": {
+          "retryable": false,
+          "field": "statement"
+        }
+      }
+    },
+    {
+      "name": "too_long",
+      "params": {
+        "instrumentId": "us:ZZEN",
+        "statement": "字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字"
+      },
+      "error": {
+        "code": "INVALID_ARGUMENT",
+        "message": "逻辑最多 500 字，当前 501 字",
+        "data": {
+          "retryable": false,
+          "field": "statement",
+          "length": 501,
+          "max": 500
+        }
+      }
+    },
+    {
+      "name": "limit_reached",
+      "params": {
+        "instrumentId": "us:ZZAR",
+        "statement": "第六条逻辑"
+      },
+      "error": {
+        "code": "INVALID_ARGUMENT",
+        "message": "每只股票最多 5 条有效逻辑",
+        "data": {
+          "retryable": false,
+          "field": "instrumentId",
+          "max": 5
+        }
+      }
+    }
+  ]
+}

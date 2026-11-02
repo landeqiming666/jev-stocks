@@ -1,0 +1,485 @@
+{
+  "method": "scan.history",
+  "summary": "读取扫描历史与预算",
+  "owner": "P-02",
+  "phase": "mvp0",
+  "timeoutMs": 30000,
+  "params": {
+    "type": "object",
+    "required": [],
+    "properties": {
+      "limit": {
+        "type": "integer",
+        "minimum": 1,
+        "maximum": 200
+      },
+      "cursor": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "additionalProperties": false
+  },
+  "result": {
+    "type": "object",
+    "required": [
+      "items",
+      "nextCursor",
+      "budget"
+    ],
+    "properties": {
+      "items": {
+        "type": "array",
+        "items": {
+          "$ref": "types.schema.json#/$defs/ScanRun"
+        }
+      },
+      "nextCursor": {
+        "anyOf": [
+          {
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ]
+      },
+      "budget": {
+        "type": "object",
+        "required": [
+          "usedTokens",
+          "limitTokens",
+          "resetAt"
+        ],
+        "properties": {
+          "usedTokens": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "limitTokens": {
+            "type": "integer",
+            "minimum": 10000,
+            "maximum": 50000000
+          },
+          "resetAt": {
+            "$ref": "types.schema.json#/$defs/IsoTime"
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    "additionalProperties": false
+  },
+  "errors": [],
+  "examples": [
+    {
+      "name": "default",
+      "params": {
+        "limit": 20
+      },
+      "result": {
+        "items": [
+          {
+            "runId": "01JC8Z5V3Q000000000000C6M1",
+            "trigger": "manual",
+            "market": "us",
+            "status": "succeeded",
+            "windowStart": "2026-10-26T00:00:00Z",
+            "windowEnd": "2026-11-02T00:30:41Z",
+            "stats": {
+              "instruments": 4,
+              "skippedNoThesis": 2,
+              "filings": 6,
+              "passages": 17,
+              "decisions": 21,
+              "cachedDecisions": 0,
+              "requests": 17,
+              "inputTokens": 18420,
+              "estCostUsd": "0.000774",
+              "durationMs": 31000
+            },
+            "engine": "jev_direct",
+            "modelId": "jev-1.14.0",
+            "startedAt": "2026-11-02T00:30:41Z",
+            "finishedAt": "2026-11-02T00:31:12Z",
+            "error": null,
+            "batchSummary": {
+              "total": 17,
+              "succeeded": 17,
+              "failed": 0,
+              "pending": 0
+            }
+          },
+          {
+            "runId": "01JC8Z5V3Q000000000000C6M2",
+            "trigger": "manual",
+            "market": "us",
+            "status": "partial",
+            "windowStart": "2026-10-28T00:00:00Z",
+            "windowEnd": "2026-10-31T09:10:00Z",
+            "stats": {
+              "instruments": 4,
+              "skippedNoThesis": 2,
+              "filings": 2,
+              "passages": 5,
+              "decisions": 6,
+              "cachedDecisions": 0,
+              "requests": 5,
+              "inputTokens": 6110,
+              "estCostUsd": "0.000257",
+              "durationMs": 78000
+            },
+            "engine": "jev_direct",
+            "modelId": "jev-1.14.0",
+            "startedAt": "2026-10-31T09:10:02Z",
+            "finishedAt": "2026-10-31T09:11:20Z",
+            "error": {
+              "code": "MODEL_ERROR",
+              "message": "1 个批次判定失败，已保留其余结果，下次扫描会自动重试"
+            },
+            "batchSummary": {
+              "total": 5,
+              "succeeded": 4,
+              "failed": 1,
+              "pending": 0
+            }
+          },
+          {
+            "runId": "01JC8Z5V3Q000000000000C6M3",
+            "trigger": "manual",
+            "market": "us",
+            "status": "succeeded",
+            "windowStart": "2026-10-26T00:00:00Z",
+            "windowEnd": "2026-10-28T00:15:00Z",
+            "stats": {
+              "instruments": 4,
+              "skippedNoThesis": 2,
+              "filings": 3,
+              "passages": 6,
+              "decisions": 7,
+              "cachedDecisions": 0,
+              "requests": 6,
+              "inputTokens": 7240,
+              "estCostUsd": "0.000304",
+              "durationMs": 38000
+            },
+            "engine": "jev_direct",
+            "modelId": "jev-1.14.0",
+            "startedAt": "2026-10-28T00:15:10Z",
+            "finishedAt": "2026-10-28T00:15:48Z",
+            "error": null,
+            "batchSummary": {
+              "total": 6,
+              "succeeded": 6,
+              "failed": 0,
+              "pending": 0
+            }
+          },
+          {
+            "runId": "01JC8Z5V3Q000000000000C6M4",
+            "trigger": "manual",
+            "market": "us",
+            "status": "cancelled",
+            "windowStart": "2026-10-19T00:00:00Z",
+            "windowEnd": "2026-10-26T01:02:00Z",
+            "stats": {
+              "instruments": 4,
+              "skippedNoThesis": 2,
+              "filings": 1,
+              "passages": 1,
+              "decisions": 0,
+              "cachedDecisions": 0,
+              "requests": 0,
+              "inputTokens": 0,
+              "estCostUsd": "0.000000",
+              "durationMs": 9000
+            },
+            "engine": "jev_direct",
+            "modelId": "jev-1.14.0",
+            "startedAt": "2026-10-26T01:02:00Z",
+            "finishedAt": "2026-10-26T01:02:09Z",
+            "error": null,
+            "batchSummary": {
+              "total": 8,
+              "succeeded": 0,
+              "failed": 0,
+              "pending": 8
+            }
+          }
+        ],
+        "budget": {
+          "usedTokens": 18420,
+          "limitTokens": 2000000,
+          "resetAt": "2026-11-03T00:00:00Z"
+        }
+      }
+    },
+    {
+      "name": "empty",
+      "params": {
+        "limit": 20
+      },
+      "result": {
+        "items": [],
+        "budget": {
+          "usedTokens": 18420,
+          "limitTokens": 2000000,
+          "resetAt": "2026-11-03T00:00:00Z"
+        }
+      }
+    },
+    {
+      "name": "budget_exhausted",
+      "params": {
+        "limit": 20
+      },
+      "result": {
+        "items": [
+          {
+            "runId": "01JC8Z5V3Q000000000000C6M1",
+            "trigger": "manual",
+            "market": "us",
+            "status": "succeeded",
+            "windowStart": "2026-10-26T00:00:00Z",
+            "windowEnd": "2026-11-02T00:30:41Z",
+            "stats": {
+              "instruments": 4,
+              "skippedNoThesis": 2,
+              "filings": 6,
+              "passages": 17,
+              "decisions": 21,
+              "cachedDecisions": 0,
+              "requests": 17,
+              "inputTokens": 18420,
+              "estCostUsd": "0.000774",
+              "durationMs": 31000
+            },
+            "engine": "jev_direct",
+            "modelId": "jev-1.14.0",
+            "startedAt": "2026-11-02T00:30:41Z",
+            "finishedAt": "2026-11-02T00:31:12Z",
+            "error": null,
+            "batchSummary": {
+              "total": 17,
+              "succeeded": 17,
+              "failed": 0,
+              "pending": 0
+            }
+          },
+          {
+            "runId": "01JC8Z5V3Q000000000000C6M2",
+            "trigger": "manual",
+            "market": "us",
+            "status": "partial",
+            "windowStart": "2026-10-28T00:00:00Z",
+            "windowEnd": "2026-10-31T09:10:00Z",
+            "stats": {
+              "instruments": 4,
+              "skippedNoThesis": 2,
+              "filings": 2,
+              "passages": 5,
+              "decisions": 6,
+              "cachedDecisions": 0,
+              "requests": 5,
+              "inputTokens": 6110,
+              "estCostUsd": "0.000257",
+              "durationMs": 78000
+            },
+            "engine": "jev_direct",
+            "modelId": "jev-1.14.0",
+            "startedAt": "2026-10-31T09:10:02Z",
+            "finishedAt": "2026-10-31T09:11:20Z",
+            "error": {
+              "code": "MODEL_ERROR",
+              "message": "1 个批次判定失败，已保留其余结果，下次扫描会自动重试"
+            },
+            "batchSummary": {
+              "total": 5,
+              "succeeded": 4,
+              "failed": 1,
+              "pending": 0
+            }
+          }
+        ],
+        "budget": {
+          "usedTokens": 2000000,
+          "limitTokens": 2000000,
+          "resetAt": "2026-11-03T00:00:00Z"
+        }
+      }
+    },
+    {
+      "name": "running",
+      "params": {
+        "limit": 20
+      },
+      "result": {
+        "items": [
+          {
+            "runId": "01JC8Z5V3Q000000000000C6M5",
+            "trigger": "manual",
+            "market": "us",
+            "status": "running",
+            "windowStart": "2026-10-26T00:00:00Z",
+            "windowEnd": "2026-11-02T00:30:41Z",
+            "stats": {
+              "instruments": 4,
+              "skippedNoThesis": 2,
+              "filings": 6,
+              "passages": 17,
+              "decisions": 9,
+              "cachedDecisions": 0,
+              "requests": 9,
+              "inputTokens": 9800,
+              "estCostUsd": "0.000412",
+              "durationMs": 40000
+            },
+            "engine": "jev_direct",
+            "modelId": "jev-1.14.0",
+            "startedAt": "2026-11-02T00:34:20Z",
+            "finishedAt": null,
+            "error": null,
+            "batchSummary": {
+              "total": 17,
+              "succeeded": 9,
+              "failed": 0,
+              "pending": 8
+            }
+          },
+          {
+            "runId": "01JC8Z5V3Q000000000000C6M1",
+            "trigger": "manual",
+            "market": "us",
+            "status": "succeeded",
+            "windowStart": "2026-10-26T00:00:00Z",
+            "windowEnd": "2026-11-02T00:30:41Z",
+            "stats": {
+              "instruments": 4,
+              "skippedNoThesis": 2,
+              "filings": 6,
+              "passages": 17,
+              "decisions": 21,
+              "cachedDecisions": 0,
+              "requests": 17,
+              "inputTokens": 18420,
+              "estCostUsd": "0.000774",
+              "durationMs": 31000
+            },
+            "engine": "jev_direct",
+            "modelId": "jev-1.14.0",
+            "startedAt": "2026-11-02T00:30:41Z",
+            "finishedAt": "2026-11-02T00:31:12Z",
+            "error": null,
+            "batchSummary": {
+              "total": 17,
+              "succeeded": 17,
+              "failed": 0,
+              "pending": 0
+            }
+          },
+          {
+            "runId": "01JC8Z5V3Q000000000000C6M2",
+            "trigger": "manual",
+            "market": "us",
+            "status": "partial",
+            "windowStart": "2026-10-28T00:00:00Z",
+            "windowEnd": "2026-10-31T09:10:00Z",
+            "stats": {
+              "instruments": 4,
+              "skippedNoThesis": 2,
+              "filings": 2,
+              "passages": 5,
+              "decisions": 6,
+              "cachedDecisions": 0,
+              "requests": 5,
+              "inputTokens": 6110,
+              "estCostUsd": "0.000257",
+              "durationMs": 78000
+            },
+            "engine": "jev_direct",
+            "modelId": "jev-1.14.0",
+            "startedAt": "2026-10-31T09:10:02Z",
+            "finishedAt": "2026-10-31T09:11:20Z",
+            "error": {
+              "code": "MODEL_ERROR",
+              "message": "1 个批次判定失败，已保留其余结果，下次扫描会自动重试"
+            },
+            "batchSummary": {
+              "total": 5,
+              "succeeded": 4,
+              "failed": 1,
+              "pending": 0
+            }
+          },
+          {
+            "runId": "01JC8Z5V3Q000000000000C6M3",
+            "trigger": "manual",
+            "market": "us",
+            "status": "succeeded",
+            "windowStart": "2026-10-26T00:00:00Z",
+            "windowEnd": "2026-10-28T00:15:00Z",
+            "stats": {
+              "instruments": 4,
+              "skippedNoThesis": 2,
+              "filings": 3,
+              "passages": 6,
+              "decisions": 7,
+              "cachedDecisions": 0,
+              "requests": 6,
+              "inputTokens": 7240,
+              "estCostUsd": "0.000304",
+              "durationMs": 38000
+            },
+            "engine": "jev_direct",
+            "modelId": "jev-1.14.0",
+            "startedAt": "2026-10-28T00:15:10Z",
+            "finishedAt": "2026-10-28T00:15:48Z",
+            "error": null,
+            "batchSummary": {
+              "total": 6,
+              "succeeded": 6,
+              "failed": 0,
+              "pending": 0
+            }
+          },
+          {
+            "runId": "01JC8Z5V3Q000000000000C6M4",
+            "trigger": "manual",
+            "market": "us",
+            "status": "cancelled",
+            "windowStart": "2026-10-19T00:00:00Z",
+            "windowEnd": "2026-10-26T01:02:00Z",
+            "stats": {
+              "instruments": 4,
+              "skippedNoThesis": 2,
+              "filings": 1,
+              "passages": 1,
+              "decisions": 0,
+              "cachedDecisions": 0,
+              "requests": 0,
+              "inputTokens": 0,
+              "estCostUsd": "0.000000",
+              "durationMs": 9000
+            },
+            "engine": "jev_direct",
+            "modelId": "jev-1.14.0",
+            "startedAt": "2026-10-26T01:02:00Z",
+            "finishedAt": "2026-10-26T01:02:09Z",
+            "error": null,
+            "batchSummary": {
+              "total": 8,
+              "succeeded": 0,
+              "failed": 0,
+              "pending": 8
+            }
+          }
+        ],
+        "budget": {
+          "usedTokens": 18420,
+          "limitTokens": 2000000,
+          "resetAt": "2026-11-03T00:00:00Z"
+        }
+      }
+    }
+  ]
+}

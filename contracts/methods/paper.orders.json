@@ -1,0 +1,206 @@
+{
+  "method": "paper.orders",
+  "summary": "读取模拟订单历史",
+  "owner": "P-05",
+  "phase": "mvp0",
+  "timeoutMs": 30000,
+  "params": {
+    "type": "object",
+    "required": [
+      "accountId"
+    ],
+    "properties": {
+      "accountId": {
+        "type": "string",
+        "minLength": 1
+      },
+      "status": {
+        "type": "string",
+        "enum": [
+          "pending",
+          "filled",
+          "rejected",
+          "cancelled"
+        ]
+      },
+      "idempotencyKey": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 64
+      },
+      "limit": {
+        "type": "integer",
+        "minimum": 1,
+        "maximum": 200
+      },
+      "cursor": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "additionalProperties": false
+  },
+  "result": {
+    "type": "object",
+    "required": [
+      "items",
+      "nextCursor"
+    ],
+    "properties": {
+      "items": {
+        "type": "array",
+        "items": {
+          "$ref": "types.schema.json#/$defs/PaperOrder"
+        }
+      },
+      "nextCursor": {
+        "anyOf": [
+          {
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ]
+      }
+    },
+    "additionalProperties": false
+  },
+  "errors": [
+    "NOT_FOUND"
+  ],
+  "examples": [
+    {
+      "name": "default",
+      "params": {
+        "accountId": "01JC8Z5V3Q000000000000J9Y1",
+        "limit": 50
+      },
+      "result": {
+        "items": [
+          {
+            "orderId": "01JC8Z5V3Q000000000000RD84",
+            "accountId": "01JC8Z5V3Q000000000000J9Y1",
+            "instrument": {
+              "instrumentId": "us:ZZCL",
+              "market": "us",
+              "symbol": "ZZCL",
+              "name": "Zhongzhi Cloud Ltd.",
+              "nameZh": "众智云",
+              "exchange": "NASDAQ",
+              "currency": "USD",
+              "isActive": true
+            },
+            "side": "buy",
+            "quantity": 100,
+            "orderType": "market_open",
+            "status": "pending",
+            "rejectReason": null,
+            "createdClockDate": "2026-10-14",
+            "reservedCash": "2841.4200",
+            "idempotencyKey": "idem-004",
+            "fills": [],
+            "estimate": {
+              "price": "28.414200",
+              "amount": "2841.4200",
+              "fee": "0.0000"
+            }
+          },
+          {
+            "orderId": "01JC8Z5V3Q000000000000RD83",
+            "accountId": "01JC8Z5V3Q000000000000J9Y1",
+            "instrument": {
+              "instrumentId": "us:ZZCL",
+              "market": "us",
+              "symbol": "ZZCL",
+              "name": "Zhongzhi Cloud Ltd.",
+              "nameZh": "众智云",
+              "exchange": "NASDAQ",
+              "currency": "USD",
+              "isActive": true
+            },
+            "side": "sell",
+            "quantity": 500,
+            "orderType": "market_open",
+            "status": "rejected",
+            "rejectReason": {
+              "code": "INSUFFICIENT_POSITION",
+              "message": "可卖数量不足：持仓 0 股，要卖出 500 股。"
+            },
+            "createdClockDate": "2026-10-13",
+            "reservedCash": null,
+            "idempotencyKey": "idem-003",
+            "fills": [],
+            "estimate": null
+          },
+          {
+            "orderId": "01JC8Z5V3Q000000000000RD82",
+            "accountId": "01JC8Z5V3Q000000000000J9Y1",
+            "instrument": {
+              "instrumentId": "us:ZZAR",
+              "market": "us",
+              "symbol": "ZZAR",
+              "name": "Zenith Arc Robotics Inc.",
+              "nameZh": "天顶弧机器人",
+              "exchange": "NASDAQ",
+              "currency": "USD",
+              "isActive": true
+            },
+            "side": "buy",
+            "quantity": 50,
+            "orderType": "market_open",
+            "status": "filled",
+            "rejectReason": null,
+            "createdClockDate": "2026-09-14",
+            "reservedCash": null,
+            "idempotencyKey": "idem-002",
+            "fills": [
+              {
+                "fillId": "01JC8Z5V3Q000000000000NBK2",
+                "filledOn": "2026-09-15",
+                "price": "49.824900",
+                "quantity": 50,
+                "amount": "2491.2450",
+                "fee": "0.0000"
+              }
+            ],
+            "estimate": null
+          },
+          {
+            "orderId": "01JC8Z5V3Q000000000000RD81",
+            "accountId": "01JC8Z5V3Q000000000000J9Y1",
+            "instrument": {
+              "instrumentId": "us:ZZFD",
+              "market": "us",
+              "symbol": "ZZFD",
+              "name": "Zephyr Foods Corp.",
+              "nameZh": "和风食品",
+              "exchange": "NYSE",
+              "currency": "USD",
+              "isActive": true
+            },
+            "side": "buy",
+            "quantity": 200,
+            "orderType": "market_open",
+            "status": "filled",
+            "rejectReason": null,
+            "createdClockDate": "2026-09-01",
+            "reservedCash": null,
+            "idempotencyKey": "idem-001",
+            "fills": [
+              {
+                "fillId": "01JC8Z5V3Q000000000000NBK1",
+                "filledOn": "2026-09-02",
+                "price": "22.411200",
+                "quantity": 200,
+                "amount": "4482.2400",
+                "fee": "0.0000"
+              }
+            ],
+            "estimate": null
+          }
+        ]
+      }
+    }
+  ]
+}

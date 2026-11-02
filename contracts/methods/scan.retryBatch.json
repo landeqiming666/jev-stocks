@@ -1,0 +1,94 @@
+{
+  "method": "scan.retryBatch",
+  "summary": "重试失败扫描批次",
+  "owner": "P-02",
+  "phase": "mvp0",
+  "timeoutMs": 60000,
+  "params": {
+    "type": "object",
+    "required": [
+      "batchId"
+    ],
+    "properties": {
+      "batchId": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "additionalProperties": false
+  },
+  "result": {
+    "$ref": "types.schema.json#/$defs/ScanBatch"
+  },
+  "errors": [
+    "NOT_FOUND",
+    "CONFIG_REQUIRED",
+    "BUDGET_EXCEEDED",
+    "MODEL_ERROR",
+    "SOURCE_UNAVAILABLE",
+    "TIMEOUT",
+    "INTERNAL"
+  ],
+  "examples": [
+    {
+      "name": "ok",
+      "params": {
+        "batchId": "01JC8Z5V3Q000000000000F893"
+      },
+      "result": {
+        "batchId": "01JC8Z5V3Q000000000000F893",
+        "runId": "01JC8Z5V3Q000000000000C6M2",
+        "instrumentId": "us:ZZCL",
+        "eventId": "us:0009990001-26-000006",
+        "eventTitle": "6-K: Notice of Extraordinary General Meeting",
+        "status": "succeeded",
+        "attempts": 4,
+        "error": null,
+        "passages": 1,
+        "decisions": 1,
+        "inputTokens": 1000
+      }
+    },
+    {
+      "name": "model_error",
+      "params": {
+        "batchId": "01JC8Z5V3Q000000000000F893"
+      },
+      "error": {
+        "code": "MODEL_ERROR",
+        "message": "Jev 暂时不可用（529），稍后会自动重试。",
+        "data": {
+          "retryable": true,
+          "status": 529
+        }
+      }
+    },
+    {
+      "name": "timeout",
+      "params": {
+        "batchId": "01JC8Z5V3Q000000000000F893"
+      },
+      "error": {
+        "code": "TIMEOUT",
+        "message": "请求超时，请重试。",
+        "data": {
+          "retryable": true
+        }
+      }
+    },
+    {
+      "name": "internal",
+      "params": {
+        "batchId": "01JC8Z5V3Q000000000000F893"
+      },
+      "error": {
+        "code": "INTERNAL",
+        "message": "发生了未预期的错误，错误编号 r-17-k3j9。",
+        "data": {
+          "retryable": true,
+          "requestId": "r-17-k3j9"
+        }
+      }
+    }
+  ]
+}

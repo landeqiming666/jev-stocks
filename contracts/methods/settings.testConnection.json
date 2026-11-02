@@ -1,0 +1,79 @@
+{
+  "method": "settings.testConnection",
+  "summary": "测试 Jev、SEC 和 JEVDB 连接",
+  "owner": "C-04",
+  "phase": "mvp0",
+  "timeoutMs": 20000,
+  "params": {
+    "type": "object",
+    "required": [],
+    "properties": {},
+    "additionalProperties": false
+  },
+  "result": {
+    "$ref": "types.schema.json#/$defs/TestConnectionResult"
+  },
+  "errors": [
+    "CONFIG_REQUIRED"
+  ],
+  "examples": [
+    {
+      "name": "ok",
+      "params": {},
+      "result": {
+        "ok": true,
+        "engine": "jev_direct",
+        "modelId": "jev-1.14.0",
+        "checks": [
+          {
+            "name": "Jev",
+            "ok": true,
+            "latencyMs": 412,
+            "message": "模型 jev-1.14.0 可用"
+          },
+          {
+            "name": "SEC",
+            "ok": true,
+            "latencyMs": 236,
+            "message": "data.sec.gov 可访问"
+          },
+          {
+            "name": "JEVDB",
+            "ok": false,
+            "latencyMs": null,
+            "message": "未找到 JEVDB 扩展，已使用 Jev 直连（同一模型）"
+          }
+        ]
+      }
+    },
+    {
+      "name": "failed",
+      "params": {},
+      "result": {
+        "ok": false,
+        "engine": "jev_direct",
+        "modelId": "jev-1.14.0",
+        "checks": [
+          {
+            "name": "Jev",
+            "ok": false,
+            "latencyMs": null,
+            "message": "密钥无效（401）。请重新填写 Jev 密钥。"
+          },
+          {
+            "name": "SEC",
+            "ok": true,
+            "latencyMs": 251,
+            "message": "data.sec.gov 可访问"
+          },
+          {
+            "name": "JEVDB",
+            "ok": false,
+            "latencyMs": null,
+            "message": "未找到 JEVDB 扩展，已使用 Jev 直连（同一模型）"
+          }
+        ]
+      }
+    }
+  ]
+}

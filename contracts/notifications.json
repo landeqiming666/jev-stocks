@@ -1,0 +1,414 @@
+{
+  "app.ready": {
+    "params": {
+      "type": "object",
+      "required": [
+        "version",
+        "migrationsApplied"
+      ],
+      "properties": {
+        "version": {
+          "type": "string"
+        },
+        "migrationsApplied": {
+          "type": "integer",
+          "minimum": 0
+        }
+      },
+      "additionalProperties": false
+    },
+    "example": {
+      "version": "0.1.0",
+      "migrationsApplied": 0
+    }
+  },
+  "scan.progress": {
+    "params": {
+      "type": "object",
+      "required": [
+        "runId",
+        "market",
+        "stage",
+        "done",
+        "total",
+        "message"
+      ],
+      "properties": {
+        "runId": {
+          "type": "string",
+          "minLength": 1
+        },
+        "market": {
+          "$ref": "types.schema.json#/$defs/Market"
+        },
+        "stage": {
+          "type": "string",
+          "enum": [
+            "fetch",
+            "parse",
+            "decide",
+            "evidence",
+            "finish"
+          ]
+        },
+        "done": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "total": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "message": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false
+    },
+    "example": {
+      "runId": "01JC8Z5V3Q000000000000C6M5",
+      "market": "us",
+      "stage": "decide",
+      "done": 9,
+      "total": 17,
+      "message": "正在判定 ZZCL 的 6-K"
+    }
+  },
+  "scan.finished": {
+    "params": {
+      "type": "object",
+      "required": [
+        "runId",
+        "trigger",
+        "market",
+        "status",
+        "windowStart",
+        "windowEnd",
+        "stats",
+        "engine",
+        "modelId",
+        "startedAt",
+        "finishedAt",
+        "error",
+        "batchSummary"
+      ],
+      "properties": {
+        "runId": {
+          "type": "string",
+          "minLength": 1
+        },
+        "trigger": {
+          "type": "string",
+          "enum": [
+            "manual",
+            "schedule"
+          ]
+        },
+        "market": {
+          "$ref": "types.schema.json#/$defs/Market"
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "queued",
+            "running",
+            "succeeded",
+            "partial",
+            "failed",
+            "cancelled",
+            "interrupted"
+          ]
+        },
+        "windowStart": {
+          "$ref": "types.schema.json#/$defs/IsoTime"
+        },
+        "windowEnd": {
+          "$ref": "types.schema.json#/$defs/IsoTime"
+        },
+        "stats": {
+          "type": "object",
+          "required": [
+            "instruments",
+            "skippedNoThesis",
+            "filings",
+            "passages",
+            "decisions",
+            "cachedDecisions",
+            "requests",
+            "inputTokens",
+            "estCostUsd",
+            "durationMs"
+          ],
+          "properties": {
+            "instruments": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "skippedNoThesis": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "filings": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "passages": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "decisions": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "cachedDecisions": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "requests": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "inputTokens": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "estCostUsd": {
+              "$ref": "types.schema.json#/$defs/Decimal"
+            },
+            "durationMs": {
+              "type": "integer",
+              "minimum": 0
+            }
+          },
+          "additionalProperties": false
+        },
+        "engine": {
+          "$ref": "types.schema.json#/$defs/Engine"
+        },
+        "modelId": {
+          "type": "string"
+        },
+        "startedAt": {
+          "anyOf": [
+            {
+              "$ref": "types.schema.json#/$defs/IsoTime"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "finishedAt": {
+          "anyOf": [
+            {
+              "$ref": "types.schema.json#/$defs/IsoTime"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "error": {
+          "anyOf": [
+            {
+              "type": "object",
+              "required": [
+                "code",
+                "message"
+              ],
+              "properties": {
+                "code": {
+                  "type": "string"
+                },
+                "message": {
+                  "type": "string"
+                }
+              },
+              "additionalProperties": false
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "batchSummary": {
+          "type": "object",
+          "required": [
+            "total",
+            "succeeded",
+            "failed",
+            "pending"
+          ],
+          "properties": {
+            "total": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "succeeded": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "failed": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "pending": {
+              "type": "integer",
+              "minimum": 0
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    "example": {
+      "runId": "01JC8Z5V3Q000000000000C6M1",
+      "trigger": "manual",
+      "market": "us",
+      "status": "succeeded",
+      "windowStart": "2026-10-26T00:00:00Z",
+      "windowEnd": "2026-11-02T00:30:41Z",
+      "stats": {
+        "instruments": 4,
+        "skippedNoThesis": 2,
+        "filings": 6,
+        "passages": 17,
+        "decisions": 21,
+        "cachedDecisions": 0,
+        "requests": 17,
+        "inputTokens": 18420,
+        "estCostUsd": "0.000774",
+        "durationMs": 31000
+      },
+      "engine": "jev_direct",
+      "modelId": "jev-1.14.0",
+      "startedAt": "2026-11-02T00:30:41Z",
+      "finishedAt": "2026-11-02T00:31:12Z",
+      "error": null,
+      "batchSummary": {
+        "total": 17,
+        "succeeded": 17,
+        "failed": 0,
+        "pending": 0
+      }
+    }
+  },
+  "inbox.updated": {
+    "params": {
+      "type": "object",
+      "required": [
+        "newItems",
+        "pendingCount"
+      ],
+      "properties": {
+        "newItems": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "pendingCount": {
+          "type": "integer",
+          "minimum": 0
+        }
+      },
+      "additionalProperties": false
+    },
+    "example": {
+      "newItems": 3,
+      "pendingCount": 3
+    }
+  },
+  "engine.changed": {
+    "params": {
+      "type": "object",
+      "required": [
+        "from",
+        "to",
+        "reason"
+      ],
+      "properties": {
+        "from": {
+          "anyOf": [
+            {
+              "$ref": "types.schema.json#/$defs/Engine"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "to": {
+          "anyOf": [
+            {
+              "$ref": "types.schema.json#/$defs/Engine"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "reason": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false
+    },
+    "example": {
+      "from": "jevdb",
+      "to": "jev_direct",
+      "reason": "未找到 JEVDB 扩展，已改用 Jev 直连（同一模型）"
+    }
+  },
+  "source.degraded": {
+    "params": {
+      "type": "object",
+      "required": [
+        "source",
+        "reason"
+      ],
+      "properties": {
+        "source": {
+          "type": "string"
+        },
+        "reason": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false
+    },
+    "example": {
+      "source": "SEC EDGAR",
+      "reason": "连续 5 次请求失败，10 分钟后重试"
+    }
+  },
+  "budget.updated": {
+    "params": {
+      "type": "object",
+      "required": [
+        "usedTokens",
+        "limitTokens",
+        "resetAt"
+      ],
+      "properties": {
+        "usedTokens": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "limitTokens": {
+          "type": "integer",
+          "minimum": 10000,
+          "maximum": 50000000
+        },
+        "resetAt": {
+          "$ref": "types.schema.json#/$defs/IsoTime"
+        }
+      },
+      "additionalProperties": false
+    },
+    "example": {
+      "usedTokens": 18420,
+      "limitTokens": 2000000,
+      "resetAt": "2026-11-03T00:00:00Z"
+    }
+  }
+}

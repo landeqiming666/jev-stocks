@@ -1,0 +1,42 @@
+{
+  "method": "app.ping",
+  "summary": "检查核心进程心跳",
+  "owner": "C-01",
+  "phase": "mvp0",
+  "timeoutMs": 2000,
+  "params": {
+    "type": "object",
+    "required": [],
+    "properties": {},
+    "additionalProperties": false
+  },
+  "result": {
+    "type": "object",
+    "required": [
+      "ok",
+      "uptimeMs"
+    ],
+    "properties": {
+      "ok": {
+        "type": "boolean",
+        "const": true
+      },
+      "uptimeMs": {
+        "type": "integer",
+        "minimum": 0
+      }
+    },
+    "additionalProperties": false
+  },
+  "errors": [],
+  "examples": [
+    {
+      "name": "ok",
+      "params": {},
+      "result": {
+        "ok": true,
+        "uptimeMs": 183420
+      }
+    }
+  ]
+}
