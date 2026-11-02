@@ -139,12 +139,12 @@ def main(argv: Sequence[str] | None = None) -> int: ...
 | `CANCELLED_MESSAGE_KEY` | `"error.CANCELLED"` | `messages` | 取消文案 |
 ## 6. 实现步骤
 1. **writer**：创建 `queue.Queue(maxsize=1024)` 和 `threading.Thread(name="rpc-writer")`。`send` 把 `bytes` 放入队列；队列满时阻塞不超过 1 s，仍失败则记录 `rpc.writer.backpressure` 并丢弃通知，响应不得丢弃。
-2. **reader**：使用 `stdin.buffer.readline(MAX_LINE_BYTES + 1)`；超过上限时尝试解析前 64 字节取得 `id`，有 `id` 则写 `INVALID_ARGUMENT`，无 `id` 则只记日志。空行跳过。
+2. **reader**：输入已是 `BinaryIO`，使用 `stdin.readline(MAX_LINE_BYTES + 1)`；超限时丢弃该行余下字节，随后继续读下一完整行，不把残余字节当成新请求。有可校验 `id` 则写 `INVALID_ARGUMENT`，无 `id` 则只记日志。空行跳过。
 3. **ping**：reader 解析 `app.ping` 后直接构造 `{"ok": True, "uptimeMs": int((now - started).total_seconds() * 1000)}`，不经过线程池。
 4. **普通请求**：创建 `CancelToken`，调用 `CancelRegistry.register(id, token, cancellable=spec.cancellable)`，提交 `ThreadPoolExecutor(max_workers=4)`；提交前将请求状态保存为 `in_flight`。
 5. **分发**：`Dispatcher.lookup` 找不到方法时抛 `UserError("INVALID_ARGUMENT", reason="UNKNOWN_METHOD")`；用 `params_model.model_validate(raw_params)`，`ValidationError` 取第一条错误的点号路径作为 `data.field`。
 6. **取消**：reader 收到 `$/cancel` 后解析 `params.id`，调用 `CancelRegistry.cancel`；该方法只在登记项存在且 `cancellable=True` 时置位并返回 `True`，未知或不可取消返回 `False`（不回 `CANCELLED`、不置位）。成功且状态仍未响应时，writer 立即写 `CANCELLED`，状态改为 `responded`；worker 返回时看到 `responded` 就丢弃结果。处理器必须在自己的写事务前调用 `raise_if_cancelled()`；RPC 层无法替处理器回滚已开始的事务。
-7. **错误**：处理器抛 `SentinelError` 时调用 `to_wire(request_id)`；抛 `pydantic.ValidationError` 转为 `INVALID_ARGUMENT`；其他异常包装为 `InternalError("INTERNAL", request_id=request_id, detail=type(exc).__name__)`，日志不得写用户正文。
+7. **错误**：处理器抛 `SentinelError` 时调用 `to_wire(request_id)`；抛 `pydantic.ValidationError` 转为 `INVALID_ARGUMENT`；其他异常包装为 `InternalError("INTERNAL", detail=type(exc).__name__)`，再由 `to_wire(request_id)` 关联错误编号。日志不得写用户正文。
 8. **关闭**：`app.shutdown` 返回 `{"ok": true}` 后设置 `stop_event`；server 停止接受新请求，worker 排空 3 s，writer 冲刷队列，最后关闭线程池。`force=true` 时不等待 worker。
 9. **看门狗**：`parent_pid` 不为空时每 2 s 调用 `platform.is_process_alive`；连续 1 次为假就设置 `stop_event`，并以退出码 0 结束。每次检查间隔固定 2.0 s。
 ## 7. 错误与边界情况

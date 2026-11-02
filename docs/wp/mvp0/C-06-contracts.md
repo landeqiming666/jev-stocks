@@ -6,7 +6,7 @@ platform: shared
 lane: core
 deps: [WP-00]
 size: M
-owns: [contracts/, scripts/gen_proto_mock.py, scripts/check_contracts.py, scripts/tests/test_contracts.py]
+owns: [contracts/, scripts/gen_proto_mock.py, scripts/check_contracts.py, scripts/tests/test_contracts.py, .kiro/notes/author/data.py, design/prototype/data/mock.js]
 appends: []
 stubs: []
 ---
@@ -40,6 +40,8 @@ stubs: []
 | 修改 `design/prototype/` 的页面代码或示例正文 | 不改；生成物只写 `data/mock.js` |
 | 新增契约字段或改变示例语义 | 变更申请；C-06 只固化已有设计 |
 | 引入 `jsonschema`、网络校验或远程 schema | 禁止；脚本兼容 Python 3.9 标准库 |
+
+本批主 agent 批准的例外见 [B10-01](../cr/B10-01-review-clarifications.md)：为落实已采纳的 R08，修正创作源 E1 为已完成减持，问题集版本升为 `qs-2026-11-02.2`，再重生成 mock。现有 92 个示例、ID、模拟概率和字段顺序不变；逐字节比较以修正后的创作源与 mock 为准。
 
 ## 2. 必读
 | 文档 | 小节 | 为什么要读 |

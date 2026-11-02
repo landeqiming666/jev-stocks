@@ -163,7 +163,7 @@ def register(dispatcher: Dispatcher, settings: SettingsService, secrets: Secrets
 | `test_unknown_patch_field_is_rejected` | 同上 | `{"modelId":"x"}` | `INVALID_ARGUMENT`，没有任何写入 |
 | `test_budget_out_of_range_is_rejected` | 同上 | `10000` 与 `50000001` | 后者 `INVALID_ARGUMENT` |
 | `test_secret_is_never_returned` | `test_secrets.py` | `set_jev_key("<secret>")` 后 `status()` | `{"jevKey":True}`，响应不含 `<secret>` |
-| `test_secret_rejects_whitespace` | 同上 | `" sk-test "` | `INVALID_ARGUMENT`，钥匙串没有写入 |
+| `test_secret_rejects_whitespace` | 同上 | `"sk test"`（密钥内部空白） | `INVALID_ARGUMENT`，钥匙串没有写入；首尾空白按 05 §5.2 先 strip 后校验 |
 | `test_bootstrap_fields_match_contract` | `test_settings.py` | 已配置、`engine=auto/active=jev_direct`、db version 1 | 10 个字段与 [05] §4 示例名 `ready` 一致 |
 | `test_bootstrap_unconfigured_has_no_active_engine` | 同上 | 无密钥 | `configured.jevKey is False`，`engine.active is None` |
 | `test_connection_ok_when_jevdb_missing` | 同上 | Jev 412 ms、SEC 236 ms、JEVDB false | `ok is True`，检查顺序 `Jev,SEC,JEVDB` |
