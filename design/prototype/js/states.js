@@ -49,6 +49,8 @@
       c[k] = c[k].filter(function (d) {
         var a = acted[d.decisionId];
         if (!a) { return true; }
+        if (!a.origin) { a.origin = k; }
+        if (a.action === 'reopen') { return a.origin === k; }
         d.action = { action: a.action, note: a.note || null, actedAt: P.now };
         c.processed.unshift(d);
         return false;

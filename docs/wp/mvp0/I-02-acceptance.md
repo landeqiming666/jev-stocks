@@ -15,7 +15,7 @@ stubs: []
 
 ## 0. 一眼看懂
 
-- **目标**：把第 8 节七项“必须”变成一条可重复执行的验收命令，并给出任何人在离线环境都能按表演完的 5 分钟演示。
+- **目标**：把第 8 节八项“必须”变成一条可重复执行的验收命令，并给出任何人在离线环境都能按表演完的 5 分钟演示。最终提交必须包含一次真实 JEVDB 贯通记录。
 - **完成后解锁**：课程提交、W-05 的 Windows 对照验收。
 - **预计规模**：约 520 行，验收编排 260 行、Playwright 160 行、演示数据脚本 100 行。
 
@@ -25,24 +25,26 @@ stubs: []
 功能测试通过不等于交付通过。密钥是否泄露、断网是否还能看、证据是否缺失、评测能否一条命令跑完，都需要在一个干净数据目录里按产品路径核对。现场演示还需要明确失败时的诚实降级，不准临时编数据。
 
 ### 1.2 范围内
-1. 自动化核对 M-1～M-7，输出每项证据路径和总判定。
+1. 自动化核对 M-1～M-8，输出每项证据路径和总判定。
 2. 运行真实核心 + 前端的验收场景、评测回放、密钥扫描和三处数据库查询。
 3. 5 分钟演示脚本、预期界面与固定数据、逐段降级方案。
 4. macOS 与 Windows 共用同一验收报告格式，平台结果分开记录。
+5. `--full` 模式下用一份固定公开 SEC 披露跑通真实 JEVDB 查询，保存 M-8 的 SQL、统计、数据库结果与界面证据；HTTP 可回放，模型响应不可伪造。
 
 ### 1.3 明确不做
 | 不做 | 由谁做 |
 |---|---|
 | 修复验收发现的问题 | 对应工作包；本包只记录和阻断 |
 | 构建安装包 | v1；MVP-0 用开发模式 |
-| 用真实 Jev 作为默认验收前置 | G0-JEV；默认离线 |
+| 默认运行付费模型 | 默认 `--offline`；只有最终验收显式使用 `--full` |
 | 改任何 RPC、业务逻辑或 UI | 共享工作包 |
+| 用 `jev_direct`、cassette 或 SQL 字符串测试替代真实 JEVDB | ADR-018；M-8 直接失败 |
 
 ## 2. 必读
 
 | 文档 | 小节 | 为什么要读 |
 |---|---|---|
-| [01-产品需求.md](../../01-产品需求.md) | 第 8 节 MVP-0 验收标准 | M-1～M-7 的唯一来源 |
+| [01-产品需求.md](../../01-产品需求.md) | 第 8 节 MVP-0 验收标准 | M-1～M-8 的唯一来源 |
 | [09-测试与评测.md](../../09-测试与评测.md) | 11.2 MVP-0 验收、9.7 复现与产物 | 人工项与评测命令 |
 | [10-协作与工作包规范.md](../../10-协作与工作包规范.md) | 6 状态文件、9 Windows 协议 | 报告与平台隔离 |
 | [05-接口契约.md](../../05-接口契约.md) | 3.2 错误码、5.9 演示数据 | 断网与演示断言 |
@@ -55,6 +57,7 @@ stubs: []
 - E-02 的 `dataset.jsonl`、manifest 和 cassette 完整，离线回放可运行。
 - `scripts/check.py` 已包含 lint、typecheck、pytest、前端测试、Rust 检查、文档检查与平台隔离检查。
 - 验收在 macOS arm64 主线运行；Windows 只复用报告 schema，由 W-05 执行。
+- `--full` 还要求：macOS arm64 上 JEVDB 扩展可加载、`JEV_API_KEY` 存在、真实 JEVDB 查询预算已获确认。缺任一项时 M-8=`fail`，整体不得通过。
 
 ## 4. 交付物清单
 
@@ -80,7 +83,7 @@ class AcceptanceRunner:
 
 def main(argv: Sequence[str] | None = None) -> int: ...
 ```
-CLI：`scripts/acceptance.py [--offline|--full] [--report-dir PATH] [--skip-e2e] [--json]`。默认 `--offline`。`--skip-e2e` 只供开发排错，最终报告强制 `overall=fail`，不得用来交付。
+CLI：`scripts/acceptance.py [--offline|--full] [--report-dir PATH] [--skip-e2e] [--json]`。默认 `--offline`，只做开发回归；M-8 固定为 `not_run`，因此整体 `overall=fail`。最终提交必须无 `--skip-e2e` 运行 `--full`，且 M-1～M-8 全 pass。
 
 ### 5.2 报告字段
 | 字段 | 类型 | 必填 | 约束 | 含义 |
@@ -89,8 +92,8 @@ CLI：`scripts/acceptance.py [--offline|--full] [--report-dir PATH] [--skip-e2e]
 | `platform` | str | 是 | `macos/windows` | 平台 |
 | `mode` | str | 是 | `offline/full` | 验收模式 |
 | `startedAt/finishedAt` | str | 是 | UTC、以 `Z` 结尾 | 起止时间 |
-| `checks[]` | object | 是 | 至少 M-1～M-7 | 单项结果 |
-| `checks[].id` | str | 是 | `M-1`…`M-7` | 对应产品标准 |
+| `checks[]` | object | 是 | 至少 M-1～M-8 | 单项结果 |
+| `checks[].id` | str | 是 | `M-1`…`M-8` | 对应产品标准 |
 | `checks[].status` | str | 是 | `pass/fail/not_run` | 只有 pass 可交付 |
 | `checks[].evidence[]` | list[str] | 是 | 相对报告目录的路径 | 可点击复核 |
 | `overall` | str | 是 | `pass/fail` | 所有必须项均为 pass |
@@ -115,9 +118,10 @@ CLI：`scripts/acceptance.py [--offline|--full] [--report-dir PATH] [--skip-e2e]
 7. 查询 `decision`，断言 12 行的 `engine/model_id/question_set_version/evidence_kind` 非空且值在白名单；归入 M-4。
 8. 运行 `scripts/eval.py --replay … --split test --gate`；把 `report.md`、`report.json`、`predictions.jsonl` 归入 M-5。未达 F1 时 M-5 fail，但不得删产物。
 9. 运行 I-01 的“无证据不展示”测试，人工在数据库插入一条缺少证据的阳性判定并重启，断言不进清单；归入 M-6。
-10. 汇总 `overall`：仅当 M-1～M-7 全部 pass 时为 pass；任何 `not_run` 视为 fail。终端输出一行 `ACCEPTANCE PASS/FAIL <passed>/7`。
-11. 复制 `manual-checklist.md` 到报告目录，要求在录屏后勾选键盘、断网、取消/重启、密钥四项；未勾选不得提交。
-12. 生成 `acceptance.json`、`summary.md`、`artifacts/`，不清理失败的临时目录，路径打印在终端。
+10. **仅 `--full`**：对一份固定公开 SEC 披露启动一次真实扫描，强制引擎为 `jevdb`；轮询到完成。保存扩展路径与 SHA-256、DuckDB 版本、模型 ID、问题集版本、生成 SQL、`jevdb_stats()`、`decision` 行和证据抽屉截图到 M-8 证据目录。若引擎降级、请求失败或界面显示 `jev_direct`，M-8 fail。
+11. 汇总 `overall`：仅当 M-1～M-8 全部 pass 时为 pass；任何 `not_run` 视为 fail。终端输出一行 `ACCEPTANCE PASS/FAIL <passed>/8`。
+12. 复制 `manual-checklist.md` 到报告目录，要求在录屏后勾选键盘、断网、取消/重启、密钥四项；未勾选不得提交。
+13. 生成 `acceptance.json`、`summary.md`、`artifacts/`，不清理失败的临时目录，路径打印在终端。
 
 ## 7. 5 分钟演示脚本
 
@@ -125,7 +129,7 @@ CLI：`scripts/acceptance.py [--offline|--full] [--report-dir PATH] [--skip-e2e]
 |---|---|---|---|
 | 0:00–0:25 | 启动应用；标题“投资逻辑哨兵” | 无 | 启动超过 15 秒则重启一次，仍失败只展示已知缺陷，不继续 |
 | 0:25–1:05 | 今日页：3 条待处理，顺序 ZZAR 推翻 0.93、ZZCL 削弱 0.78、ZZEN 削弱 0.71；“系统拿不准 1 条”折叠 | 4 个数字来自 manifest | 今日页异常则直接打开证据抽屉 URL，说明页面缺陷，不手工造卡 |
-| 1:05–1:45 | 打开 ZZAR 证据抽屉；高亮“拟减持最多 4.5%”；显示 Jev 直连与模型 ID | 披露 0009990001-26-000001 | 原文抓取失败则显示已存句子，并明确“演示数据预置” |
+| 1:05–1:45 | 打开 ZZAR 证据抽屉；高亮已完成的 4.5% 减持句；显示 JEVDB 回放来源与模型 ID | 披露 0009990001-26-000001；M-8 真实运行记录 | 原文抓取失败则显示已存句子，并明确“演示数据预置”；不得使用未留证据的直连结果 |
 | 1:45–2:15 | 点“仍然成立”；条目移出，待处理变 2；展开已处理可重新打开 | 动作记录追加 | 写入失败则展示错误编号，不继续交易步骤 |
 | 2:15–2:55 | 持仓页：5 个标的、6 条逻辑；展开 ZZAR 两条逻辑与失效条件 | 数量 5/6 | 编辑器异常则只读展示，不现场修改数据库 |
 | 2:55–3:25 | 扫描页：1 条预置扫描历史、6 份披露、预算与引擎信息；说明这是离线演示数据，不是现场扫描 | 6 份披露 | 历史为空则展示 E-01 fixture，不声称刚扫描成功 |
@@ -139,8 +143,10 @@ CLI：`scripts/acceptance.py [--offline|--full] [--report-dir PATH] [--skip-e2e]
 ### 8.1 测试清单
 | 测试名 | 文件 | 输入 | 期望 |
 |---|---|---|---|
-| `test_acceptance_all_pass_exits_zero` | `apps/desktop/e2e/acceptance/acceptance.spec.ts` | 全部 fixture | `overall=pass`，7/7 |
+| `test_full_acceptance_all_pass_exits_zero` | `apps/desktop/e2e/acceptance/acceptance.spec.ts` | 全部 fixture + 真实 JEVDB 探针 | `overall=pass`，8/8 |
 | `test_skip_e2e_cannot_report_pass` | 同上 | `--skip-e2e` | `overall=fail`，M-1=`not_run` |
+| `test_offline_cannot_pass_final_acceptance` | 同上 | `--offline` | M-8=`not_run`，`overall=fail` |
+| `test_full_without_jevdb_marks_m8_fail` | 同上 | JEVDB 扩展不可用 | M-8=`fail`，整体 exit=1 |
 | `test_offline_keeps_six_pages_readable` | 同上 | `SENTINEL_OFFLINE=1` | 六页有数据、有离线提示 |
 | `test_secret_scan_finds_planted_secret` | `scripts/acceptance.py --self-test` | 日志写入假密钥 | M-3 fail，证据路径存在 |
 | `test_missing_evidence_blocks_inbox` | 同上 | 无证据阳性判定 | M-6 pass，清单不计该条 |
@@ -159,8 +165,10 @@ CLI：`scripts/acceptance.py [--offline|--full] [--report-dir PATH] [--skip-e2e]
 
 ### 9.1 命令与期望输出
 ```bash
+python3 scripts/acceptance.py --full --json
+# 期望：真实 JEVDB 可用时退出码 0；ACCEPTANCE PASS 8/8
 python3 scripts/acceptance.py --offline --json
-# 期望：退出码 0；ACCEPTANCE PASS 7/7
+# 期望：开发回归可执行，但 M-8=not_run、退出码 1；不得用于最终提交
 python3 scripts/acceptance.py --skip-e2e
 # 期望：退出码 1；overall=fail；M-1=not_run
 python3 scripts/check_docs.py --strict
@@ -169,9 +177,10 @@ python3 scripts/check_docs.py --strict
 人工录屏必须覆盖 §7 全表，并保存到 `test-results/acceptance/录屏.mov`；报告只引用路径，不把视频提交进仓库。
 
 ### 9.2 完成清单
-- [ ] M-1～M-7 每项有状态、证据路径和复核命令
+- [ ] M-1～M-8 每项有状态、证据路径和复核命令
 - [ ] 5 分钟脚本实测 ≤ 300 秒，两个视口无横向滚动
 - [ ] 密钥泄漏、缺证据、离线、评测失败四种反向测试通过
+- [ ] M-8 保存真实 JEVDB 的扩展 SHA、SQL、统计、数据库结果与界面截图；任何直连替代均失败
 - [ ] 人工录屏与键盘/断网/重启/密钥四项都勾选
 - [ ] 报告中没有任何真实密钥、持仓或个人信息
 - [ ] 已写 `docs/wp/status/I-02.md`
@@ -188,6 +197,6 @@ python3 scripts/check_docs.py --strict
 
 | 风险 | 征兆 | 回退 |
 |---|---|---|
-| 现场网络或密钥失效 | SEC/Jev 超时 | 全程使用 `--offline` 和预置演示数据，明确不是实时扫描 |
+| 现场网络或密钥失效 | SEC/Jev 超时 | 现场只回放已保存的 M-8 记录；若从未完成 `--full`，不得提交或宣称验收通过 |
 | 演示超时 | 5 分钟表走到 4:30 后未完成 | 跳过风险数字讲解，保留今日、证据、交易三段 |
 | 验收脚本自身改变数据 | 重复运行计数变化 | 每次新建临时目录；报告记录数据目录，失败不复用 |

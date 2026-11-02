@@ -197,4 +197,4 @@ cd .. && scripts/check.sh
 |---|---|---|
 | 缩写表漏项导致错切 | 证据句跨两个句子 | 加回归样例并升规则版本；不得在线用模型纠正 |
 | 硬切切断单词 | 段落末尾出现半个单词 | 已优先在空白处切；无空白时接受固定 1200 字符 |
-| Unicode 代理对偏移错误 | Python 长度与 JS 长度不同 | 后端字符数用 Python 码点；RPC 只传偏移和原文，前端用同一字符串切片 |
+| Unicode 代理对偏移错误 | Python 码点与 JS UTF-16 长度不同 | 后端偏移固定为 Python 码点；前端必须 `Array.from(text).slice(start, end)`；回归样例 `A😀. Revenue fell.` 的 `[4,17)` 必须高亮 `Revenue fell.` |

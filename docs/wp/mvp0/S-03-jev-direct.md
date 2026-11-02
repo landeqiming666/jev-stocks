@@ -14,7 +14,7 @@ stubs: []
 # S-03 Jev 直连引擎
 
 ## 0. 一眼看懂
-- **目标**：实现 `SemanticEngine` 的 `jev_direct` 引擎：按段落打包逻辑，4 路并发调用官方 SDK，校验概率，整批成功或整批失败，并把 401/403/429 等错误准确映射。
+- **目标**：实现 `SemanticEngine` 的 `jev_direct` 引擎：只为显式请求的 `(逻辑, 段落)` 对按段落打包，4 路并发调用官方 SDK，校验概率，整批成功或整批失败，并把 401/403/429 等错误准确映射。
 - **完成后解锁**：S-05 可以用真实或 fake 引擎跑判定流水线，S-04 可复用错误与响应校验约定。
 - **预计规模**：实现约 360 行，测试约 300 行；只使用 WP-00 已锁定的 `typesafe-sdk`，不新增依赖。
 
@@ -25,7 +25,7 @@ Jev 是产品唯一允许产出判定的模型。网络重试若分散在 SDK �
 ### 1.2 范围内
 1. `JevDirectEngine` 实现 S-02 的 `SemanticEngine` Protocol。
 2. 官方 SDK 适配器：构造客户端、调用 `system_one`、读取 `answers/model/usage`、映射异常。
-3. 每个段落 1 个请求；`PACK_THESES=False` 时每个（逻辑，段落）1 个请求。
+3. `score_pairs` 只处理显式传入的 pair，按段落分组后每段 1 个请求；`PACK_THESES=False` 时每个（逻辑，段落）1 个请求。`score_event` 生成全量笛卡尔积并委托给 `score_pairs`。
 4. 线程池并发 4；只保留 SDK 内一层重试。
 5. 证据请求 1 次，按句子返回概率列表。
 6. 取消检查、全有或全无、request id 诊断、token 分配。
@@ -82,6 +82,8 @@ class JevDirectEngine:
                  client_factory: Callable[[str], SystemOneClient],
                  max_workers: int = 4) -> None: ...
     def health(self) -> EngineHealth: ...
+    def score_pairs(self, company: str, pairs: Sequence[PairInput],
+                    cancel: CancelToken) -> list[PairScore]: ...
     def score_event(self, company: str, theses: Sequence[ThesisInput],
                     passages: Sequence[PassageInput], cancel: CancelToken) -> list[PairScore]: ...
     def locate_evidence(self, thesis: ThesisInput, relation: Relation,
@@ -90,7 +92,7 @@ class JevDirectEngine:
 def map_sdk_exception(exc: BaseException) -> EngineError: ...
 def allocate_tokens(total: int, pair_count: int) -> list[int]: ...
 ```
-构造时 `api_key` 只传给 `client_factory`，**不得保存为实例属性、写日志或放进异常**。`max_workers` 必须为 `1..4`，越界抛 `ValueError`。`health()` 不发网络请求：已配置返回 `ok`，上次批次认证失败可返回 `degraded`，缺 key 返回 `unconfigured`。
+构造时 `api_key` 只传给 `client_factory`，**不得保存为实例属性、写日志或放进异常**。`max_workers` 必须为 `1..4`，越界抛 `ValueError`。`score_pairs` 返回数必须等于 `len(pairs)`，不得返回未请求的 pair；`score_event(company, theses, passages, cancel)` 等价于把全部逻辑 × 段落组成 `PairInput` 后调用 `score_pairs`。`health()` 不发网络请求：已配置返回 `ok`，上次批次认证失败可返回 `degraded`，缺 key 返回 `unconfigured`。
 
 ### 5.2 数据结构
 | 字段 | 类型 | 必填 | 约束 | 含义 |
@@ -116,8 +118,8 @@ def allocate_tokens(total: int, pair_count: int) -> list[int]: ...
 ## 6. 实现步骤
 
 1. `_SdkClient` 适配器在第一次 `call` 前懒加载 `typesafe_sdk`，按 G0 报告的签名构造 `TypeSafeClient`；`RetryPolicy` 精确使用 §5.3。不得在适配器外再捕获 5xx 重试。
-2. `score_event` 先校验：theses 数量 `1..5`、passages 非空、每段 `≤1200` 字符、输入内容哈希非空；调用 `cancel.raise_if_cancelled()`。
-3. `PACK_THESES=True` 时每个段落构造 `state={"company":...,"document":...,"theses":{ref:...}}` 和该段全部问题；`False` 时每对构造单逻辑状态。请求顺序固定为段落升序、逻辑 ref 字典序。
+2. `score_pairs` 先校验：pairs 非空且无重复 `(thesis_id, version, passage_id)`，涉及逻辑不超过 5 条、每个段落非空且 `≤1200` 字符、输入内容哈希非空；调用 `cancel.raise_if_cancelled()`。
+3. 按段落对请求的 pair 分组，只为这些 pair 构造 `state={"company":...,"document":...,"theses":{ref:...}}` 和问题；`PACK_THESES=False` 时每对构造单逻辑状态。请求顺序固定为段落升序、逻辑 ref 字典序。`score_event` 只负责生成全量 pair 后调用同一实现。
 4. 用 `ThreadPoolExecutor(max_workers=len(requests) if <4 else 4)` 提交；每个线程在网络调用前再次检查 cancel。若取消，设置 `threading.Event`，不再发新请求，等待已发请求返回或超时。
 5. 每个响应校验问题名集合等于请求集合；`answers[name]` 必须是有限 float 且 `[0,1]`；任一缺失、多余或越界都抛 `MODEL_ERROR("INCOMPLETE_RESPONSE")`。不得把缺答案填 0。
 6. 同一批所有响应的 `model` 必须相同，且等于配置 `model_id`；否则抛 `MODEL_ERROR("MODEL_MISMATCH")`，避免缓存键漂移。
@@ -146,8 +148,9 @@ def allocate_tokens(total: int, pair_count: int) -> list[int]: ...
 ### 8.1 测试清单
 | 测试名 | 文件 | 输入 | 期望 |
 |---|---|---|---|
-| `test_score_event_packs_all_theses_per_passage` | `core/tests/unit/semantic/test_jev_direct.py` | 2 逻辑 × 3 段落 | 调用 3 次；返回 6 个 PairScore |
-| `test_score_event_does_not_emit_partial_results` | 同上 | 第 2 个请求抛 `MODEL_ERROR` | 抛错；返回列表不存在 |
+| `test_score_pairs_packs_only_requested_pairs` | `core/tests/unit/semantic/test_jev_direct.py` | 2 逻辑 × 2 段落，只请求 3 对 | 只发 2 个段落请求；返回 3 个 PairScore |
+| `test_score_event_wraps_full_cartesian_product` | 同上 | 2 逻辑 × 3 段落 | `score_pairs` 收到 6 对；返回 6 个 PairScore |
+| `test_score_pairs_does_not_emit_partial_results` | 同上 | 第 2 个请求抛 `MODEL_ERROR` | 抛错；返回列表不存在 |
 | `test_missing_answer_maps_to_model_error` | 同上 | 响应缺 `t1__supports` | `MODEL_ERROR`，detail 含 `INCOMPLETE_RESPONSE` |
 | `test_auth_401_and_403_have_distinct_reasons` | 同上 | 两个假异常 | 都 `UNAUTHENTICATED`，reason 分别为 `INVALID_KEY`/`FORBIDDEN` |
 | `test_rate_limit_carries_retry_after_seconds` | 同上 | `retry_after_ms=2500` | `RATE_LIMITED`，`retryAfterSec=3` |
@@ -169,7 +172,7 @@ def allocate_tokens(total: int, pair_count: int) -> list[int]: ...
 ### 9.1 命令与期望输出
 ```bash
 cd core && uv run pytest tests/unit/semantic/test_jev_direct.py -q
-# 期望：10 passed，0 failed
+# 期望：12 passed，0 failed
 cd .. && scripts/check.sh
 # 期望：exit=0；无裸 except、无第二层 5xx 重试、日志无密钥
 ```
@@ -179,13 +182,13 @@ cd .. && scripts/check.sh
 - [ ] 4 路并发；全部成功才返回，任一失败无部分结果
 - [ ] 401/403/429/404/400/5xx/超时映射有测试；request id 保留
 - [ ] 证据只返回句子概率，不解析模型自由文本
-- [ ] 第 8.1 节 10 个测试全部通过；已写 `docs/wp/status/S-03.md`
+- [ ] 第 8.1 节 12 个测试全部通过；已写 `docs/wp/status/S-03.md`
 
 ## 10. 给下游的交接
 
 | 下游工作包 | 它会使用 | 约定 |
 |---|---|---|
-| S-05 | `JevDirectEngine.score_event/locate_evidence` | 网络在事务外；失败不落判定 |
+| S-05 | `JevDirectEngine.score_pairs/locate_evidence` | 网络在事务外；失败不落判定；只计算显式 pair |
 | S-04 | `map_sdk_exception` 的 reason 命名风格 | 不共享 SDK 客户端 |
 | P-02 | `health()` 与 `EngineError` | 授权错误引导设置；模型错误可重试批次 |
 

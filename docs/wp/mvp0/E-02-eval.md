@@ -96,6 +96,7 @@ def write_report(report: EvalReport, out_dir: Path) -> ReportPaths: ...
 | `split` | str | 是 | `tuning/test` 各 30 | 禁止运行前混用 |
 | `lang` | str | 是 | 每个 split 各 15 个 `zh/en` | 语言分层 |
 | `subsets` | list[str] | 是 | `numeric/title_only/adversarial/long/multi_thesis` | 可多选 |
+| `eventState` | str | 是 | `planned/completed/cancelled/na` | 事件状态；`completed` 才能作为 `kill_met` 正例 |
 | `label.relation` | str | 是 | `none/support/weaken/overturn` | 金标准，不含 `uncertain` |
 | `label.evidenceSentence` | int\|null | 是 | 阳性必填，`none/support` 为 `null` | 从 1 开始的句号 |
 | `prediction.relation` | str | 是 | 五类 | 系统输出 |
@@ -117,7 +118,7 @@ def write_report(report: EvalReport, out_dir: Path) -> ReportPaths: ...
 
 ## 6. 实现步骤
 
-1. 读取 JSONL，拒绝重复 ID、空白文本、未知字段、未商定 `adjudicated=false`、split 比例不为 30/30；校验总分布 `overturn=8/weaken=14/support=10/none=28`、每 split `4/7/5/14`、正负 `22:38`。
+1. 读取 JSONL，拒绝重复 ID、空白文本、未知字段、未商定 `adjudicated=false`、split 比例不为 30/30；校验总分布 `overturn=8/weaken=14/support=10/none=28`、每 split `4/7/5/14`、正负 `22:38`。`kill_met` 正例必须 `eventState=completed`；`planned/cancelled` 只能作为削弱或无关负例。
 2. 校验每个 split 中文 15/英文 15 与子集 `5/3/3/3/3`；计算 SHA-256，与 manifest 不一致时退出 2，不运行模型。
 5. `--split test` 只读 30 条；没有 `--allow-tuned-test` 时拒绝 `tuning` 与 `test` 混合报告。
 6. 默认禁用判定缓存，使用临时内存库；每条记录 `question_set_version`、`model_id`、阈值、引擎和代码版本。
@@ -147,6 +148,7 @@ def write_report(report: EvalReport, out_dir: Path) -> ReportPaths: ...
 |---|---|---|---|
 | `test_dataset_has_exact_composition` | `test_dataset.py` | `dataset.jsonl` | 60；`22` 正、`38` 负；split 各 30 |
 | `test_dataset_rejects_tuning_test_overlap` | 同上 | 复制一条 ID 到另一 split | `ValueError`，字段 `id` |
+| `test_planned_sale_is_not_kill_met_positive` | 同上 | `eventState=planned` 且 label 标 `overturn` | 拒绝数据集；错误说明 kill_met 只允许 completed |
 | `test_manifest_hash_change_is_rejected` | 同上 | 改一个字符 | 退出码 2 |
 | `test_confusion_matrix_matches_hand_counted_example` | `test_metrics.py` | 5 条固定预测 | 矩阵 `[[2,0,0,0],[0,2,1,0]]`，F1 `0.8` |
 | `test_wilson_interval_for_zero_success` | 同上 | `0/10` | 上界 `0.2775`（4 位） |

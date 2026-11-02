@@ -124,7 +124,7 @@ class DecisionPipeline:
 2. 校验段落 `len(text)<=1200`，否则 `ValueError`；超过 60 段按 `seq` 升序截断，记录 warn。按 `(thesis_id,thesis_version,passage_id)` 排序以稳定输出。
 3. 用读事务查询所有 cache key。命中行直接转 `DecisionRow`；缺失对组成 pair keys。**缓存命中不发请求、不写 usage**。
 4. 预估缺失请求：`raw = sum(estimate_tokens(len(thesis)+len(kill or "")+len(document)+question_chars))`；`reserved=reserve_tokens(raw)`。读取今日 `usage_daily`，`used+reserved>daily_budget` 时抛 `BUDGET_EXCEEDED`，不调用引擎。
-5. 在事务外调用 `engine.score_event(ctx.company, needed_theses, needed_passages, cancel)`；返回数必须等于缺失 pair 数，id 集合必须完全匹配。否则抛 `MODEL_ERROR`，不写部分。
+5. 在事务外调用 `engine.score_pairs(ctx.company, missing_pairs, cancel)`；`missing_pairs` 是缓存未命中的 `(thesis, passage)` 列表，返回数必须等于 `len(missing_pairs)`，且 `(thesis_id, version, passage_id)` 集合完全匹配。否则抛 `MODEL_ERROR`，不写部分。禁止把缺失集合拆成两个完整列表再让引擎做笛卡尔积。
 6. **进入写事务前先调用 `cancel.raise_if_cancelled()`**：若引擎返回后、事务开始前被取消，丢弃结果，不写 decision 与 usage。随后在**一个写事务**中插入新 decision 行并用 `ON CONFLICT(cache_key) DO NOTHING` 防重复；发生冲突时读回已有行。`decision_id=new_id()`、`created_at=clock.now()`、`content_status=passage.content_status`。同一事务 upsert `usage_daily` 的 `input_tokens/estimated_tokens` 并把 `requests` 加 1（只计判定请求；`jevdb` 的 token 计入 `estimated_tokens`，`jev_direct` 计入 `input_tokens`）。
 7. 将新行与缓存行合并；按 `(thesis_id,event_id)` 分组，用 `select_representative()` 按关系严重度、headline 降序、段落 `seq` 升序、`decision_id` 升序选一条。
 8. 只对代表且关系为 `overturn/weaken/uncertain` 的判定找证据。`title_only` 直接 `kind=title`；全文按 S-01 切句，取前 40 句。证据预算检查失败时回退整段，不抛预算错误。
@@ -155,6 +155,7 @@ class DecisionPipeline:
 | `test_cached_pair_does_not_call_engine_or_usage` | `core/tests/unit/semantic/test_pipeline.py` | 全部命中 | 引擎 0 次；usage 增量 0 |
 | `test_engine_failure_writes_no_decisions_or_usage` | 同上 | 2 个缺失对，引擎抛 `MODEL_ERROR` | 两表行数不变 |
 | `test_wrong_pair_count_fails_whole_batch` | 同上 | 期望 2，返回 1 | `MODEL_ERROR`；不落库 |
+| `test_partial_cache_2x2_requests_only_three_missing_pairs` | 同上 | 2 逻辑 × 2 段落，仅 `(t1,p1)` 命中 | 引擎收到 3 个 pair；缓存行不重算 |
 | `test_one_new_decision_per_missing_pair_and_usage_once` | 同上 | 1 逻辑 × 2 段落 | 2 行 decision；usage 为响应 token 总和 |
 | `test_representative_prefers_overturn_then_headline_then_seq` | `core/tests/unit/semantic/test_evidence.py` | 4 行乱序 | 选 `overturn,0.93,seq=1` |
 | `test_sentence_evidence_offsets_round_trip` | 同上 | E1 4 句概率 `[.05,.91,.34,.02]` | `kind=sentence`；回切文字等于证据句 |
@@ -173,7 +174,7 @@ class DecisionPipeline:
 ### 9.1 命令与期望输出
 ```bash
 cd core && uv run pytest tests/unit/semantic/test_cache.py tests/unit/semantic/test_evidence.py tests/unit/semantic/test_pipeline.py -q
-# 期望：13 passed，0 failed
+# 期望：14 passed，0 failed
 cd .. && scripts/check.sh
 # 期望：exit=0；迁移 checksum、ruff、mypy、pytest 全绿
 ```
@@ -183,7 +184,7 @@ cd .. && scripts/check.sh
 - [ ] 网络调用全在写事务外；引擎失败/取消不留下半批数据
 - [ ] 每个清单判定都有 title/passage/sentence 证据；句子可精确回切
 - [ ] 证据失败回退整段、保留判定并可见
-- [ ] 第 8.1 节 13 个测试全部通过；已写 `docs/wp/status/S-05.md`
+- [ ] 第 8.1 节 14 个测试全部通过；已写 `docs/wp/status/S-05.md`
 
 ## 10. 给下游的交接
 | 下游工作包 | 它会使用 | 约定 |
