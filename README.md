@@ -43,7 +43,7 @@ Jev 逐段判断：无关 / 支持 / 削弱 / 推翻
 - 可点击原型：`design/prototype/index.html`（双击打开）
 - 产品代码：**尚未开始**，从 `WP-00` 开始
 - MVP-0 目标：约 1 周，美股、手动扫描、开发模式可演示
-- 平台：macOS 主线；Windows 并行做到开发模式对等
+- 平台：macOS arm64；Windows 暂缓（ADR-017）
 
 ## 文档入口
 
