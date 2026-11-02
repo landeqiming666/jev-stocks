@@ -6,7 +6,7 @@ platform: shared
 lane: core
 deps: []
 size: M
-owns: [.gitignore, .editorconfig, .node-version, README.md, THIRD_PARTY.md, core/pyproject.toml, core/uv.lock, core/.python-version, core/sentinel/__init__.py, core/sentinel/platform/__init__.py, core/sentinel/platform/posix.py, core/tests/conftest.py, core/tests/unit/test_smoke.py, core/tests/unit/test_layering.py, apps/desktop/package.json, apps/desktop/pnpm-lock.yaml, apps/desktop/tsconfig.json, apps/desktop/vite.config.ts, apps/desktop/vitest.config.ts, apps/desktop/eslint.config.js, apps/desktop/index.html, apps/desktop/src/styles/platform-macos.css, apps/desktop/src-tauri/Cargo.toml, apps/desktop/src-tauri/Cargo.lock, apps/desktop/src-tauri/build.rs, apps/desktop/src-tauri/tauri.conf.json, apps/desktop/src-tauri/tauri.macos.conf.json, apps/desktop/src-tauri/capabilities/default.json, apps/desktop/src-tauri/icons/, apps/desktop/src-tauri/src/main.rs, apps/desktop/src-tauri/src/platform/mod.rs, apps/desktop/src-tauri/src/platform/macos.rs, scripts/check.py, scripts/setup.py, scripts/dev.py, scripts/doctor.py, scripts/make_placeholder_icon.py, scripts/check.sh, scripts/setup.sh, scripts/dev.sh, scripts/doctor.sh, scripts/check_platform_isolation.py, scripts/tests/test_check_platform_isolation.py, scripts/tests/test_check_runner.py, scripts/tests/test_doctor.py]
+owns: [.gitignore, .editorconfig, .node-version, THIRD_PARTY.md, core/pyproject.toml, core/uv.lock, core/.python-version, core/sentinel/__init__.py, core/sentinel/platform/__init__.py, core/sentinel/platform/posix.py, core/tests/conftest.py, core/tests/unit/test_smoke.py, core/tests/unit/test_layering.py, apps/desktop/package.json, apps/desktop/pnpm-lock.yaml, apps/desktop/tsconfig.json, apps/desktop/vite.config.ts, apps/desktop/vitest.config.ts, apps/desktop/eslint.config.js, apps/desktop/index.html, apps/desktop/src/styles/platform-macos.css, apps/desktop/src-tauri/Cargo.toml, apps/desktop/src-tauri/Cargo.lock, apps/desktop/src-tauri/build.rs, apps/desktop/src-tauri/tauri.conf.json, apps/desktop/src-tauri/tauri.macos.conf.json, apps/desktop/src-tauri/capabilities/default.json, apps/desktop/src-tauri/icons/, apps/desktop/src-tauri/src/main.rs, apps/desktop/src-tauri/src/platform/mod.rs, apps/desktop/src-tauri/src/platform/macos.rs, scripts/check.py, scripts/setup.py, scripts/dev.py, scripts/doctor.py, scripts/make_placeholder_icon.py, scripts/check.sh, scripts/setup.sh, scripts/dev.sh, scripts/doctor.sh, scripts/check_platform_isolation.py, scripts/tests/test_check_platform_isolation.py, scripts/tests/test_check_runner.py, scripts/tests/test_doctor.py]
 appends: []
 stubs: [core/sentinel/platform/windows.py, apps/desktop/src-tauri/src/platform/windows.rs, apps/desktop/src-tauri/tauri.windows.conf.json, apps/desktop/src/styles/platform-windows.css, apps/desktop/src/main.tsx, apps/desktop/src/Hello.tsx, apps/desktop/src/Hello.test.tsx, apps/desktop/src-tauri/src/lib.rs, scripts/check.ps1, scripts/setup.ps1, scripts/dev.ps1, scripts/doctor.ps1]
 ---
@@ -26,7 +26,7 @@ stubs: [core/sentinel/platform/windows.py, apps/desktop/src-tauri/src/platform/w
 十几个工作包会并行开发。如果没有统一的目录、统一的依赖、统一的检查命令，每个人都会各自发明一套，合并时必然冲突。WP-00 把这些先定死。
 
 ### 1.2 范围内
-1. 仓库根文件：忽略规则、编辑器配置、Node 版本、简短 README、第三方许可证清单。
+1. 仓库根文件：忽略规则、编辑器配置、Node 版本、第三方许可证清单。根 `README.md` 是产品介绍，**不得覆盖**。
 2. Python 工程 `core/`：`pyproject.toml`（依赖、ruff、mypy、pytest 配置）、锁文件、`sentinel` 包的最小入口、平台层（接口 + macOS 实现 + Windows 占位）、冒烟测试、分层规则测试。
 3. 前端工程 `apps/desktop/`：`package.json`（依赖和脚本）、锁文件、TypeScript / Vite / Vitest / ESLint 配置、一个能渲染的 `Hello` 组件及其测试。
 4. Tauri 工程 `apps/desktop/src-tauri/`：`Cargo.toml`、锁文件、`tauri.conf.json`、能打开一个空窗口的 `lib.rs`、平台层（trait + macOS 实现 + Windows 占位）、占位图标。
@@ -70,7 +70,7 @@ stubs: [core/sentinel/platform/windows.py, apps/desktop/src-tauri/src/platform/w
 | `.gitignore` | 新建 | 见 5.3 |
 | `.editorconfig` | 新建 | `root = true`；`utf-8`；`end_of_line = lf`；`insert_final_newline = true`；`indent_style = space`；Python / Rust 4 空格，TS / JSON / CSS / MD 2 空格；`*.ps1` 与 `*.bat` 用 `crlf`，因为 PowerShell 5 对 LF 脚本的行为不稳定 |
 | `.node-version` | 新建 | 写本机已验证可用的 Node **主版本号**，一行，如 `26`。若 `pnpm install` 或 `vite build` 在该版本下报错，改用 Node 22 LTS（`brew install node@22`）并在状态文件记录 |
-| `README.md` | 新建 | ≤ 40 行：项目名、一句话说明、指向 `docs/README.md`、快速开始（`scripts/doctor.sh`、`scripts/setup.sh`、`scripts/dev.sh`、`scripts/check.sh`） |
+| `README.md` | 不改 | 已存在，是产品介绍；开发快速开始后续由协调者追加，不属于本包 |
 | `THIRD_PARTY.md` | 新建 | 白名单每个包一行：名称、版本、许可证。许可证从包元数据读取（`uv pip show`、`pnpm licenses list`、`cargo metadata`），**不凭记忆填写**。无法确定的写 `UNKNOWN` 并在状态文件列出。同时解决 [02](../../02-技术架构.md) 里的 `TODO-VERIFY(WP-00)` |
 
 ### 4.2 Python（`core/`）
