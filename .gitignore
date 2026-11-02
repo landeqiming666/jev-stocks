@@ -1,0 +1,32 @@
+# macOS
+.DS_Store
+
+# 本地备份与开发数据
+.kiro/backup/
+.dev-data/
+
+# 前端与构建产物
+node_modules/
+dist/
+target/
+
+# Python
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# 数据库
+*.duckdb
+*.duckdb.wal
+
+# 测试与评测产物
+eval/reports/
+playwright-report/
+test-results/
+
+# 环境变量
+.env
+.env.*

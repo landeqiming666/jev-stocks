@@ -1,0 +1,51 @@
+[project]
+name = "sentinel"
+version = "0.1.0"
+description = "Thesis Sentinel core process"
+requires-python = ">=3.12,<3.13"
+dependencies = [
+  "duckdb==1.4.3",
+  "typesafe-sdk",
+  "httpx",
+  "selectolax",
+  "numpy",
+  "keyring",
+  "pydantic>=2",
+  "tzdata",
+]
+
+[dependency-groups]
+dev = ["pytest", "pytest-timeout", "jsonschema", "ruff", "mypy"]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["sentinel"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP", "SIM"]
+
+[tool.mypy]
+python_version = "3.12"
+strict = true
+plugins = ["pydantic.mypy"]
+
+[[tool.mypy.overrides]]
+module = ["typesafe_sdk.*", "keyring.*", "selectolax.*", "duckdb.*"]
+ignore_missing_imports = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+timeout = 30
+addopts = "-ra"
+markers = [
+  "macos: 只在 macOS 上运行",
+  "windows: 只在 Windows 上运行",
+  "integration: 需要网络或真实密钥，默认不运行",
+]

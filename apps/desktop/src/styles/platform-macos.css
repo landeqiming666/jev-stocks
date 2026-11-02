@@ -1,0 +1,6 @@
+/* macOS 平台变量；平台差异只允许出现在本文件与 platform-windows.css。 */
+[data-platform="macos"] {
+  --titlebar-inset-left: 72px;
+  --font-cjk: "PingFang SC";
+  --kbd-mod: "⌘";
+}

@@ -1,0 +1,6 @@
+/* Windows 占位：W-01 接手并补齐平台变量。 */
+[data-platform="windows"] {
+  --titlebar-inset-left: 0px;
+  --font-cjk: "Microsoft YaHei UI";
+  --kbd-mod: "Ctrl";
+}
