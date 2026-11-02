@@ -207,6 +207,7 @@
             }
           }
         ],
+        "nextCursor": null,
         "budget": {
           "usedTokens": 18420,
           "limitTokens": 2000000,
@@ -221,6 +222,7 @@
       },
       "result": {
         "items": [],
+        "nextCursor": null,
         "budget": {
           "usedTokens": 18420,
           "limitTokens": 2000000,
@@ -301,6 +303,7 @@
             }
           }
         ],
+        "nextCursor": null,
         "budget": {
           "usedTokens": 2000000,
           "limitTokens": 2000000,
@@ -474,6 +477,7 @@
             }
           }
         ],
+        "nextCursor": null,
         "budget": {
           "usedTokens": 18420,
           "limitTokens": 2000000,

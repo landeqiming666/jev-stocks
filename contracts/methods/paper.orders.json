@@ -199,7 +199,8 @@
             ],
             "estimate": null
           }
-        ]
+        ],
+        "nextCursor": null
       }
     }
   ]

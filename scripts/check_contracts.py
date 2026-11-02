@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """Validate the offline contract subset with Python 3.9's standard library.
 
-Schemas stay strict. Seven pre-existing example omissions are audited separately
-from schema validation; see docs/wp/status/C-06.md for the source discrepancies.
+Every success/error response is validated without exceptions. Deliberately
+invalid requests are checked only against their declared expected input field.
 """
 
 from __future__ import annotations
@@ -54,18 +54,6 @@ REASONS = {
         "INSUFFICIENT_POSITION_AT_FILL",
     ],
 }
-# These paths only suppress missing required fields, never invalid present values.
-LEGACY_OMISSIONS = {
-    ("scan.history", name): {"result.nextCursor"}
-    for name in ("default", "empty", "budget_exhausted", "running")
-}
-LEGACY_OMISSIONS.update(
-    {
-        ("paper.orders", "default"): {"result.nextCursor"},
-        ("paper.order.place", "insufficient_cash"): {"error.data.orderId"},
-        ("paper.order.place", "insufficient_position"): {"error.data.orderId"},
-    }
-)
 KEYWORDS = {
     "$schema",
     "$defs",
@@ -328,34 +316,33 @@ def _equal(value, expected):
     return value == expected
 
 
-def validate(
+def validate(value, schema, types, path="value"):
+    """Validate every field without exemptions; raise ContractError on failure."""
+    _validate(value, schema, types, path)
+
+
+def _validate(
     value,
     schema,
     types,
     path="value",
     *,
-    _omissions=frozenset(),
-    _skip=frozenset(),
+    _expected_invalid_field=None,
     _active=(),
 ):
-    """Validate an instance; raise ContractError with its precise dotted path.
-
-    Public callers use no exceptions. Private skips apply only to deliberately
-    invalid argument examples or the documented pre-existing missing fields.
-    """
+    """Internal traversal; an expected invalid field applies only to requests."""
     require(isinstance(schema, dict), path, "schema must be object")
-    if path in _skip:
+    if path == _expected_invalid_field:
         return
     if "$ref" in schema:
         target = resolve_ref(schema["$ref"], types, path)
         require(id(target) not in _active, path, "circular $ref")
-        validate(
+        _validate(
             value,
             target,
             types,
             path,
-            _omissions=_omissions,
-            _skip=_skip,
+            _expected_invalid_field=_expected_invalid_field,
             _active=_active + (id(target),),
         )
     for keyword in ("anyOf", "oneOf", "allOf"):
@@ -366,13 +353,12 @@ def validate(
         branches = schema[keyword]
         for branch in branches:
             try:
-                validate(
+                _validate(
                     value,
                     branch,
                     types,
                     path,
-                    _omissions=_omissions,
-                    _skip=_skip,
+                    _expected_invalid_field=_expected_invalid_field,
                     _active=_active,
                 )
                 successes += 1
@@ -417,7 +403,7 @@ def validate(
         props = schema.get("properties", {})
         for key in schema.get("required", []):
             require(
-                key in value or path + "." + key in _omissions,
+                key in value,
                 path + "." + key,
                 "required field missing",
             )
@@ -426,13 +412,12 @@ def validate(
                 require(key in props, path + "." + key, "additional property forbidden")
         for key, child in props.items():
             if key in value:
-                validate(
+                _validate(
                     value[key],
                     child,
                     types,
                     path + "." + key,
-                    _omissions=_omissions,
-                    _skip=_skip,
+                    _expected_invalid_field=_expected_invalid_field,
                     _active=_active,
                 )
     if isinstance(value, list):
@@ -448,13 +433,12 @@ def validate(
             )
         if "items" in schema:
             for i, child in enumerate(value):
-                validate(
+                _validate(
                     child,
                     schema["items"],
                     types,
                     "%s[%d]" % (path, i),
-                    _omissions=_omissions,
-                    _skip=_skip,
+                    _expected_invalid_field=_expected_invalid_field,
                     _active=_active,
                 )
     if isinstance(value, str):
@@ -677,7 +661,6 @@ def check_contracts(contracts):
                 context,
                 "expected exactly one of result/error",
             )
-            omissions = LEGACY_OMISSIONS.get((name, label), set())
             if "error" in example:
                 error = example["error"]
                 require(
@@ -697,7 +680,6 @@ def check_contracts(contracts):
                         ],
                         types,
                         "error",
-                        _omissions=omissions,
                     )
                 except ContractError as exc:
                     raise ContractError(context, str(exc)) from exc
@@ -710,7 +692,7 @@ def check_contracts(contracts):
                     )
                 covered.add(code)
                 field = error["data"].get("field")
-                skip = set()
+                expected_invalid_field = None
                 if (
                     code == "INVALID_ARGUMENT"
                     and isinstance(field, str)
@@ -725,13 +707,13 @@ def check_contracts(contracts):
                             "params." + field,
                         )
                     except ContractError:
-                        skip.add(context + ".params." + field)
-                validate(
+                        expected_invalid_field = context + ".params." + field
+                _validate(
                     example["params"],
                     item["params"],
                     types,
                     context + ".params",
-                    _skip=skip,
+                    _expected_invalid_field=expected_invalid_field,
                 )
             else:
                 successes += 1
@@ -742,7 +724,6 @@ def check_contracts(contracts):
                         item["result"],
                         types,
                         "result",
-                        _omissions=omissions,
                     )
                 except ContractError as exc:
                     raise ContractError(context, str(exc)) from exc

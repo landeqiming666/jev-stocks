@@ -10,14 +10,6 @@ window.MOCK = {
     }
    }
   },
-  "app.shutdown": {
-   "ok": {
-    "params": {},
-    "result": {
-     "ok": true
-    }
-   }
-  },
   "app.bootstrap": {
    "ready": {
     "params": {},
@@ -142,6 +134,14 @@ window.MOCK = {
      "demoDataLoaded": true,
      "offline": false,
      "now": "2026-11-02T00:35:00Z"
+    }
+   }
+  },
+  "app.shutdown": {
+   "ok": {
+    "params": {},
+    "result": {
+     "ok": true
     }
    }
   },
@@ -3124,6 +3124,7 @@ window.MOCK = {
        }
       }
      ],
+     "nextCursor": null,
      "budget": {
       "usedTokens": 18420,
       "limitTokens": 2000000,
@@ -3137,6 +3138,7 @@ window.MOCK = {
     },
     "result": {
      "items": [],
+     "nextCursor": null,
      "budget": {
       "usedTokens": 18420,
       "limitTokens": 2000000,
@@ -3216,6 +3218,7 @@ window.MOCK = {
        }
       }
      ],
+     "nextCursor": null,
      "budget": {
       "usedTokens": 2000000,
       "limitTokens": 2000000,
@@ -3388,6 +3391,7 @@ window.MOCK = {
        }
       }
      ],
+     "nextCursor": null,
      "budget": {
       "usedTokens": 18420,
       "limitTokens": 2000000,
@@ -3738,7 +3742,8 @@ window.MOCK = {
       "retryable": false,
       "reason": "INSUFFICIENT_CASH",
       "required": "92025.9900",
-      "available": "90185.0950"
+      "available": "90185.0950",
+      "orderId": "01JC8Z5V3Q000000000000RD85"
      }
     }
    },
@@ -3758,7 +3763,8 @@ window.MOCK = {
       "retryable": false,
       "reason": "INSUFFICIENT_POSITION",
       "held": 0,
-      "requested": 500
+      "requested": 500,
+      "orderId": "01JC8Z5V3Q000000000000RD83"
      }
     }
    }
@@ -3927,7 +3933,8 @@ window.MOCK = {
        ],
        "estimate": null
       }
-     ]
+     ],
+     "nextCursor": null
     }
    }
   },

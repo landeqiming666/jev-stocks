@@ -19,16 +19,12 @@ HEADER = "/* 由 contracts/ 的 examples 生成（scripts/gen_proto_mock.py）�
 
 def generate(contracts):
     index, methods, notifications = check_contracts(contracts)
-    order = list(index["methods"])
-    # Author EX inserted shutdown before bootstrap. Preserve those legacy bytes
-    # while the machine-readable index retains the authoritative 05 ordering.
-    order[1:3] = ["app.shutdown", "app.bootstrap"]
     examples = {
         name: {
             e["name"]: {k: v for k, v in e.items() if k != "name"}
             for e in methods[name]["examples"]
         }
-        for name in order
+        for name in index["methods"]
     }
     payload = {
         "examples": examples,

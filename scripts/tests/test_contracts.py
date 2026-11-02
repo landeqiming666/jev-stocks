@@ -465,26 +465,42 @@ class ContractTests(unittest.TestCase):
         types = read(CONTRACTS / "types.schema.json")
         for method in ("scan.history", "paper.orders"):
             data = read(CONTRACTS / "methods" / (method + ".json"))
+            checker.validate(data["examples"][0]["result"], data["result"], types)
+            result = copy.deepcopy(data["examples"][0]["result"])
+            result.pop("nextCursor", None)
             with self.assertRaises(checker.ContractError):
-                checker.validate(data["examples"][0]["result"], data["result"], types)
+                checker.validate(result, data["result"], types)
         schema = types["$defs"]["RpcError"]
         error = read(CONTRACTS / "methods/paper.order.place.json")["examples"][1][
             "error"
         ]
+        checker.validate(error, schema, types)
+        error["data"].pop("orderId", None)
         with self.assertRaises(checker.ContractError):
             checker.validate(error, schema, types)
 
-    def test_legacy_omissions_are_limited_to_named_examples(self):
+    def test_required_fields_are_not_exempt_by_example_name(self):
+        for index in range(4):
+            with self.subTest(method="scan.history", example=index):
+                self.rejected(
+                    "methods/scan.history.json",
+                    lambda m: m["examples"][index]["result"].pop("nextCursor", None),
+                    "nextCursor",
+                )
         self.rejected(
             "methods/paper.orders.json",
-            lambda m: m["examples"][0].update(name="new_example"),
+            lambda m: m["examples"][0]["result"].pop("nextCursor", None),
             "nextCursor",
         )
-        self.rejected(
-            "methods/paper.order.place.json",
-            lambda m: m["examples"][1].update(name="new_error"),
-            "orderId",
-        )
+        for index in (1, 2):
+            with self.subTest(method="paper.order.place", example=index):
+                self.rejected(
+                    "methods/paper.order.place.json",
+                    lambda m: m["examples"][index]["error"]["data"].pop(
+                        "orderId", None
+                    ),
+                    "orderId",
+                )
         self.rejected(
             "methods/paper.orders.json",
             lambda m: m["examples"][0]["result"].update(nextCursor=4),
@@ -733,6 +749,106 @@ class ContractTests(unittest.TestCase):
                 passage[end:],
                 " Following the sale, Atlas continues to hold approximately 31.0% of the outstanding common stock. The Company did not receive any proceeds from the sale.",
             )
+
+    def test_every_success_and_error_example_passes_strict_schema(self):
+        checker = self.checker()
+        types = read(CONTRACTS / "types.schema.json")
+        for path in (CONTRACTS / "methods").glob("*.json"):
+            method = read(path)
+            for example in method["examples"]:
+                with self.subTest(method=method["method"], example=example["name"]):
+                    if "result" in example:
+                        checker.validate(example["result"], method["result"], types)
+                    else:
+                        schema = types["$defs"][
+                            "RiskInsufficientError"
+                            if method["method"] == "risk.compute"
+                            else "RpcError"
+                        ]
+                        checker.validate(example["error"], schema, types)
+
+    def test_removing_each_required_response_field_fails(self):
+        checker = self.checker()
+        types = read(CONTRACTS / "types.schema.json")
+        checked = []
+
+        def inspect(value, schema, context):
+            if "$ref" in schema:
+                inspect(value, checker.resolve_ref(schema["$ref"], types), context)
+            for keyword in ("anyOf", "oneOf", "allOf"):
+                for branch in schema.get(keyword, []):
+                    try:
+                        checker.validate(value, branch, types)
+                    except checker.ContractError:
+                        continue
+                    inspect(value, branch, context)
+            if isinstance(value, dict):
+                for field in schema.get("required", []):
+                    with self.subTest(path=context + "." + field):
+                        self.assertIn(field, value)
+                        changed = copy.deepcopy(value)
+                        changed.pop(field, None)
+                        with self.assertRaises(checker.ContractError):
+                            checker.validate(changed, schema, types)
+                        checked.append(context + "." + field)
+                for field, child in schema.get("properties", {}).items():
+                    if field in value:
+                        inspect(value[field], child, context + "." + field)
+            if isinstance(value, list) and "items" in schema:
+                for index, child in enumerate(value):
+                    inspect(child, schema["items"], "%s[%d]" % (context, index))
+
+        for path in (CONTRACTS / "methods").glob("*.json"):
+            method = read(path)
+            for example in method["examples"]:
+                value = example.get("result", example.get("error"))
+                schema = (
+                    method["result"]
+                    if "result" in example
+                    else types["$defs"][
+                        "RiskInsufficientError"
+                        if method["method"] == "risk.compute"
+                        else "RpcError"
+                    ]
+                )
+                checker.validate(value, schema, types)
+                inspect(value, schema, method["method"] + "/" + example["name"])
+        self.assertTrue(checked)
+
+    def test_generated_author_and_mock_method_order_matches_index(self):
+        from scripts.gen_proto_mock import generate
+
+        expected = read(CONTRACTS / "index.json")["methods"]
+        source = author_payload()
+        generated = json.loads(
+            generate(CONTRACTS).decode("utf-8").split("window.MOCK = ", 1)[1][:-2]
+        )
+        mock = json.loads(
+            (ROOT / "design/prototype/data/mock.js")
+            .read_text(encoding="utf-8")
+            .split("window.MOCK = ", 1)[1][:-2]
+        )
+        self.assertEqual(list(source["examples"]), expected)
+        self.assertEqual(list(generated["examples"]), expected)
+        self.assertEqual(list(mock["examples"]), expected)
+
+    def test_rejected_order_ids_match_existing_or_reserved_fictional_identity(self):
+        payload = author_payload()
+        errors = payload["examples"]["paper.order.place"]
+        orders = payload["examples"]["paper.orders"]["default"]["result"]["items"]
+        position = errors["insufficient_position"]["error"]
+        matching = next(
+            order for order in orders if order["orderId"] == position["data"]["orderId"]
+        )
+        self.assertEqual(matching["status"], "rejected")
+        self.assertEqual(matching["rejectReason"]["code"], position["data"]["reason"])
+        self.assertEqual(
+            matching["idempotencyKey"],
+            errors["insufficient_position"]["params"]["idempotencyKey"],
+        )
+        cash_id = errors["insufficient_cash"]["error"]["data"]["orderId"]
+        self.assertEqual(cash_id, "01JC8Z5V3Q000000000000RD85")
+        self.assertNotIn(cash_id, {order["orderId"] for order in orders})
 
 
 if __name__ == "__main__":
