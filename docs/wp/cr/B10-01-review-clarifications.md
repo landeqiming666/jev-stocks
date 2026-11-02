@@ -20,6 +20,8 @@
 
 `settings/rpc.py` 可以依赖 RPC 注册接口，反向依赖仍禁止。C-00 文案所有权缩小到公共三文件，`messages/settings.py` 归 C-04，`messages/trading.py` 归 P-04；公共初始化器由主 agent 集成，不让 worker 争用。清除密钥不清空进程内脱敏登记，避免仍在运行的旧请求泄漏；从钥匙串读取旧密钥也登记脱敏。
 
+锁定 keyring 的 Mac provider 确实先 delete 后 add，异常补偿不能保证旧值安全。批准主 agent 单独实现 C-04 所属平台文件 `keyring_store.py` / `macos_keychain.py` 及其两个平台测试，worker 仅接协议和业务层，不并行编辑这些文件。默认 Mac provider 使用原子 `SecItemUpdate` / 缺失时 add；原子失败标记不得触发补偿重写。CFData、查询、属性引用全部显式释放；不使用带密钥的 CLI argv，不写用户真实钥匙串做测试。W-01 的测试所有权缩小到其两个实际 Windows 文件。
+
 ## C-03
 
 真实 DuckDB 验证表明 cursor 事务独立，不共享未提交数据。写事务内需要读自身写入时传原 `tx`；`WriteTx.execute()` 返回受保护的自身，而非可绕过上下文 commit 的原始连接。备份必须 checkpoint，临时正文 flush/fsync 后原子且不覆盖地发布；迁移恢复也先同步再 replace。排序只按备份 UTC 时间戳，忽略版本和 label。
@@ -27,6 +29,12 @@
 ## C-02
 
 WP-00 的 Mac 平台树清理只调用 `child.kill()`，会留下 uv/Python 的后代。主 agent 负责在 `platform/macos.rs` 设置独立进程组并通过 `/bin/kill` 终止该组，Rust 监督器仍只调用平台接口并负责 wait/reap。新增真实 shell + sleep 后代测试；此基础修复不计为额外工作包。平台检查只放行 C-02 测试文件单独的 `#[cfg(unix)]` fixture guard，不扩张生产代码权限。
+
+原锁定 Tauri 2 未提供外链 opener，批准 C-02 在 WP-00 所有的 `platform/mod.rs` 与 `macos.rs` 追加方法、错误类型与 Mac `/usr/bin/open` 实现；不修改已有进程接口，不新增 crate。生产命令实际调用平台接缝，不能以占位错误通过验收。平台命令参数和注入 opener 路径都需测试。
+
+## 本批规模例外
+
+本批固定为十个功能包，不为满足行数而削减安全/边界/实际进程测试或增加任务计数。主审批准超过原 800 行限制的包按文件逐项检查与专项验证；C-02、C-04 标为 L。此为 B10 批次例外，不取消后续工作包默认规模限制，也不声称这些包仍可在 15 分钟内审完。
 
 ## C-06
 

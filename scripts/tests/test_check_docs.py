@@ -233,6 +233,31 @@ class WorkPackageTests(TreeCase):
         self.write("docs/wp/mvp0/C-01-a.md", wp_text("C-01", size="L"))
         self.assertHasError(self.run_checks(), "C-01", "size")
 
+    def test_mvp0_large_package_requires_approved_size_cr(self) -> None:
+        text = wp_text("C-01", size="L").replace(
+            "size: L\n", "size: L\nsize_approval: cr/CR-size.md\n"
+        )
+        self.write("docs/wp/mvp0/C-01-a.md", text)
+        self.write("docs/wp/cr/CR-size.md", "# 规模变更\n\n状态：已批准。C-01 使用 L。\n")
+        self.assertEqual(self.run_checks().errors, [])
+
+    def test_mvp0_large_package_cannot_use_other_or_unapproved_cr(self) -> None:
+        text = wp_text("C-01", size="L").replace(
+            "size: L\n", "size: L\nsize_approval: cr/CR-size.md\n"
+        )
+        self.write("docs/wp/mvp0/C-01-a.md", text)
+        for approval in ["# 规模变更\n\n待批准 C-01。\n", "# 规模变更\n\n已批准 C-02。\n"]:
+            self.write("docs/wp/cr/CR-size.md", approval)
+            self.assertHasError(self.run_checks(), "C-01", "size")
+
+    def test_mvp0_large_package_rejects_missing_or_escaping_cr(self) -> None:
+        for approval in ["cr/missing.md", "../outside.md", "/tmp/CR-size.md"]:
+            text = wp_text("C-01", size="L").replace(
+                "size: L\n", "size: L\nsize_approval: " + approval + "\n"
+            )
+            self.write("docs/wp/mvp0/C-01-a.md", text)
+            self.assertHasError(self.run_checks(), "C-01", "size")
+
     def test_no_wp_folder_is_skipped_without_error(self) -> None:
         report = self.run_checks()
         self.assertEqual(report.errors, [])

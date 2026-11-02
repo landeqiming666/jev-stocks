@@ -6,11 +6,13 @@ platform: windows
 lane: windows
 deps: [WP-00, W-00]
 size: M
-owns: [core/sentinel/platform/windows.py, apps/desktop/src-tauri/src/platform/windows.rs, apps/desktop/src-tauri/tauri.windows.conf.json, apps/desktop/src/styles/platform-windows.css, scripts/check.ps1, scripts/setup.ps1, scripts/dev.ps1, scripts/doctor.ps1, scripts/_py.ps1, scripts/tests/test_ps1_wrappers.py, core/tests/platform/]
+owns: [core/sentinel/platform/windows.py, apps/desktop/src-tauri/src/platform/windows.rs, apps/desktop/src-tauri/tauri.windows.conf.json, apps/desktop/src/styles/platform-windows.css, scripts/check.ps1, scripts/setup.ps1, scripts/dev.ps1, scripts/doctor.ps1, scripts/_py.ps1, scripts/tests/test_ps1_wrappers.py, core/tests/platform/test_windows_platform.py, core/tests/platform/__init__.py]
 appends: [docs/wp/windows-dev-notes.md]
 ---
 
 # W-01 Windows 平台层实现
+
+C-02 已追加 `Platform::open_external`，默认 Unsupported。Windows 车道实现时应在自己的 `windows.rs` 覆盖该方法并验证安全打开 HTTPS；Mac 本批未声称 Windows 外链接缝已完成。通用钥匙串原子测试文件由 C-04 所有，不再由 W-01 独占整个 `core/tests/platform/`。
 
 ## 0. 一眼看懂
 

@@ -5,9 +5,10 @@ phase: mvp0
 platform: shared
 lane: core
 deps: [C-01]
-size: M
+size: L
+size_approval: cr/B10-01-review-clarifications.md
 owns: [apps/desktop/src-tauri/src/bridge.rs, apps/desktop/src-tauri/src/bridge/process.rs, apps/desktop/src-tauri/src/bridge/commands.rs, apps/desktop/src-tauri/src/bridge/security.rs, apps/desktop/src-tauri/src/lib.rs, apps/desktop/src-tauri/tests/bridge.rs]
-appends: []
+appends: [apps/desktop/src-tauri/src/platform/mod.rs, apps/desktop/src-tauri/src/platform/macos.rs]
 stubs: []
 ---
 
@@ -69,6 +70,8 @@ stubs: []
 | `apps/desktop/src-tauri/src/bridge/commands.rs` | 新建 | `rpc_send`、`open_external` 的参数校验 |
 | `apps/desktop/src-tauri/src/bridge/security.rs` | 新建 | CSP 常量、URL 校验、1 MiB 限制 |
 | `apps/desktop/src-tauri/src/lib.rs` | 修改 | 在 `run()` 的 Builder 上调用 `bridge::install(builder)`，其余保持 WP-00 结构 |
+| `apps/desktop/src-tauri/src/platform/mod.rs` | 追加 | `Platform::open_external` 默认 Unsupported 接缝及错误类型，不改现有进程接口 |
+| `apps/desktop/src-tauri/src/platform/macos.rs` | 追加 | 用 `/usr/bin/open` 的单个 URL argv 实现 Mac 外链打开及参数装配测试 |
 | `apps/desktop/src-tauri/tests/bridge.rs` | 新建 | §8.1 的 Rust 测试 |
 ## 5. 接口规格
 
@@ -134,6 +137,8 @@ pub async fn open_external(url: String, app: tauri::AppHandle) -> Result<(), Str
 7. **关闭**：发送 `rs-shutdown-<n>` 的 `app.shutdown`，等待 3 s；超时后调用 `Platform::kill_process_tree`；关闭 stdin，清空 pending map（每个 Promise 返回 `Timeout`），不把内部响应转发给前端。
 8. **CSP**：`csp()` 返回 `default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src ipc: http://ipc.localhost; object-src 'none'; base-uri 'none'; frame-ancestors 'none'`。**禁止** `eval`、`unsafe-eval`、远程 `https:` 脚本或字体。
 9. **装配**：在 `src/lib.rs` 的 `run()` 中，对 `tauri::Builder` 调用 `bridge::install(builder)`，再调用 `.run(...)`；这是本包对 `lib.rs` 的唯一修改。`main.rs` 继续调用 `sentinel_lib::run()`，不改。
+
+10. **外链**：先校验 https 与非空主机，再在阻塞工作线程调用 `Platform::open_external`。Mac 使用 `/usr/bin/open`，URL 作为一个完整 argv，不经 shell；opener 失败返回安全错误。Windows 默认返回 Unsupported，W-01 再实现，不算 Mac 本批的 Windows 验收。测试通过注入 opener 验证成功/失败和拒绝路径，不打开用户浏览器。
 
 ## 7. 错误与边界情况
 

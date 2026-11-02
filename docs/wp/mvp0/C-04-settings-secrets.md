@@ -5,8 +5,9 @@ phase: mvp0
 platform: shared
 lane: core
 deps: [C-01, C-03]
-size: M
-owns: [core/sentinel/settings/__init__.py, core/sentinel/settings/models.py, core/sentinel/settings/repository.py, core/sentinel/settings/service.py, core/sentinel/settings/rpc.py, core/sentinel/secrets/__init__.py, core/sentinel/secrets/store.py, core/sentinel/secrets/service.py, core/sentinel/messages/settings.py, core/tests/unit/settings/, core/tests/unit/secrets/test_secrets.py]
+size: L
+size_approval: cr/B10-01-review-clarifications.md
+owns: [core/sentinel/settings/__init__.py, core/sentinel/settings/models.py, core/sentinel/settings/repository.py, core/sentinel/settings/service.py, core/sentinel/settings/rpc.py, core/sentinel/secrets/__init__.py, core/sentinel/secrets/store.py, core/sentinel/secrets/service.py, core/sentinel/messages/settings.py, core/sentinel/platform/keyring_store.py, core/sentinel/platform/macos_keychain.py, core/tests/platform/test_keyring_store.py, core/tests/platform/test_macos_keychain.py, core/tests/unit/settings/, core/tests/unit/secrets/test_secrets.py]
 appends: []
 stubs: []
 ---
@@ -57,11 +58,14 @@ stubs: []
 | `core/sentinel/settings/rpc.py` | 新建 | 7 个 RPC 处理器与 `register()` |
 | `core/sentinel/secrets/__init__.py` | 新建 | 导出 `SecretStore`、`SecretsService` |
 | `core/sentinel/secrets/store.py` | 新建 | `KeyringSecretStore` 与 `MemorySecretStore` |
+| `core/sentinel/platform/keyring_store.py` | 新建 | 默认 Mac backend 的原子写路由与可注入 backend 协议 |
+| `core/sentinel/platform/macos_keychain.py` | 新建 | Security.framework 原子 update / 缺失时 add；不 delete 旧密钥 |
 | `core/sentinel/secrets/service.py` | 新建 | 单向写入、清除、脱敏登记、状态 |
 | `core/sentinel/messages/settings.py` | 新建 | 设置、密钥与连接状态文案；由协调者加入公共文案目录 |
 | `core/tests/unit/settings/test_settings.py` | 新建 | 设置与 bootstrap 测试 |
 | `core/tests/unit/settings/test_rpc.py` | 新建 | 7 个处理器注册与 wire 字段 |
 | `core/tests/unit/secrets/test_secrets.py` | 新建 | 密钥测试 |
+| `core/tests/platform/test_keyring_store.py`、`core/tests/platform/test_macos_keychain.py` | 新建 | 原子失败保留、CF 引用释放与平台路由测试；不写用户钥匙串 |
 ## 5. 接口规格
 ### 5.1 公开接口
 ```python
@@ -101,6 +105,8 @@ def register(dispatcher: Dispatcher, settings: SettingsService, secrets: Secrets
              probe: ConnectionProbe) -> None: ...
 ```
 `SettingsPatch` 的字段只有 `engine`、`secContactEmail`、`dailyTokenBudget`、`firstScanLookbackDays`；`extra="forbid"`。`update` 先校验完整 patch，再在一个 `Database.write()` 中写入变化的键；未知字段、超范围值和非法邮箱都抛 `UserError("INVALID_ARGUMENT")`，`data.field` 指向第一个字段。`bootstrap` 只读，不写数据库。`get_jev_key` 仅供核心进程内部调用，不能注册成 RPC。
+
+Python 属性使用 snake_case 与 camelCase alias，wire 和 setting 表键不变。`KeyringSecretStore` 可注入 `PasswordBackend`，测试必须使用 fake backend；默认 Mac provider 的写入走 `SecItemUpdate`，不存在才 `SecItemAdd`，重复竞态再试一次 update。`AtomicWriteError` 不触发补偿写，避免更新未发生时不安全地重写旧值。其他 provider 的异常补偿为 best-effort，真实 provider 验收交 I-01。引擎 requested 来自当前设置，active/available 来自实际注入快照；C-04 不猜测或构造引擎。
 ### 5.2 数据结构
 | 结构 | 字段 | 类型 | 必填 | 约束 | 含义 |
 |---|---|---|---|---|---|

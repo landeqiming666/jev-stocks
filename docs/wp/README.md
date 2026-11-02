@@ -247,8 +247,8 @@ graph LR
 | [S-01](mvp0/S-01-segment.md) | 分句与分段 | 语义 | 共享 | S | 2 | C-00 | 已写 | 待派发 |
 | [S-02](mvp0/S-02-engine-interface.md) | 引擎接口、问题集、classify、定价与预算 | 语义 | 共享 | M | 2 | C-00, G0-JEV | 已写 | 待派发 |
 | [W-01](mvp0/W-01-windows-platform-layer.md) | Windows 平台层实现 | Windows | Windows | M | 2 | WP-00, W-00 | 已写 | 待派发 |
-| [C-02](mvp0/C-02-tauri-bridge.md) | Rust 桥接：核心进程监督与消息转发 | 核心 | 共享 | M | 3 | C-01 | 已写 | 待派发 |
-| [C-04](mvp0/C-04-settings-secrets.md) | 设置与密钥：settings.*、secrets.*、app.bootstrap | 核心 | 共享 | M | 3 | C-01, C-03 | 已写 | 待派发 |
+| [C-02](mvp0/C-02-tauri-bridge.md) | Rust 桥接：核心进程监督与消息转发 | 核心 | 共享 | L | 3 | C-01 | 已写 | 待派发 |
+| [C-04](mvp0/C-04-settings-secrets.md) | 设置与密钥：settings.*、secrets.*、app.bootstrap | 核心 | 共享 | L | 3 | C-01, C-03 | 已写 | 待派发 |
 | [D-02](mvp0/D-02-instruments.md) | 美股标的表与搜索 | 数据 | 共享 | M | 3 | C-03, D-01 | 已写 | 待派发 |
 | [D-03](mvp0/D-03-sec-filings.md) | SEC 披露抓取与正文提取 | 数据 | 共享 | M | 3 | C-03, D-01, G1-US | 已写 | 待派发 |
 | [D-04](mvp0/D-04-prices-calendar.md) | 日线行情与交易日历 | 数据 | 共享 | M | 3 | C-03, D-01, G1-US | 已写 | 待派发 |
