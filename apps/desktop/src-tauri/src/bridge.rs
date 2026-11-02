@@ -199,25 +199,53 @@ pub(crate) fn transition(shared: &Shared, state: CoreState, attempt: u8) {
     shared.view.lock().unwrap_or_else(|e| e.into_inner()).status = status.clone();
     (shared.sink)(BridgeEvent::Status(status));
 }
+fn emit_core_event<R: tauri::Runtime>(app: &tauri::AppHandle<R>, event: BridgeEvent) {
+    let result = match event {
+        BridgeEvent::Status(status) => app.emit("core://status", status),
+        BridgeEvent::Message(line) => app.emit("core://message", line),
+    };
+    if result.is_err() {
+        eprintln!("{{\"level\":\"warn\",\"module\":\"bridge\",\"error_code\":\"EMIT_FAILED\"}}");
+    }
+}
+
+fn start_state<R: tauri::Runtime>(app: &tauri::AppHandle<R>) -> BridgeState {
+    let handle = app.clone();
+    let started = process::CoreConfig::from_app(app).and_then(|config| {
+        BridgeState::start(config, process::Timings::default(), move |event| {
+            emit_core_event(&handle, event);
+        })
+    });
+    started.unwrap_or_else(|_| {
+        let state = BridgeState::default();
+        transition(&state.shared, CoreState::Failed, 0);
+        let _ = app.emit("core://status", status(&state));
+        state
+    })
+}
+
+fn on_ready<R: tauri::Runtime>(app: &tauri::AppHandle<R>) {
+    app.manage(start_state(app));
+}
+
+fn on_exit<R: tauri::Runtime>(app: &tauri::AppHandle<R>) {
+    if let Some(state) = app.try_state::<BridgeState>() {
+        let _ = shutdown(&state);
+    }
+}
+
 pub fn install<R: tauri::Runtime>(builder: tauri::Builder<R>) -> tauri::Builder<R> {
-    builder.invoke_handler(tauri::generate_handler![commands::rpc_send, commands::open_external])
-        .plugin(tauri::plugin::Builder::<R>::new("core-bridge")
-            .on_event(|app, event| {
-                if matches!(event, tauri::RunEvent::Ready) {
-                let handle = app.clone();
-                let started = process::CoreConfig::from_app(app).and_then(|config| BridgeState::start(config, process::Timings::default(), move |event| {
-                    let result = match event { BridgeEvent::Status(s) => handle.emit("core://status", s), BridgeEvent::Message(line) => handle.emit("core://message", line) };
-                    if result.is_err() { eprintln!("{{\"level\":\"warn\",\"module\":\"bridge\",\"error_code\":\"EMIT_FAILED\"}}"); }
-                }));
-                let state = started.unwrap_or_else(|_| {
-                    let state = BridgeState::default();
-                    transition(&state.shared, CoreState::Failed, 0);
-                    let _ = app.emit("core://status", status(&state));
-                    state
-                });
-                app.manage(state);
-                }
-                if matches!(event, tauri::RunEvent::ExitRequested { .. } | tauri::RunEvent::Exit) { if let Some(state) = app.try_state::<BridgeState>() { let _ = shutdown(&state); } }
-            })
-            .build())
+    let plugin = tauri::plugin::Builder::<R>::new("core-bridge")
+        .on_event(|app, event| match event {
+            tauri::RunEvent::Ready => on_ready(app),
+            tauri::RunEvent::ExitRequested { .. } | tauri::RunEvent::Exit => on_exit(app),
+            _ => {}
+        })
+        .build();
+    builder
+        .invoke_handler(tauri::generate_handler![
+            commands::rpc_send,
+            commands::open_external
+        ])
+        .plugin(plugin)
 }

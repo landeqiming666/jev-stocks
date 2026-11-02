@@ -46,7 +46,10 @@ for line in sys.stdin:
             with open(os.path.join(sys.argv[3], 'shutdown-received'), 'w') as f: f.write('ok')
         emit({'result':{'ok': True}, 'jsonrpc':'2.0','id':rid}); break
     else:
-        emit({'jsonrpc':'2.0','id':rid,'result':{'argv':sys.argv[2:], 'utf8':os.getenv('PYTHONUTF8'), 'encoding':os.getenv('PYTHONIOENCODING')}})
+        if mode == 'frame':
+            emit({'jsonrpc':'2.0','id':rid,'result':{'frameBytes':len(line.encode('utf-8'))}})
+        else:
+            emit({'jsonrpc':'2.0','id':rid,'result':{'argv':sys.argv[2:], 'utf8':os.getenv('PYTHONUTF8'), 'encoding':os.getenv('PYTHONIOENCODING')}})
 "#;
 fn fast() -> Timings {
     Timings {
@@ -320,7 +323,7 @@ fn test_blocked_stdin_does_not_block_shutdown_and_releases_writer() {
     let (state, rx) = start("blocked");
     ready(&rx);
     std::thread::scope(|scope| {
-        let writer = scope.spawn(|| send_line(&state, &"x".repeat(MAX_LINE_BYTES)));
+        let writer = scope.spawn(|| send_line(&state, &"x".repeat(MAX_LINE_BYTES - 1)));
         assert!(writer.join().unwrap().is_err());
     });
     shutdown(&state).unwrap();
@@ -430,6 +433,93 @@ fn test_spawn_failure_reports_failed_without_child() {
         })
         .collect();
     assert_eq!(statuses, [CoreState::Starting, CoreState::Failed]);
+}
+
+fn padded_request(raw_bytes: usize) -> String {
+    let mut request = serde_json::json!({"jsonrpc":"2.0", "id":"r-frame", "method":"test.echo", "params":{"padding":""}});
+    let padding = raw_bytes - request.to_string().len();
+    request["params"]["padding"] = "x".repeat(padding).into();
+    let line = request.to_string();
+    assert_eq!(line.len(), raw_bytes);
+    line
+}
+
+#[test]
+fn test_rpc_frame_limit_includes_writer_lf_and_rejects_raw_max() {
+    let (state, rx) = start("frame");
+    ready(&rx);
+    send_line(&state, &padded_request(MAX_LINE_BYTES - 1)).unwrap();
+    let response: serde_json::Value = serde_json::from_str(&message(&rx)).unwrap();
+    assert_eq!(response["result"]["frameBytes"], MAX_LINE_BYTES);
+    assert_eq!(
+        send_line(&state, &padded_request(MAX_LINE_BYTES))
+            .unwrap_err()
+            .code,
+        BridgeErrorCode::LineTooLarge
+    );
+    send_line(
+        &state,
+        "{\"id\":\"r-after\",\"method\":\"test.echo\",\"params\":{}}",
+    )
+    .unwrap();
+    let response: serde_json::Value = serde_json::from_str(&message(&rx)).unwrap();
+    assert_eq!(response["id"], "r-after");
+    shutdown(&state).unwrap();
+}
+
+#[test]
+fn test_rpc_frame_matches_actual_c01_parse_request_and_serialize() {
+    const CORE_PROTOCOL: &str = r#"
+import json, os, sys
+from sentinel.rpc.protocol import MAX_LINE_BYTES, LineTooLarge, parse_request, serialize
+def emit(message):
+    sys.stdout.buffer.write(serialize(message)); sys.stdout.buffer.flush()
+emit({'jsonrpc':'2.0','method':'app.ready','params':{'pid':os.getpid()}})
+for frame in sys.stdin.buffer:
+    request = parse_request(frame)
+    if request.method in ('app.ping', 'app.shutdown'):
+        result = {'ok':True}
+    else:
+        serialized = serialize(json.loads(frame))
+        assert serialized == frame
+        assert parse_request(serialized).id == request.id
+        oversized = json.loads(frame)
+        oversized['params']['padding'] += 'x'
+        oversized = serialize(oversized)
+        assert len(oversized) == MAX_LINE_BYTES + 1
+        try:
+            parse_request(oversized)
+        except LineTooLarge:
+            pass
+        else:
+            raise AssertionError('C-01 accepted an oversized frame')
+        result = {'frameBytes':len(frame),'serializedBytes':len(serialized),'oversizedRejected':True}
+    emit({'jsonrpc':'2.0','id':request.id,'result':result})
+    if request.method == 'app.shutdown': break
+"#;
+    let mut cfg = config("frame");
+    cfg.argv = vec![
+        cfg.argv[0].clone(),
+        "-u".into(),
+        "-c".into(),
+        CORE_PROTOCOL.into(),
+    ];
+    let mut timings = fast();
+    timings.startup_timeout = Duration::from_secs(3);
+    timings.heartbeat_interval = Duration::from_secs(1);
+    timings.write_timeout = Duration::from_secs(1);
+    let (tx, rx) = mpsc::channel();
+    let state = BridgeState::start(cfg, timings, move |event| {
+        let _ = tx.send(event);
+    })
+    .unwrap();
+    ready(&rx);
+    send_line(&state, &padded_request(MAX_LINE_BYTES - 1)).unwrap();
+    let response: serde_json::Value = serde_json::from_str(&message(&rx)).unwrap();
+    assert_eq!(response["result"]["frameBytes"], MAX_LINE_BYTES);
+    assert_eq!(response["result"]["serializedBytes"], MAX_LINE_BYTES);
+    assert_eq!(response["result"]["oversizedRejected"], true);
+    shutdown(&state).unwrap();
 }
 
 struct FakeOpener {

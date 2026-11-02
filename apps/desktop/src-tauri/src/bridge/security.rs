@@ -27,7 +27,8 @@ pub fn validate_url(url: &str) -> Result<tauri::Url, BridgeError> {
     Ok(parsed)
 }
 pub fn validate_line(line: &str) -> Result<(), BridgeError> {
-    if line.len() > MAX_LINE_BYTES {
+    // writer 还会追加一个 LF；发送上限与 C-01 的整帧上限一致。
+    if line.len() >= MAX_LINE_BYTES {
         return Err(BridgeError::new(BridgeErrorCode::LineTooLarge));
     }
     if line.contains(['\r', '\n']) {
