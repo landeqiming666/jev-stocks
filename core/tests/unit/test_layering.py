@@ -19,7 +19,7 @@ LAYER_RULES: dict[str, set[str]] = {
     "quant": {"domain", "storage", "markets", "rpc"},
     "trading": {"domain", "storage", "markets", "rpc"},
     "portfolio": {"domain", "storage", "markets", "rpc"},
-    "rpc": {"domain"},
+    "rpc": {"domain", "platform"},
     "settings": {"domain", "storage", "security", "secrets"},
     "secrets": {"domain", "security", "platform"},
     "scan": {"domain", "storage", "markets", "semantic", "rpc"},
@@ -67,7 +67,7 @@ def imported_layers(source: str, module_path: str) -> set[str]:
                     if alias.name in LAYER_RULES or alias.name in ALWAYS_ALLOWED:
                         layers.add(alias.name)
 
-    return {layer for layer in layers if layer in LAYER_RULES}
+    return {layer for layer in layers if layer in LAYER_RULES and layer not in ALWAYS_ALLOWED}
 
 
 def violations(source: str, module_path: str) -> set[str]:
@@ -111,3 +111,14 @@ def test_logging_can_import_redaction_but_not_business_services() -> None:
         violations("from .security.redact import redact_obj\n", "sentinel.logging_setup") == set()
     )
     assert violations("from .storage import Database\n", "sentinel.logging_setup") == {"storage"}
+
+
+def test_business_layers_can_use_foundation_logging() -> None:
+    assert (
+        imported_layers("from sentinel.logging_setup import get_logger\n", "sentinel.rpc.server")
+        == set()
+    )
+    assert (
+        violations("from sentinel.platform import is_process_alive\n", "sentinel.rpc.server")
+        == set()
+    )

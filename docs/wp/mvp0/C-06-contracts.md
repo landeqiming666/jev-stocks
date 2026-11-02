@@ -6,7 +6,7 @@ platform: shared
 lane: core
 deps: [WP-00]
 size: M
-owns: [contracts/, scripts/gen_proto_mock.py, scripts/check_contracts.py, scripts/tests/test_contracts.py, .kiro/notes/author/data.py, design/prototype/data/mock.js]
+owns: [contracts/, scripts/gen_proto_mock.py, scripts/check_contracts.py, scripts/tests/test_contracts.py, .kiro/notes/author/data.py, .kiro/notes/author/examples.py, design/prototype/data/mock.js]
 appends: []
 stubs: []
 ---

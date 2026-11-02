@@ -12,6 +12,8 @@
 
 输入是 `BinaryIO`，直接使用 `readline`；超限行丢弃剩余内容后才能继续读下一行。内部错误编号在 `to_wire(request_id)` 注入，而非传给不存在的构造参数。验收以全部实际基线测试及关键边界为准，不以不同小节中矛盾的测试计数为准。
 
+父进程看门狗可使用平台层；基础日志的导入不应被错误归类成业务层。线程池允许固定四个 daemon worker，shutdown 与 ping/cancel 一样由 reader 直通，保证 worker 卡住时仍能关闭。入参验证失败是 `INVALID_ARGUMENT`，handler 返回结果验证失败是 `INTERNAL`。
+
 ## C-04
 
 密钥先 strip 后校验，拒绝内部空白；测试不能将仅含首尾空白的有效密钥判为非法。此规则以 05 §5.2 与工作包 §6 为准。
@@ -19,6 +21,8 @@
 ## C-06
 
 前次审核改了 R08 的文档示例，但演示创作源仍使用“计划减持”作为已发生正例。本批批准在 `.kiro/notes/author/data.py` 修正 E1 为已完成减持，问题集升至 `.2`，在契约中保留相同 ID、模拟概率、示例名与计数，再通过生成器生成 `design/prototype/data/mock.js`。句子偏移必须随实际文本重算；额外回归检查计划与执行的区别。
+
+主审另发现既有创作源缺少必填的分页游标和拒单 ID。批准 `.kiro/notes/author/examples.py` 补齐 `nextCursor=null` 和虚构拒单 `orderId`，并统一方法插入顺序为 `index.methods`。校验器不得用豁免表跳过结果必填字段；生成器不得硬编码交换索引中的方法。
 
 ## D-01
 
