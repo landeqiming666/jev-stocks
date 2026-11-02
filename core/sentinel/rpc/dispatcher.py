@@ -27,6 +27,8 @@ class RequestContext:
 
 @dataclass(frozen=True)
 class MethodSpec:
+    """timeout_ms 仅供客户端或方法管理超时，不限制 server 线程执行。"""
+
     method: str
     handler: Handler
     params_model: type[BaseModel]
@@ -50,7 +52,11 @@ class Dispatcher:
         cancellable: bool = False,
         replace: bool = False,
     ) -> None:
-        if not re.fullmatch(METHOD_PATTERN, method) or timeout_ms <= 0:
+        if (
+            not re.fullmatch(METHOD_PATTERN, method)
+            or type(timeout_ms) is not int
+            or timeout_ms <= 0
+        ):
             raise ValueError("invalid method specification")
         if method in self._specs and not replace:
             raise ValueError("duplicate method")
@@ -104,9 +110,6 @@ class Dispatcher:
                 return response
             except Exception as wire_exc:
                 return self._internal(ctx, wire_exc)
-        except ValidationError as exc:
-            field = ".".join(str(part) for part in exc.errors()[0]["loc"])
-            return failure(ctx.request_id, UserError("INVALID_ARGUMENT", field=field))
         except Exception as exc:
             return self._internal(ctx, exc)
 

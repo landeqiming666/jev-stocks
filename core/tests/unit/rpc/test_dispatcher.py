@@ -5,7 +5,7 @@ from datetime import UTC, datetime
 import pytest
 from pydantic import BaseModel, Field
 
-from sentinel.errors import UserError
+from sentinel.errors import InternalError, UserError
 from sentinel.rpc import Dispatcher
 from sentinel.rpc.builtins import EmptyParams
 from sentinel.rpc.cancel import CancelToken
@@ -30,11 +30,70 @@ class QuantityParams(BaseModel):
 @pytest.mark.parametrize("quantity", ["7", True, 1.0])
 def test_validation_error_reports_first_field(quantity: object) -> None:
     dispatcher = Dispatcher()
-    dispatcher.register("test.method", lambda p, c: {}, QuantityParams)
+    calls: list[str] = []
+
+    def handler(params: BaseModel, ctx: RequestContext) -> dict[str, object]:
+        calls.append(ctx.request_id)
+        return {"quantity": 7}
+
+    dispatcher.register("test.method", handler, QuantityParams, QuantityParams)
     response = dispatcher.dispatch(
         dispatcher.lookup("test.method"), {"quantity": quantity}, context()
     )
     assert response["error"] == UserError("INVALID_ARGUMENT", field="quantity").to_wire()
+    assert calls == []
+
+
+@pytest.mark.parametrize(
+    "result",
+    [
+        {"quantity": "private result body"},
+        {"quantity": True},
+        {"quantity": 1.0},
+        {},
+        {"quantity": 7, "extra": "private result body"},
+    ],
+)
+def test_valid_params_with_invalid_result_map_to_internal(
+    result: dict[str, object],
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    dispatcher = Dispatcher()
+    calls: list[str] = []
+
+    def handler(params: BaseModel, ctx: RequestContext) -> dict[str, object]:
+        calls.append(ctx.request_id)
+        return result
+
+    dispatcher.register("test.method", handler, QuantityParams, QuantityParams)
+    response = dispatcher.dispatch(
+        dispatcher.lookup("test.method"),
+        {"quantity": 7},
+        context(),
+    )
+    assert calls == ["r-1"]
+    assert response["error"] == InternalError(detail="ValidationError").to_wire("r-1")
+    assert len(caplog.records) == 1
+    assert vars(caplog.records[0])["sentinel"] == {
+        "event": "rpc.dispatch.internal",
+        "request_id": "r-1",
+        "method": "test.method",
+        "duration_ms": None,
+        "error_code": "INTERNAL",
+        "detail": "ValidationError",
+    }
+    assert "private result body" not in str(response)
+    assert "private result body" not in caplog.text
+
+
+def test_handler_raised_validation_error_is_internal() -> None:
+    def handler(params: BaseModel, ctx: RequestContext) -> BaseModel:
+        return QuantityParams.model_validate({"quantity": "private result body"}, strict=True)
+
+    dispatcher = Dispatcher()
+    dispatcher.register("test.method", handler, QuantityParams, QuantityParams)
+    response = dispatcher.dispatch(dispatcher.lookup("test.method"), {"quantity": 7}, context())
+    assert response["error"] == InternalError(detail="ValidationError").to_wire("r-1")
 
 
 def test_dispatcher_forbids_extra_fields_even_with_default_model_config() -> None:
@@ -94,3 +153,38 @@ def test_registration_validates_name_and_requires_explicit_replace() -> None:
     dispatcher.register("test.method", handler, EmptyParams, replace=True)
     assert dispatcher.methods() == ("test.method",)
     assert dispatcher.lookup("test.method").cancellable is False  # type: ignore[union-attr]
+
+
+@pytest.mark.parametrize(
+    "timeout",
+    [
+        True,
+        False,
+        0,
+        -1,
+        1.0,
+        1.5,
+        "30",
+        None,
+        float("nan"),
+        float("inf"),
+        -float("inf"),
+    ],
+)
+def test_register_rejects_timeout_that_is_not_a_positive_integer(timeout: object) -> None:
+    dispatcher = Dispatcher()
+    with pytest.raises(ValueError, match="invalid method specification"):
+        dispatcher.register("test.method", lambda p, c: {}, EmptyParams, timeout_ms=timeout)  # type: ignore[arg-type]
+    assert dispatcher.methods() == ()
+
+
+def test_invalid_timeout_cannot_replace_existing_registration() -> None:
+    dispatcher = Dispatcher()
+    dispatcher.register("test.method", lambda p, c: {}, EmptyParams, timeout_ms=1)
+    original = dispatcher.lookup("test.method")
+    with pytest.raises(ValueError):
+        dispatcher.register(
+            "test.method", lambda p, c: {}, EmptyParams, timeout_ms=True, replace=True
+        )
+    assert dispatcher.lookup("test.method") is original
+    assert original is not None and original.timeout_ms == 1

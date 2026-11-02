@@ -114,6 +114,24 @@ def test_non_cancellable_method_ignores_cancel(dispatcher: Dispatcher) -> None:
         pair.close()
 
 
+def test_timeout_metadata_does_not_limit_server_worker_execution(dispatcher: Dispatcher) -> None:
+    slow = SlowHandler()
+    dispatcher.register("slow.method", slow, EmptyParams, timeout_ms=1)
+    pair = PipePair(dispatcher)
+    try:
+        pair.request("slow", "slow.method")
+        assert slow.started.wait(1.0)
+        assert not slow.finished.wait(0.05)
+        pair.request("barrier", "app.ping")
+        assert pair.wait_for_line()["id"] == "barrier"
+        assert pair.lines.empty()
+        slow.release.set()
+        assert pair.wait_for_line() == {"jsonrpc": "2.0", "id": "slow", "result": {"ok": True}}
+    finally:
+        slow.release.set()
+        pair.close()
+
+
 def test_duplicate_id_preserves_inflight_token_and_never_reexecutes(dispatcher: Dispatcher) -> None:
     slow = SlowHandler()
     dispatcher.register("slow.method", slow, EmptyParams, cancellable=True)
