@@ -1,0 +1,29 @@
+# Windows 对等矩阵
+
+- 维护工作包：W-00。
+- 验证日期：2026-11-02。
+- 结果取值：通过 / 失败 / 未验证。
+- 基线固定为本次被验证的提交；后续 main 变更应另行记录。
+
+| 工作包 | main 上的提交 | Windows 结果 | 说明与链接 |
+|---|---|---|---|
+| WP-00 | `5b79539708557884c925138daa4776d1b2321c7c` | **失败** | 依赖、前端、Rust 和窗口启动通过；统一检查 13 通过 / 1 失败 / 3 跳过，平台层和 .ps1 仍为占位。见[完成报告](status/W-00.md) |
+
+## 分项证据
+
+| 分项 | 结果 | 证据 |
+|---|---|---|
+| 依赖安装与锁文件 | 通过 | setup 退出 0；Python/前端/Rust 依赖安装成功，锁文件未修改 |
+| Python 通用测试 | 通过 | 7 passed / 5 skipped；5 项跳过均为 macOS 用例 |
+| Windows Python 平台接口 | 失败 | 4 项接口均 NotImplementedError(W-01)，由 W-01 接手 |
+| Python 类型检查 | 失败 | POSIX fcntl 属性 5 错；[CR](cr/CR-20261102-windows-mypy-platform.md) |
+| 工具链体检 | 失败 | doctor 退出 0，但已安装 pnpm 被显示“未知”；[CR](cr/CR-20261102-doctor-pnpm-cmd.md) |
+| 前端 lint/typecheck/test/build | 通过 | 四项命令退出码均为 0 |
+| Rust fmt/clippy | 通过 | 两项命令退出码均为 0 |
+| Windows Hello 窗口启动 | 通过 | 开发构建 45.15 秒；158.609 秒观察周期结束前已登记窗口“投资逻辑哨兵” |
+| 开发期文件监听 | 失败 | 编译产物 EBUSY 警告，未阻止启动；[CR](cr/CR-20261102-vite-target-watch.md) |
+| PowerShell 包装器 | 失败 | doctor.ps1 仍为 W-01 占位，实际退出 1 |
+| 前端生成契约、E2E、核心桥接与业务 | 未验证 | 相应工作包或测试尚未完成 |
+
+安装版本、复现环境及注意事项见 [Windows 开发笔记](windows-dev-notes.md)。W-00 本身是环境摸底交付，本矩阵的“失败”表示 WP-00 尚未达到 Windows 对等验收。
+
