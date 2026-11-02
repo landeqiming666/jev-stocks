@@ -10,7 +10,7 @@
 3. 派发时把 [10](../10-协作与工作包规范.md) 第 10 节的“实现者”提示词填好交给 agent。
 4. 工作包 `done` 后更新状态列（看板生成时默认写“待派发”，请在派发后手工维护一份副本或使用你们的任务系统；本表只负责依赖与波次）。`platform: shared` 的工作包合并后，通知 Windows 的人更新对等矩阵。
 5. **`backlog.json` 里有、但还没有对应 `.md` 文件的工作包**，必须先按 [10](../10-协作与工作包规范.md) 第 5 节的模板写成完整文档（满足 D1–D10），才能派发。
-6. **Windows 车道暂缓（ADR-017）**：`W-00`～`W-05` 文档保留但不派发；MVP-0 只验收 macOS arm64。
+6. **Windows 分阶段恢复（ADR-021）**：当前只派发 `W-00` 环境摸底；`W-01`～`W-05` 在 W-00 结论被协调者审阅前继续暂缓。macOS MVP-0 与 M-8 口径不变。
 
 ## 2. 车道与分工
 
@@ -232,13 +232,13 @@ graph LR
 
 | ID | 标题 | 车道 | 平台 | 规模 | 波次 | 依赖 | 文档 | 状态 |
 |---|---|---|---|---|---|---|---|---|
-| [WP-00](mvp0/WP-00-skeleton.md) | 仓库骨架与工具链 | 核心 | 共享 | M | 0 | — | 已写 | 待派发 |
+| [WP-00](mvp0/WP-00-skeleton.md) | 仓库骨架与工具链 | 核心 | 共享 | M | 0 | — | 已写 | done |
 | [C-00](mvp0/C-00-core-utils.md) | 基础模块：ID、时钟、错误、日志、脱敏、文案 | 核心 | 共享 | S | 1 | WP-00 | 已写 | 待派发 |
 | [C-06](mvp0/C-06-contracts.md) | 契约文件与原型数据生成 | 核心 | 共享 | M | 1 | WP-00 | 已写 | 待派发 |
 | [G0-JEV](mvp0/G0-JEV-probe.md) | 闸门探针：Jev 直连实测 | 语义 | 共享 | S | 1 | WP-00 | 已写 | 待派发 |
 | [G0-JEVDB](mvp0/G0-JEVDB-build.md) | 闸门探针：macOS 构建并加载 JEVDB | 语义 | macOS | M | 1 | WP-00 | 已写 | 待派发 |
 | [G1-US](mvp0/G1-US-market-probe.md) | 闸门探针：SEC、行情源实测与录制 | 数据 | 共享 | S | 1 | WP-00 | 已写 | 待派发 |
-| [W-00](mvp0/W-00-windows-survey.md) | Windows 环境摸底与对等矩阵 | Windows | Windows | S | 1 | WP-00 | 已写 | 待派发 |
+| [W-00](mvp0/W-00-windows-survey.md) | Windows 环境摸底与对等矩阵 | Windows | Windows | S | 1 | WP-00 | 已写 | doing |
 | [C-01](mvp0/C-01-rpc-server.md) | RPC 服务端：线程模型、分发、取消 | 核心 | 共享 | M | 2 | C-00 | 已写 | 待派发 |
 | [C-03](mvp0/C-03-storage.md) | 存储：DuckDB 封装、迁移、备份 | 核心 | 共享 | M | 2 | C-00 | 已写 | 待派发 |
 | [C-05](mvp0/C-05-frontend-rpc.md) | 前端 RpcClient、mock 与契约类型生成 | 核心 | 共享 | M | 2 | C-06, WP-00 | 已写 | 待派发 |

@@ -48,6 +48,7 @@ def load(root: Path = ROOT) -> List[dict]:
                 "platform": str(meta["platform"]), "lane": str(meta["lane"]),
                 "deps": list(meta["deps"]) if isinstance(meta["deps"], list) else [],
                 "size": str(meta["size"]), "written": "%s/%s" % (phase, path.name),
+                "status": str(meta.get("status", "待派发")),
             }
     return sorted(items.values(), key=lambda r: r["id"])
 
@@ -104,9 +105,10 @@ def render(items: List[dict]) -> str:
     rows = []
     for i in sorted(mvp, key=lambda r: (lvl[r["id"]], r["id"])):
         cell = "[%s](%s)" % (i["id"], i["written"]) if i["written"] else i["id"]
-        rows.append("| %s | %s | %s | %s | %s | %d | %s | %s | 待派发 |" % (
+        rows.append("| %s | %s | %s | %s | %s | %d | %s | %s | %s |" % (
             cell, i["title"], LANE[i["lane"]], PLAT[i["platform"]], i["size"], lvl[i["id"]],
-            ", ".join(i["deps"]) or "—", "已写" if i["written"] else "待写"))
+            ", ".join(i["deps"]) or "—", "已写" if i["written"] else "待写",
+            i.get("status", "待派发")))
 
     return "\n".join([
         BEGIN, "",

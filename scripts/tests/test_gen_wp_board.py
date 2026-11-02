@@ -41,6 +41,10 @@ class RenderTests(unittest.TestCase):
         self.assertIn("| B |", text)
         self.assertIn("已写完整文档 1 个", text)
 
+    def test_front_matter_status_is_rendered(self) -> None:
+        row = dict(item("A"), status="doing")
+        self.assertIn("| doing |", gb.render([row]))
+
     def test_waves_put_windows_in_their_own_column(self) -> None:
         text = gb.render([item("A"), item("W-1", ["A"], platform="windows", lane="windows")])
         self.assertIn("| 0 | A | — |", text)
@@ -85,10 +89,11 @@ class LoadTests(unittest.TestCase):
                 {"id": "C-02", "title": "只在 backlog", "phase": "mvp0", "platform": "shared", "lane": "core", "size": "M", "deps": ["C-01"]},
             ], ensure_ascii=False), encoding="utf-8")
             (root / "docs" / "wp" / "mvp0" / "C-01-a.md").write_text(
-                "---\nid: C-01\ntitle: 新标题\nphase: mvp0\nplatform: shared\nlane: core\ndeps: []\nsize: M\nowns: [x/]\n---\n", encoding="utf-8")
+                "---\nid: C-01\ntitle: 新标题\nphase: mvp0\nplatform: shared\nlane: core\ndeps: []\nsize: M\nstatus: doing\nowns: [x/]\n---\n", encoding="utf-8")
             items = {i["id"]: i for i in gb.load(root)}
             self.assertEqual(items["C-01"]["title"], "新标题")
             self.assertEqual(items["C-01"]["written"], "mvp0/C-01-a.md")
+            self.assertEqual(items["C-01"]["status"], "doing")
             self.assertIsNone(items["C-02"]["written"])
 
 

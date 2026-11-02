@@ -6,6 +6,7 @@ platform: windows
 lane: windows
 deps: [WP-00]
 size: S
+status: doing
 owns: [docs/wp/windows-matrix.md, docs/wp/windows-dev-notes.md]
 ---
 
@@ -18,6 +19,8 @@ owns: [docs/wp/windows-matrix.md, docs/wp/windows-dev-notes.md]
 - **预计规模**：两个文档文件加一份状态文件；没有代码。预计半天到一天，主要时间花在装工具链上。
 
 ## 1. 背景与边界
+
+> 2026-11-02 已由 ADR-021 解禁。当前只做环境事实记录；`W-01`～`W-05` 仍未派发。
 
 ### 1.1 为什么需要它
 WP-00 是在 macOS 上写的，Windows 一侧只有可编译的占位文件。没人知道 `uv sync` 能不能装上 `typesafe-sdk`、`selectolax`、`duckdb==1.4.3` 的 Windows 版本，也不知道 `pnpm tauri dev` 在 Windows 上缺什么。先摸清，再动手。
@@ -41,14 +44,14 @@ WP-00 是在 macOS 上写的，Windows 一侧只有可编译的占位文件。�
 
 | 文档 | 小节 | 为什么要读 |
 |---|---|---|
-| [decisions.md](../../decisions.md) | ADR-016 | 平台分工与规则 |
+| [decisions.md](../../decisions.md) | ADR-016、ADR-021 | 平台分工、W-00 解禁范围与后续闸门 |
 | [10-协作与工作包规范.md](../../10-协作与工作包规范.md) | 9 Windows 车道协议 | 你的工作方式 |
 | [02-技术架构.md](../../02-技术架构.md) | 2 开发环境、9 平台层 | 要装什么、平台层是什么 |
 | [WP-00-skeleton.md](WP-00-skeleton.md) | 4 交付物、9.1 验收命令 | 你要验证的东西 |
 
 ## 3. 前置条件
 
-- WP-00 已合并到 `main`。
+- WP-00 已合并到 `main`（2026-11-02 起满足）。
 - 一台 Windows 11 x64 机器，有管理员权限（安装 Visual Studio 生成工具需要）。**记录系统版本，不要假设**。
 - 能访问 GitHub、PyPI、npm、crates.io。
 
