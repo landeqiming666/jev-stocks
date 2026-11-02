@@ -1,0 +1,75 @@
+/* 页面专用样式。类名前缀 p-。 */
+
+/* 通用页头 */
+.p-page__head { display: flex; align-items: flex-end; justify-content: space-between; gap: var(--space-5); margin-bottom: var(--space-5); }
+.p-page__eyebrow { color: var(--ink-2); margin-bottom: var(--space-1); }
+.p-page__title { font-size: var(--text-h1-size); line-height: var(--text-h1-lh); font-weight: 600; }
+.p-page__actions { display: flex; align-items: center; gap: var(--space-3); flex: none; }
+.p-page__sub { color: var(--muted); font-size: var(--text-small-size); }
+.p-section { margin-top: var(--space-6); }
+.p-section__title { font-size: var(--text-h2-size); line-height: var(--text-h2-lh); font-weight: 600; margin-bottom: var(--space-3); }
+.p-grid-2 { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: var(--space-4); align-items: start; }
+.p-stack { display: flex; flex-direction: column; gap: var(--space-3); }
+
+/* 今日 */
+.p-today__list { display: flex; flex-direction: column; gap: var(--space-3); }
+.p-today__scan { margin-bottom: var(--space-4); }
+.p-today__scan .c-progress { margin-top: var(--space-3); }
+
+/* 持仓 */
+.p-holdings__toolbar { display: flex; align-items: center; gap: var(--space-3); margin-bottom: var(--space-4); }
+.p-holdings__toolbar .u-grow { display: flex; align-items: center; gap: var(--space-3); }
+.p-holdings__empty { margin-top: var(--space-4); }
+.p-add-form { display: grid; grid-template-columns: 120px 120px minmax(0, 1fr) auto; gap: var(--space-3); align-items: end; padding: var(--space-4); margin-bottom: var(--space-4); background: var(--surface); border: 1px solid var(--line-strong); border-radius: var(--radius-card); }
+
+/* 交易 */
+.p-trading__account { display: flex; align-items: center; gap: var(--space-4); margin-bottom: var(--space-4); padding: var(--space-3) var(--space-4); background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-card); }
+.p-trading__account .u-grow { display: flex; align-items: center; gap: var(--space-4); }
+.p-trading__clock { font-family: var(--font-mono); font-variant-numeric: tabular-nums; font-weight: 500; }
+.p-trading__main { display: grid; grid-template-columns: 340px minmax(0, 1fr); gap: var(--space-4); margin-top: var(--space-4); align-items: start; }
+.p-trading__ticket { display: flex; flex-direction: column; gap: var(--space-4); }
+.p-trading__estimate { padding: var(--space-3); background: var(--surface-2); border-radius: var(--radius-input); }
+.p-trading__reject { color: var(--danger); font-size: var(--text-small-size); }
+
+/* 风险 */
+.p-risk__controls { display: flex; align-items: center; gap: var(--space-5); margin-bottom: var(--space-4); }
+.p-risk__controls .u-grow { display: flex; align-items: center; gap: var(--space-5); }
+.p-risk__body { margin-top: var(--space-4); }
+.p-risk__foot { margin-top: var(--space-4); color: var(--muted); font-size: var(--text-small-size); }
+.p-risk__heat { display: flex; flex-direction: column; gap: var(--space-3); }
+.p-risk__loadings { margin-top: var(--space-4); }
+.p-risk__loadings li { display: flex; justify-content: space-between; padding: 4px 0; border-top: 1px solid var(--line); }
+.p-risk__loadings li:first-child { border-top: 0; }
+
+/* 扫描 */
+.p-scan__budget { margin-bottom: var(--space-4); }
+.p-scan__budget .c-progress { margin-top: var(--space-3); }
+
+/* 设置 */
+.p-settings { max-width: 720px; margin: 0 auto; }
+.p-settings__group + .p-settings__group { margin-top: var(--space-5); }
+.p-settings__group > .c-card__title { margin-bottom: var(--space-3); }
+.p-settings__row { display: flex; align-items: center; justify-content: space-between; gap: var(--space-4); padding: var(--space-3) 0; border-top: 1px solid var(--line); }
+.p-settings__row:first-of-type { border-top: 0; padding-top: 0; }
+.p-settings__row .c-field { flex: 1 1 auto; max-width: 360px; }
+.p-settings__check { display: flex; align-items: center; gap: var(--space-3); padding: var(--space-2) 0; }
+.p-settings__check .u-grow { min-width: 0; }
+
+/* v1 草图 */
+.p-v1__grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-4); }
+.p-v1__tag { margin-bottom: var(--space-3); }
+.p-v1__chart { height: 120px; margin-top: var(--space-3); border: 1px dashed var(--line-strong); border-radius: var(--radius-input); display: flex; align-items: center; justify-content: center; color: var(--muted); }
+.p-v1__tray { width: 260px; padding: var(--space-1); background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-input); box-shadow: var(--shadow-float); }
+.p-v1__tray div { display: flex; height: 28px; align-items: center; padding: 0 var(--space-3); }
+.p-v1__tray div + div { border-top: 1px solid var(--line); }
+.p-v1__notice { width: 340px; padding: var(--space-3) var(--space-4); background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-card); box-shadow: var(--shadow-float); }
+.p-v1__steps { display: flex; gap: var(--space-2); }
+.p-v1__step { flex: 1 1 0; min-width: 0; padding: var(--space-3); border: 1px solid var(--line); border-radius: var(--radius-input); background: var(--surface); }
+.p-v1__step.is-active { border-color: var(--ink); }
+
+/* 窄窗口 */
+@media (max-width: 1079px) {
+  .p-grid-2, .p-trading__main { grid-template-columns: minmax(0, 1fr); }
+  .c-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .p-v1__grid { grid-template-columns: minmax(0, 1fr); }
+}

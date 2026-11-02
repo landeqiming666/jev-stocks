@@ -1,0 +1,6 @@
+/* macOS：覆盖式标题栏，顶栏左侧留出红绿灯安全区。 */
+[data-platform="macos"] {
+  --titlebar-inset-left: 72px;
+  --font-cjk: "PingFang SC";
+  --kbd-mod: "⌘";
+}

@@ -1,0 +1,6 @@
+/* Windows：原生标题栏，没有安全区。W-01 接手并按真机渲染调整。 */
+[data-platform="windows"] {
+  --titlebar-inset-left: 0px;
+  --font-cjk: "Microsoft YaHei UI";
+  --kbd-mod: "Ctrl";
+}

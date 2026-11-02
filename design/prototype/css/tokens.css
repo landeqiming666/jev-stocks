@@ -1,0 +1,77 @@
+/* 设计令牌。docs/03-界面设计规范.md 第 2 节是规范，本文件是它的落地。
+   规则：所有颜色只在这里定义（第一个 :root 块）；其他 CSS 不得出现十六进制颜色。
+   scripts/check_contrast.py 只读这个块里的十六进制颜色。 */
+:root {
+  /* 基底 */
+  --paper:        #FAF8F3;
+  --surface:      #FFFFFF;
+  --surface-2:    #F3F0E9;
+  --ink:          #1A1C20;
+  --ink-2:        #4A4D55;
+  --muted:        #64676F;
+  --line:         #E7E2D8;
+  --line-strong:  #D5CFC2;
+  --on-ink:       #FFFFFF;
+
+  /* 强调（朱红）：只用于当前导航项、焦点环、选中行左缘 */
+  --accent:       #C4472D;
+  --accent-text:  #A93A22;
+  --accent-ink:   #FFFFFF;
+  --accent-soft:  #FBEDE9;
+  --focus-ring:   #C4472D;
+
+  /* 判定标签 */
+  --verdict-over:   #B3261E;  --verdict-over-bg:   #FCEEEC;
+  --verdict-weak:   #A65A0B;  --verdict-weak-bg:   #FFF4E5;
+  --verdict-hold:   #1E7A5A;  --verdict-hold-bg:   #EAF5F0;
+  --verdict-none:   #64676F;  --verdict-none-bg:   #F1F0EC;
+  --verdict-unsure: #3B5B85;  --verdict-unsure-bg: #EAF0F8;
+
+  /* 状态条 */
+  --ok:      #1E7A5A;
+  --warn:    #8F5A00;   --warn-bg:   #FFF4E5;
+  --danger:  #B3261E;   --danger-bg: #FCEEEC;
+  --info:    #3B5B85;   --info-bg:   #EAF0F8;
+
+  /* 涨跌：美股上涨绿、下跌红（MVP-0 只有美股） */
+  --up:   #1E7A5A;
+  --down: #C0392B;
+
+  /* 热力图 */
+  --heat-neg:  #3B5B85;
+  --heat-zero: #FAF8F3;
+  --heat-pos:  #C4472D;
+
+  /* 字体 */
+  --font-sans: "IBM Plex Sans", system-ui, var(--font-cjk, "PingFang SC"), sans-serif;
+  --font-mono: "IBM Plex Mono", "SF Mono", "Cascadia Mono", ui-monospace, monospace;
+
+  /* 字号 / 行高 */
+  --text-display-size: 36px;  --text-display-lh: 44px;
+  --text-h1-size: 24px;       --text-h1-lh: 32px;
+  --text-h2-size: 18px;       --text-h2-lh: 26px;
+  --text-body-size: 14px;     --text-body-lh: 22px;
+  --text-small-size: 12px;    --text-small-lh: 18px;
+  --text-num-l-size: 28px;    --text-num-l-lh: 34px;
+
+  /* 间距（4px 基数） */
+  --space-1: 4px;  --space-2: 8px;  --space-3: 12px;  --space-4: 16px;
+  --space-5: 24px; --space-6: 32px; --space-7: 48px;
+
+  /* 圆角、阴影、层级 */
+  --radius-input: 6px;  --radius-card: 10px;  --radius-drawer: 12px;  --radius-tag: 4px;
+  --shadow-float: 0 8px 24px rgba(26, 28, 32, .08), 0 1px 2px rgba(26, 28, 32, .04);
+  --scrim: rgba(26, 28, 32, .18);
+  --z-drawer: 30;  --z-modal: 40;  --z-toast: 50;
+
+  /* 动效 */
+  --ease: cubic-bezier(.2, .8, .2, 1);
+  --dur-in: 180ms;  --dur-out: 140ms;  --dur-drawer: 200ms;
+
+  /* 布局尺寸 */
+  --top-h: 56px;  --nav-w: 68px;  --status-h: 28px;  --drawer-w: 400px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; }
+}

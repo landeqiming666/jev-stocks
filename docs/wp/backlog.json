@@ -1,0 +1,566 @@
+[
+ {
+  "id": "WP-00",
+  "title": "仓库骨架与工具链",
+  "phase": "mvp0",
+  "lane": "core",
+  "platform": "shared",
+  "size": "M",
+  "deps": []
+ },
+ {
+  "id": "C-00",
+  "title": "基础模块：ID、时钟、错误、日志、脱敏、文案",
+  "phase": "mvp0",
+  "lane": "core",
+  "platform": "shared",
+  "size": "S",
+  "deps": [
+   "WP-00"
+  ]
+ },
+ {
+  "id": "C-07",
+  "title": "组合根与进程入口：装配服务、注册处理器、启动恢复",
+  "phase": "mvp0",
+  "lane": "core",
+  "platform": "shared",
+  "size": "M",
+  "deps": [
+   "C-01",
+   "C-03",
+   "C-04",
+   "D-01",
+   "D-02",
+   "D-03",
+   "D-04",
+   "S-01",
+   "S-02",
+   "S-03",
+   "S-04",
+   "P-01",
+   "P-02",
+   "P-03",
+   "P-05",
+   "P-06",
+   "E-01"
+  ]
+ },
+ {
+  "id": "C-01",
+  "title": "RPC 服务端：线程模型、分发、取消",
+  "phase": "mvp0",
+  "lane": "core",
+  "platform": "shared",
+  "size": "M",
+  "deps": [
+   "C-00"
+  ]
+ },
+ {
+  "id": "C-02",
+  "title": "Rust 桥接：核心进程监督与消息转发",
+  "phase": "mvp0",
+  "lane": "core",
+  "platform": "shared",
+  "size": "M",
+  "deps": [
+   "C-01"
+  ]
+ },
+ {
+  "id": "C-03",
+  "title": "存储：DuckDB 封装、迁移、备份",
+  "phase": "mvp0",
+  "lane": "core",
+  "platform": "shared",
+  "size": "M",
+  "deps": [
+   "C-00"
+  ]
+ },
+ {
+  "id": "C-04",
+  "title": "设置与密钥：settings.*、secrets.*、app.bootstrap",
+  "phase": "mvp0",
+  "lane": "core",
+  "platform": "shared",
+  "size": "M",
+  "deps": [
+   "C-01",
+   "C-03"
+  ]
+ },
+ {
+  "id": "C-05",
+  "title": "前端 RpcClient、mock 与契约类型生成",
+  "phase": "mvp0",
+  "lane": "core",
+  "platform": "shared",
+  "size": "M",
+  "deps": [
+   "C-06",
+   "WP-00"
+  ]
+ },
+ {
+  "id": "C-06",
+  "title": "契约文件与原型数据生成：contracts/ 全部 JSON、gen_proto_mock.py、check_contracts.py",
+  "phase": "mvp0",
+  "lane": "core",
+  "platform": "shared",
+  "size": "M",
+  "deps": [
+   "WP-00"
+  ]
+ },
+ {
+  "id": "G0-JEV",
+  "title": "闸门探针：Jev 直连实测",
+  "phase": "mvp0",
+  "lane": "semantic",
+  "platform": "shared",
+  "size": "S",
+  "deps": [
+   "WP-00"
+  ]
+ },
+ {
+  "id": "G0-JEVDB",
+  "title": "闸门探针：macOS 构建并加载 JEVDB",
+  "phase": "mvp0",
+  "lane": "semantic",
+  "platform": "macos",
+  "size": "M",
+  "deps": [
+   "WP-00"
+  ]
+ },
+ {
+  "id": "G1-US",
+  "title": "闸门探针：SEC、行情源实测与录制",
+  "phase": "mvp0",
+  "lane": "data",
+  "platform": "shared",
+  "size": "S",
+  "deps": [
+   "WP-00"
+  ]
+ },
+ {
+  "id": "D-01",
+  "title": "HTTP 基础设施：重试、熔断、限速、缓存",
+  "phase": "mvp0",
+  "lane": "data",
+  "platform": "shared",
+  "size": "M",
+  "deps": [
+   "C-00"
+  ]
+ },
+ {
+  "id": "D-02",
+  "title": "美股标的表与搜索",
+  "phase": "mvp0",
+  "lane": "data",
+  "platform": "shared",
+  "size": "M",
+  "deps": [
+   "C-03",
+   "D-01"
+  ]
+ },
+ {
+  "id": "D-03",
+  "title": "SEC 披露抓取与正文提取",
+  "phase": "mvp0",
+  "lane": "data",
+  "platform": "shared",
+  "size": "M",
+  "deps": [
+   "C-03",
+   "D-01",
+   "G1-US"
+  ]
+ },
+ {
+  "id": "D-04",
+  "title": "日线行情与交易日历",
+  "phase": "mvp0",
+  "lane": "data",
+  "platform": "shared",
+  "size": "M",
+  "deps": [
+   "C-03",
+   "D-01",
+   "G1-US"
+  ]
+ },
+ {
+  "id": "S-01",
+  "title": "分句与分段",
+  "phase": "mvp0",
+  "lane": "semantic",
+  "platform": "shared",
+  "size": "S",
+  "deps": [
+   "C-00"
+  ]
+ },
+ {
+  "id": "S-02",
+  "title": "引擎接口、问题集、classify、定价与预算",
+  "phase": "mvp0",
+  "lane": "semantic",
+  "platform": "shared",
+  "size": "M",
+  "deps": [
+   "C-00",
+   "G0-JEV"
+  ]
+ },
+ {
+  "id": "S-03",
+  "title": "Jev 直连引擎",
+  "phase": "mvp0",
+  "lane": "semantic",
+  "platform": "shared",
+  "size": "M",
+  "deps": [
+   "S-02",
+   "G0-JEV"
+  ]
+ },
+ {
+  "id": "S-04",
+  "title": "JEVDB 引擎",
+  "phase": "mvp0",
+  "lane": "semantic",
+  "platform": "shared",
+  "size": "M",
+  "deps": [
+   "S-02",
+   "G0-JEVDB"
+  ]
+ },
+ {
+  "id": "S-05",
+  "title": "判定流水线：证据、缓存、落库",
+  "phase": "mvp0",
+  "lane": "semantic",
+  "platform": "shared",
+  "size": "M",
+  "deps": [
+   "S-01",
+   "S-03",
+   "C-03"
+  ]
+ },
+ {
+  "id": "P-01",
+  "title": "持仓与投资逻辑",
+  "phase": "mvp0",
+  "lane": "data",
+  "platform": "shared",
+  "size": "M",
+  "deps": [
+   "C-01",
+   "C-03",
+   "D-02"
+  ]
+ },
+ {
+  "id": "P-02",
+  "title": "扫描编排：水位线、批次、进度、取消",
+  "phase": "mvp0",
+  "lane": "semantic",
+  "platform": "shared",
+  "size": "M",
+  "deps": [
+   "P-01",
+   "D-03",
+   "S-01",
+   "S-05",
+   "C-04"
+  ]
+ },
+ {
+  "id": "P-03",
+  "title": "待处理清单与处理动作",
+  "phase": "mvp0",
+  "lane": "semantic",
+  "platform": "shared",
+  "size": "M",
+  "deps": [
+   "P-02"
+  ]
+ },
+ {
+  "id": "P-04",
+  "title": "模拟交易规则：校验、费用、撮合",
+  "phase": "mvp0",
+  "lane": "data",
+  "platform": "shared",
+  "size": "S",
+  "deps": [
+   "C-00"
+  ]
+ },
+ {
+  "id": "P-05",
+  "title": "模拟账户与订单：账本、回放时钟",
+  "phase": "mvp0",
+  "lane": "data",
+  "platform": "shared",
+  "size": "M",
+  "deps": [
+   "P-04",
+   "C-03",
+   "D-04",
+   "C-01"
+  ]
+ },
+ {
+  "id": "P-06",
+  "title": "风险计算",
+  "phase": "mvp0",
+  "lane": "data",
+  "platform": "shared",
+  "size": "M",
+  "deps": [
+   "C-03",
+   "D-04",
+   "C-01"
+  ]
+ },
+ {
+  "id": "E-01",
+  "title": "演示数据与载入脚本",
+  "phase": "mvp0",
+  "lane": "semantic",
+  "platform": "shared",
+  "size": "M",
+  "deps": [
+   "P-03",
+   "P-05"
+  ]
+ },
+ {
+  "id": "E-02",
+  "title": "标注集与评测脚本",
+  "phase": "mvp0",
+  "lane": "semantic",
+  "platform": "shared",
+  "size": "M",
+  "deps": [
+   "S-05"
+  ]
+ },
+ {
+  "id": "U-00",
+  "title": "前端应用外壳、令牌、路由、状态骨架",
+  "phase": "mvp0",
+  "lane": "ui",
+  "platform": "shared",
+  "size": "M",
+  "deps": [
+   "C-05",
+   "C-06",
+   "WP-00"
+  ]
+ },
+ {
+  "id": "U-01",
+  "title": "组件库",
+  "phase": "mvp0",
+  "lane": "ui",
+  "platform": "shared",
+  "size": "M",
+  "deps": [
+   "U-00"
+  ]
+ },
+ {
+  "id": "U-02",
+  "title": "今日页与证据抽屉",
+  "phase": "mvp0",
+  "lane": "ui",
+  "platform": "shared",
+  "size": "M",
+  "deps": [
+   "U-01"
+  ]
+ },
+ {
+  "id": "U-03",
+  "title": "持仓页与逻辑编辑器",
+  "phase": "mvp0",
+  "lane": "ui",
+  "platform": "shared",
+  "size": "M",
+  "deps": [
+   "U-02"
+  ]
+ },
+ {
+  "id": "U-04",
+  "title": "扫描页",
+  "phase": "mvp0",
+  "lane": "ui",
+  "platform": "shared",
+  "size": "M",
+  "deps": [
+   "U-02"
+  ]
+ },
+ {
+  "id": "U-05",
+  "title": "交易页",
+  "phase": "mvp0",
+  "lane": "ui",
+  "platform": "shared",
+  "size": "S",
+  "deps": [
+   "U-02"
+  ]
+ },
+ {
+  "id": "U-06",
+  "title": "风险页",
+  "phase": "mvp0",
+  "lane": "ui",
+  "platform": "shared",
+  "size": "M",
+  "deps": [
+   "U-02"
+  ]
+ },
+ {
+  "id": "U-07",
+  "title": "设置页",
+  "phase": "mvp0",
+  "lane": "ui",
+  "platform": "shared",
+  "size": "M",
+  "deps": [
+   "U-02"
+  ]
+ },
+ {
+  "id": "U-08",
+  "title": "全局反馈：Toast、错误边界、核心状态与离线横幅",
+  "phase": "mvp0",
+  "lane": "ui",
+  "platform": "shared",
+  "size": "S",
+  "deps": [
+   "U-02"
+  ]
+ },
+ {
+  "id": "I-01",
+  "title": "联调：真实核心进程 + 真实前端",
+  "phase": "mvp0",
+  "lane": "integration",
+  "platform": "shared",
+  "size": "M",
+  "deps": [
+   "C-02",
+   "C-07",
+   "P-03",
+   "P-05",
+   "P-06",
+   "E-01",
+   "U-03",
+   "U-04",
+   "U-05",
+   "U-06",
+   "U-07",
+   "U-08"
+  ]
+ },
+ {
+  "id": "I-02",
+  "title": "MVP-0 验收与 5 分钟演示",
+  "phase": "mvp0",
+  "lane": "integration",
+  "platform": "shared",
+  "size": "M",
+  "deps": [
+   "I-01",
+   "E-02"
+  ]
+ },
+ {
+  "id": "W-00",
+  "title": "Windows 环境摸底与对等矩阵",
+  "phase": "mvp0",
+  "lane": "windows",
+  "platform": "windows",
+  "size": "S",
+  "deps": [
+   "WP-00"
+  ]
+ },
+ {
+  "id": "W-01",
+  "title": "Windows 平台层实现",
+  "phase": "mvp0",
+  "lane": "windows",
+  "platform": "windows",
+  "size": "M",
+  "deps": [
+   "WP-00",
+   "W-00"
+  ]
+ },
+ {
+  "id": "W-02",
+  "title": "Windows 核心进程桥接对等",
+  "phase": "mvp0",
+  "lane": "windows",
+  "platform": "windows",
+  "size": "M",
+  "deps": [
+   "W-01",
+   "C-02"
+  ]
+ },
+ {
+  "id": "W-03",
+  "title": "Windows 上尝试构建 JEVDB（MSVC）",
+  "phase": "mvp0",
+  "lane": "windows",
+  "platform": "windows",
+  "size": "M",
+  "deps": [
+   "W-01",
+   "G0-JEVDB"
+  ]
+ },
+ {
+  "id": "W-04",
+  "title": "Windows 凭据管理器验证",
+  "phase": "mvp0",
+  "lane": "windows",
+  "platform": "windows",
+  "size": "S",
+  "deps": [
+   "W-01",
+   "C-04"
+  ]
+ },
+ {
+  "id": "W-05",
+  "title": "Windows MVP-0 联调与验收",
+  "phase": "mvp0",
+  "lane": "windows",
+  "platform": "windows",
+  "size": "M",
+  "deps": [
+   "W-02",
+   "W-04",
+   "I-01"
+  ]
+ }
+]
