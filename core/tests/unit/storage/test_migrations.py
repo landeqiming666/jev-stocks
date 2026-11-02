@@ -1,12 +1,15 @@
 import hashlib
+import os
 from pathlib import Path
+from typing import BinaryIO
 
 import duckdb
 import pytest
 
 from sentinel.errors import InternalError
 from sentinel.storage import Database
-from sentinel.storage.migrations import MAX_MIGRATION_BYTES, split_sql
+from sentinel.storage import backup as backup_module
+from sentinel.storage.migrations import MAX_MIGRATION_BYTES, _restore_file, split_sql
 
 FIXTURES = Path(__file__).resolve().parents[2] / "fixtures" / "storage" / "migrations"
 
@@ -284,3 +287,71 @@ def test_escape_string_semicolons_match_real_parser(db: Database, migrations_dir
     db.migrate(migrations_dir)
     with db.read() as reader:
         assert reader.execute("SELECT * FROM escaped").fetchall() == [("it';s",)]
+
+
+def test_restore_syncs_complete_temporary_copy_before_replace(
+    db: Database, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    db.migrate()
+    backup = db.backup("restore")
+    with db.write() as tx:
+        tx.execute("INSERT INTO setting VALUES ('x', '1', TIMESTAMP '2026-11-02')")
+    db.close()
+    before = db.path.read_bytes()
+    synced = False
+    native_sync, native_replace = os.fsync, Path.replace
+
+    def sync(descriptor: int) -> None:
+        nonlocal synced
+        assert os.fstat(descriptor).st_size == backup.stat().st_size
+        native_sync(descriptor)
+        synced = True
+
+    def replace(source: Path, target: Path) -> Path:
+        assert synced
+        assert source.parent == target.parent
+        assert source.read_bytes() == backup.read_bytes()
+        assert target.read_bytes() == before
+        return native_replace(source, target)
+
+    monkeypatch.setattr(os, "fsync", sync)
+    monkeypatch.setattr(Path, "replace", replace)
+    _restore_file(backup, db.path)
+    assert synced
+    assert db.path.read_bytes() == backup.read_bytes()
+    assert not list(db.path.parent.glob(".storage-restore-*"))
+    db.open()
+    with db.read() as reader:
+        assert reader.execute("SELECT * FROM setting").fetchall() == []
+
+
+@pytest.mark.parametrize("failure", ["copy", "fsync"])
+def test_interrupted_restore_keeps_original_database_and_cleans_temporary_file(
+    db: Database, monkeypatch: pytest.MonkeyPatch, failure: str
+) -> None:
+    db.migrate()
+    backup = db.backup("restore")
+    with db.write() as tx:
+        tx.execute("INSERT INTO setting VALUES ('x', '1', TIMESTAMP '2026-11-02')")
+    db.close()
+    before = db.path.read_bytes()
+
+    def interrupted(source: BinaryIO, destination: BinaryIO) -> None:
+        destination.write(source.read(64))
+        destination.flush()
+        raise OSError("interrupted copy")
+
+    def fail(descriptor: int) -> None:
+        raise OSError("interrupted fsync")
+
+    if failure == "copy":
+        monkeypatch.setattr(backup_module.shutil, "copyfileobj", interrupted)
+    else:
+        monkeypatch.setattr(os, "fsync", fail)
+    with pytest.raises(OSError, match="interrupted"):
+        _restore_file(backup, db.path)
+    assert db.path.read_bytes() == before
+    assert not list(db.path.parent.glob(".storage-restore-*"))
+    db.open()
+    with db.read() as reader:
+        assert reader.execute("SELECT key FROM setting").fetchall() == [("x",)]

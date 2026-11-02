@@ -2,8 +2,12 @@
 
 from __future__ import annotations
 
+import os
 import re
 import shutil
+import tempfile
+from collections.abc import Iterator
+from contextlib import contextmanager
 from datetime import UTC, datetime
 from pathlib import Path
 
@@ -22,6 +26,32 @@ def _order(path: Path) -> tuple[str, int, int, str]:
     return match["time"], path.stat().st_mtime_ns, int(match["serial"] or 1), path.name
 
 
+def _published_backups(directory: Path) -> list[Path]:
+    return [
+        path
+        for path in directory.glob("*.duckdb")
+        if _BACKUP_RE.fullmatch(path.name) and path.is_file() and not path.is_symlink()
+    ]
+
+
+@contextmanager
+def _synced_copy(source: Path, directory: Path, prefix: str) -> Iterator[Path]:
+    temporary: Path | None = None
+    try:
+        with tempfile.NamedTemporaryFile(
+            dir=directory, prefix=prefix, suffix=".tmp", delete=False
+        ) as destination:
+            temporary = Path(destination.name)
+            with source.open("rb") as incoming:
+                shutil.copyfileobj(incoming, destination)
+            destination.flush()
+            os.fsync(destination.fileno())
+        yield temporary
+    finally:
+        if temporary is not None:
+            temporary.unlink(missing_ok=True)
+
+
 def _backup_file(
     db_path: Path, backup_dir: Path, version: int, now: datetime, label: str | None = None
 ) -> Path:
@@ -33,7 +63,7 @@ def _backup_file(
     prefix = f"sentinel-v{version}-" + (f"{label}-" if label is not None else "") + stamp
     backup_dir = backup_dir.resolve()
     backup_dir.mkdir(parents=True, exist_ok=True)
-    existing = [path for path in backup_dir.glob("*.duckdb") if _BACKUP_RE.fullmatch(path.name)]
+    existing = _published_backups(backup_dir)
     if (
         len(existing) >= BACKUP_KEEP
         and stamp < _order(sorted(existing, key=_order)[-BACKUP_KEEP])[0]
@@ -45,23 +75,18 @@ def _backup_file(
         if (match := re.fullmatch(re.escape(prefix) + r"(?:-(\d+))?\.duckdb", path.name))
     ]
     serial = max(serials, default=0) + 1
-    while True:
-        suffix = "" if serial == 1 else f"-{serial}"
-        target = backup_dir / f"{prefix}{suffix}.duckdb"
-        try:
-            destination = target.open("xb")
-        except FileExistsError:
-            serial += 1
-            continue
-        try:
-            with destination, db_path.open("rb") as source:
-                shutil.copyfileobj(source, destination)
-        except BaseException:
-            target.unlink(missing_ok=True)
-            raise
-        break
-    existing.append(target)
-    for old in sorted(existing, key=_order)[:-BACKUP_KEEP]:
+    with _synced_copy(db_path, backup_dir, ".storage-backup-") as temporary:
+        while True:
+            suffix = "" if serial == 1 else f"-{serial}"
+            target = backup_dir / f"{prefix}{suffix}.duckdb"
+            try:
+                # 硬链接只发布已同步的完整文件；目标已存在时原子失败，绝不覆盖。
+                os.link(temporary, target)
+            except FileExistsError:
+                serial += 1
+                continue
+            break
+    for old in sorted(_published_backups(backup_dir), key=_order)[:-BACKUP_KEEP]:
         old.unlink()
     return target
 

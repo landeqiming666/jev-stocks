@@ -1,10 +1,17 @@
+import os
+import subprocess
+import sys
+import textwrap
+import time
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
+from typing import BinaryIO
 
 import duckdb
 import pytest
 
 from sentinel.storage import Database
+from sentinel.storage import backup as backup_module
 from sentinel.storage.backup import backup_database
 
 
@@ -112,3 +119,145 @@ def test_backdated_backup_cannot_return_a_deleted_recovery_file(tmp_path: Path) 
     with pytest.raises(ValueError):
         backup_database(path, directory, 0, moment)
     assert set(directory.iterdir()) == before
+
+
+def test_backup_is_synced_and_complete_before_atomic_publication(
+    db: Database, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    db.migrate()
+    with db.write() as tx:
+        tx.execute("INSERT INTO setting VALUES ('x', '1', TIMESTAMP '2026-11-02')")
+    synced = False
+    native_sync, native_link = os.fsync, os.link
+
+    def sync(descriptor: int) -> None:
+        nonlocal synced
+        assert os.fstat(descriptor).st_size == db.path.stat().st_size
+        native_sync(descriptor)
+        synced = True
+
+    def publish(source: Path, target: Path) -> None:
+        assert synced
+        assert source.parent == target.parent
+        assert source.suffix != ".duckdb"
+        assert not target.exists()
+        assert not list(target.parent.glob("*.duckdb"))
+        with duckdb.connect(str(source), read_only=True) as raw:
+            assert raw.execute("SELECT key FROM setting").fetchall() == [("x",)]
+        native_link(source, target)
+
+    monkeypatch.setattr(os, "fsync", sync)
+    monkeypatch.setattr(os, "link", publish)
+    backup = db.backup("durable")
+    assert backup.exists()
+    assert synced
+    assert not list(backup.parent.glob("*.tmp"))
+
+
+@pytest.mark.parametrize("failure", ["copy", "fsync", "publish"])
+def test_failed_backup_never_exposes_partial_file_or_prunes_old_backups(
+    db: Database, monkeypatch: pytest.MonkeyPatch, failure: str
+) -> None:
+    previous = [db.backup(label) for label in ["old1", "old2", "old3"]]
+    before = {path: path.read_bytes() for path in previous}
+    directory = previous[0].parent
+
+    def partial_copy(source: BinaryIO, destination: BinaryIO) -> None:
+        destination.write(source.read(64))
+        destination.flush()
+        assert set(directory.glob("*.duckdb")) == set(previous)
+        raise OSError("interrupted copy")
+
+    def fail(*args: object) -> None:
+        raise OSError("interrupted " + failure)
+
+    if failure == "copy":
+        monkeypatch.setattr(backup_module.shutil, "copyfileobj", partial_copy)
+    else:
+        monkeypatch.setattr(os, "fsync" if failure == "fsync" else "link", fail)
+    with pytest.raises(OSError, match="interrupted"):
+        db.backup("failed")
+    assert set(directory.iterdir()) == set(previous)
+    assert {path: path.read_bytes() for path in previous} == before
+    assert db.schema_version == 0
+
+
+def test_atomic_publish_collision_preserves_existing_complete_backup(
+    db: Database, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    native_link = os.link
+    raced: Path | None = None
+    other = db.path.parent / "existing-backup.duckdb"
+    with duckdb.connect(str(other)) as raw:
+        raw.execute("CREATE TABLE marker(value INTEGER); INSERT INTO marker VALUES(7)")
+    existing_bytes = other.read_bytes()
+
+    def publish(source: Path, target: Path) -> None:
+        nonlocal raced
+        if raced is None:
+            raced = target
+            native_link(other, target)
+        native_link(source, target)
+
+    monkeypatch.setattr(os, "link", publish)
+    backup = db.backup("race")
+    assert raced is not None
+    assert raced != backup
+    assert backup.name.endswith("-2.duckdb")
+    assert raced.read_bytes() == existing_bytes
+    assert backup.read_bytes() != existing_bytes
+    assert not list(backup.parent.glob("*.tmp"))
+
+
+def test_killed_backup_process_leaves_only_unpublished_temporary_file(db: Database) -> None:
+    db.migrate()
+    previous = [db.backup(label) for label in ["old1", "old2", "old3"]]
+    directory = previous[0].parent
+    marker = db.path.parent / "copy-started"
+    db.close()
+    code = textwrap.dedent("""
+        import sys
+        from pathlib import Path
+        from threading import Event
+        from sentinel.storage import Database
+        from sentinel.storage import backup
+        def interrupted(source, destination):
+            destination.write(source.read(64))
+            destination.flush()
+            Path(sys.argv[2]).write_text('started')
+            Event().wait()
+        backup.shutil.copyfileobj = interrupted
+        db = Database(Path(sys.argv[1]))
+        db.open()
+        db.backup('killed')
+    """)
+    process = subprocess.Popen(
+        [sys.executable, "-c", code, str(db.path), str(marker)],
+        cwd=Path(__file__).resolve().parents[4],
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+    )
+    try:
+        deadline = time.monotonic() + 5
+        while not marker.exists() and process.poll() is None and time.monotonic() < deadline:
+            time.sleep(0.01)
+        assert marker.exists(), "backup subprocess failed to reach the interrupted copy"
+        assert set(directory.glob("*.duckdb")) == set(previous)
+        process.kill()
+        process.wait(timeout=5)
+    finally:
+        if process.poll() is None:
+            process.kill()
+        process.communicate(timeout=5)
+    assert process.returncode != 0
+    assert set(directory.glob("*.duckdb")) == set(previous)
+    temporary = list(directory.glob("*.tmp"))
+    assert len(temporary) == 1
+    assert temporary[0].stat().st_size == 64
+    db.open()
+    published = db.backup("after-kill")
+    assert published.exists()
+    assert len(list(directory.glob("*.duckdb"))) == 3
+    assert temporary[0].exists()
+    with duckdb.connect(str(published), read_only=True) as raw:
+        assert raw.execute("SELECT version FROM schema_version").fetchall() == [(1,)]

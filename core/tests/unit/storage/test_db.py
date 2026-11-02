@@ -8,7 +8,7 @@ import duckdb
 import pytest
 
 from sentinel.errors import InternalError
-from sentinel.storage import Database
+from sentinel.storage import Database, SqlExecutor, WriteTx
 
 
 def test_open_creates_schema_version_table(db: Database) -> None:
@@ -242,3 +242,49 @@ def test_existing_tx_cannot_write_inside_read_context(db: Database) -> None:
     db.migrate()
     with db.write() as tx, db.read(), pytest.raises(RuntimeError):
         tx.execute("INSERT INTO setting VALUES ('x', '1', TIMESTAMP '2026-11-02')")
+
+
+def test_write_execute_returns_guarded_tx_and_cannot_commit_or_rollback(db: Database) -> None:
+    with db.write() as tx:
+        result = tx.execute("SELECT 1")
+        assert result is tx
+        assert isinstance(result, WriteTx)
+        assert not isinstance(result, duckdb.DuckDBPyConnection)
+        for method in ["commit", "rollback", "cursor", "connection"]:
+            with pytest.raises(AttributeError):
+                getattr(result, method)
+        for sql in ["COMMIT", "ROLLBACK", "SELECT 1; BEGIN"]:
+            with pytest.raises(RuntimeError):
+                result.execute(sql)
+        assert result.execute("SELECT 2").fetchone() == (2,)
+    with pytest.raises(RuntimeError):
+        result.execute("SELECT 3")
+
+
+def test_write_fluent_fetches_use_utc_and_read_uncommitted_data(db: Database) -> None:
+    instant = datetime(2026, 11, 2, tzinfo=UTC)
+    db.migrate()
+
+    def read_setting(executor: SqlExecutor) -> list[tuple[object, ...]]:
+        executor.execute("SELECT key, updated_at FROM setting")
+        return executor.fetchall()
+
+    with db.write() as tx:
+        tx.execute("INSERT INTO setting VALUES (?, ?, ?)", ["x", "1", instant])
+        assert tx.execute("SELECT updated_at FROM setting").fetchone() == (instant,)
+        assert tx.execute("SELECT updated_at FROM setting").fetchall() == [(instant,)]
+        assert read_setting(tx) == [("x", instant)]
+        with db.read() as reader:
+            assert read_setting(reader) == []
+
+
+def test_write_fluent_return_cannot_escape_rollback(db: Database) -> None:
+    db.migrate()
+    with pytest.raises(ValueError), db.write() as tx:
+        result = tx.execute("INSERT INTO setting VALUES ('x', '1', TIMESTAMP '2026-11-02')")
+        assert result is tx
+        with pytest.raises(RuntimeError):
+            result.execute("COMMIT")
+        raise ValueError()
+    with db.read() as reader:
+        assert reader.execute("SELECT * FROM setting").fetchall() == []

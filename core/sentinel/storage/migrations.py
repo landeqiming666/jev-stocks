@@ -4,8 +4,6 @@ from __future__ import annotations
 
 import hashlib
 import re
-import shutil
-import tempfile
 from dataclasses import dataclass
 from pathlib import Path
 from typing import cast
@@ -15,6 +13,7 @@ import duckdb
 from sentinel import clock
 from sentinel.errors import InternalError
 
+from .backup import _synced_copy
 from .db import Database
 
 MAX_MIGRATION_BYTES = 2_097_152
@@ -187,16 +186,9 @@ def _creation_allowed(statement: str) -> bool:
 
 
 def _restore_file(backup_path: Path, db_path: Path) -> None:
-    with tempfile.NamedTemporaryFile(
-        dir=db_path.parent, prefix=".storage-restore-", delete=False
-    ) as file:
-        temporary = Path(file.name)
-    try:
-        shutil.copyfile(backup_path, temporary)
+    with _synced_copy(backup_path, db_path.parent, ".storage-restore-") as temporary:
         temporary.replace(db_path)
         Path(str(db_path) + ".wal").unlink(missing_ok=True)
-    finally:
-        temporary.unlink(missing_ok=True)
 
 
 def migrate(db: Database, directory: Path | None = None) -> MigrationReport:

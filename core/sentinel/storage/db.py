@@ -114,12 +114,11 @@ class WriteTx(_Reader):
         ):
             raise RuntimeError("cannot write inside a read context")
 
-    def execute(
-        self, sql: str, params: Sequence[object] | None = None
-    ) -> duckdb.DuckDBPyConnection:
+    def execute(self, sql: str, params: Sequence[object] | None = None) -> WriteTx:
         try:
             self._validate(sql)
-            return self._cursor.execute(sql, params)
+            self._cursor.execute(sql, params)
+            return self
         except duckdb.Error as exc:
             if self._failure is None:
                 self._failure = exc
