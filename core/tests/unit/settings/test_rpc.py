@@ -66,12 +66,12 @@ def test_register_installs_seven_methods(
     assert call("settings.update", {"engine": "jevdb"})["result"]["engine"] == "jevdb"
     boot = call("app.bootstrap", {})["result"]
     assert boot["engine"] == dict(
-        requested="jevdb", active=None, modelId="jev-1.14.0", jevdbAvailable=False
+        requested="jevdb", active="jev_direct", modelId="jev-1.14.0", jevdbAvailable=False
     )
     assert boot["offline"] is True
     monkeypatch.setenv("SENTINEL_OFFLINE", "true")
     assert call("app.bootstrap", {})["result"]["offline"] is False
-    assert call("settings.testConnection", {})["result"]["ok"] is False
+    assert call("settings.testConnection", {})["result"]["ok"] is True
     assert (
         call("secrets.set", {"name": "jevKey", "value": " "})["error"]["data"]["field"] == "value"
     )
@@ -121,3 +121,38 @@ def test_duplicate_preflight_and_result_internal(
     )
     assert response["error"]["code"] == "INTERNAL"
     assert "private-result" not in str(response)
+
+
+def test_register_binds_secrets_before_first_handler_registration(
+    settings: SettingsService, secrets: SecretsService, db: Database
+) -> None:
+    class RecordingDispatcher(Dispatcher):
+        def register(self, *args, **kwargs) -> None:
+            assert settings._secrets is secrets
+            super().register(*args, **kwargs)
+
+    register(
+        RecordingDispatcher(),
+        settings,
+        secrets,
+        db,
+        "macos",
+        EngineSnapshot("auto", "jev_direct", False),
+        FakeProbe(),
+    )
+    assert settings._secrets is secrets
+    from sentinel.secrets import MemorySecretStore
+
+    replacement = SecretsService(MemorySecretStore(), lambda: NOW)
+    dispatcher = Dispatcher()
+    with pytest.raises(ValueError, match="already bound"):
+        register(
+            dispatcher,
+            settings,
+            replacement,
+            db,
+            "macos",
+            EngineSnapshot("auto", "jev_direct", False),
+            FakeProbe(),
+        )
+    assert settings._secrets is secrets and dispatcher.methods() == ()

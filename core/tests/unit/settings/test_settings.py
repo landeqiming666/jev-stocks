@@ -4,9 +4,10 @@ import pytest
 from pydantic import ValidationError
 
 from sentinel.errors import InternalError, UserError
+from sentinel.messages.settings import MESSAGES
 from sentinel.secrets import SecretsService
 from sentinel.settings import SettingsService
-from sentinel.settings.models import EngineSnapshot, SettingsPatch
+from sentinel.settings.models import EngineSnapshot, SettingsPatch, StoredSettings
 from sentinel.settings.repository import SettingsRepository
 from sentinel.storage import Database
 
@@ -38,8 +39,8 @@ def test_defaults_match_docs_04(settings: SettingsService, db: Database) -> None
 
 
 def test_update_writes_only_changed_keys(settings: SettingsService, db: Database) -> None:
-    result = settings.update(SettingsPatch(dailyTokenBudget=3000000, engine="auto"))
-    assert result.dailyTokenBudget == 3000000
+    result = settings.update(SettingsPatch(daily_token_budget=3000000, engine="auto"))
+    assert result.daily_token_budget == 3000000
     assert SettingsRepository(db).raw() == {"dailyTokenBudget": 3000000}
     with db.read() as reader:
         reader.execute("SELECT updated_at FROM setting")
@@ -74,32 +75,32 @@ def test_unknown_patch_field_is_rejected(settings: SettingsService, db: Database
 
 
 def test_budget_out_of_range_is_rejected(settings: SettingsService) -> None:
-    assert settings.update(SettingsPatch(dailyTokenBudget=10000)).dailyTokenBudget == 10000
+    assert settings.update(SettingsPatch(daily_token_budget=10000)).daily_token_budget == 10000
     with pytest.raises(UserError):
-        SettingsPatch(dailyTokenBudget=50000001)
+        SettingsPatch(daily_token_budget=50000001)
 
 
 def test_normalization_boundaries_and_noop(settings: SettingsService, db: Database) -> None:
     email = "x" * 114 + "@a.com"
     value = settings.update(
         SettingsPatch(
-            secContactEmail="\x1c " + email + " \x1c",
-            engine=" auto ",
-            firstScanLookbackDays=30,
-            dailyTokenBudget=50000000,
+            sec_contact_email="\x1c " + email + " \x1c",
+            engine="auto",
+            first_scan_lookback_days=30,
+            daily_token_budget=50000000,
         )
     )
-    assert value.secContactEmail == email and len(email) == 120
+    assert value.sec_contact_email == email and len(email) == 120
     with db.read() as reader:
         reader.execute("SELECT updated_at FROM setting")
         assert set(reader.fetchall()) == {(NOW,)}
     settings._clock = lambda: NOW.replace(year=2027)
-    settings.update(SettingsPatch(secContactEmail=email))
+    settings.update(SettingsPatch(sec_contact_email=email))
     settings.update(SettingsPatch())
     with db.read() as reader:
         reader.execute("SELECT updated_at FROM setting")
         assert set(reader.fetchall()) == {(NOW,)}
-    assert settings.update(SettingsPatch(secContactEmail=" \x1c\t")).secContactEmail is None
+    assert settings.update(SettingsPatch(sec_contact_email=" \x1c\t")).sec_contact_email is None
 
 
 @pytest.mark.parametrize("value", ["{", "NaN", "true", '"wrong"'])
@@ -139,7 +140,7 @@ def test_repository_noop_keeps_timestamp_and_readonly_keys(
         },
         NOW,
     )
-    assert settings.get().demoDataLoaded is True
+    assert settings.get().demo_data_loaded is True
     repo.write_patch({"demoDataLoaded": True}, NOW.replace(year=2027))
     with db.read() as reader:
         reader.execute("SELECT updated_at FROM setting")
@@ -148,7 +149,7 @@ def test_repository_noop_keeps_timestamp_and_readonly_keys(
 
 def test_constructed_invalid_patch_never_writes(settings: SettingsService, db: Database) -> None:
     with pytest.raises(UserError):
-        settings.update(SettingsPatch.model_construct(dailyTokenBudget=True))
+        settings.update(SettingsPatch.model_construct(daily_token_budget=True))
     assert SettingsRepository(db).raw() == {}
 
 
@@ -156,7 +157,7 @@ def test_bootstrap_fields_match_contract(
     settings: SettingsService, secrets: SecretsService, db: Database
 ) -> None:
     secrets.set_jev_key("test-key-do-not-use")
-    settings.update(SettingsPatch(secContactEmail="name@example.com"))
+    settings.update(SettingsPatch(sec_contact_email="name@example.com"))
     result = settings.bootstrap(ENGINE, secrets, db, "macos", True).model_dump(mode="json")
     assert result == dict(
         protocolVersion="1.0",
@@ -190,7 +191,7 @@ def test_connection_ok_when_jevdb_missing(
     settings: SettingsService, secrets: SecretsService, failed: str, raises: bool
 ) -> None:
     secrets.set_jev_key("test-key-do-not-use")
-    settings.update(SettingsPatch(secContactEmail="name@example.com"))
+    settings.update(SettingsPatch(sec_contact_email="name@example.com"))
     probe = FakeProbe(failed, raises)
     result = settings.test_connection(probe, ENGINE)
     assert result.ok == (failed == "JEVDB")
@@ -204,7 +205,7 @@ def test_connection_false_when_jev_fails(
     settings: SettingsService, secrets: SecretsService
 ) -> None:
     secrets.set_jev_key("test-key-do-not-use")
-    settings.update(SettingsPatch(secContactEmail="name@example.com"))
+    settings.update(SettingsPatch(sec_contact_email="name@example.com"))
     assert not settings.test_connection(FakeProbe("Jev"), ENGINE).ok
 
 
@@ -225,9 +226,113 @@ def test_connection_missing_config(
 ) -> None:
     if key:
         secrets.set_jev_key("test-key-do-not-use")
-    settings.update(SettingsPatch(secContactEmail=email))
+    settings.update(SettingsPatch(sec_contact_email=email))
     probe = FakeProbe()
     with pytest.raises(UserError) as caught:
         settings.test_connection(probe, ENGINE)
     assert caught.value.to_wire()["data"]["missing"] == missing
     assert probe.calls == []
+
+
+WHITESPACE = tuple(
+    map(
+        chr,
+        [
+            *range(9, 14),
+            *range(28, 33),
+            0x85,
+            0xA0,
+            0x1680,
+            *range(0x2000, 0x200B),
+            0x2028,
+            0x2029,
+            0x202F,
+            0x205F,
+            0x3000,
+        ],
+    )
+)
+
+
+@pytest.mark.parametrize("whitespace", WHITESPACE, ids=lambda value: f"U+{ord(value):04X}")
+def test_all_python_whitespace_normalizes_only_email(whitespace: str) -> None:
+    assert len(WHITESPACE) == 29 and whitespace.isspace()
+    assert (
+        SettingsPatch(
+            sec_contact_email=whitespace + "name@example.com" + whitespace
+        ).sec_contact_email
+        == "name@example.com"
+    )
+    assert SettingsPatch.model_validate({"secContactEmail": whitespace}).sec_contact_email is None
+    for email in ("a" + whitespace + "b@example.com", "a@exa" + whitespace + "mple.com"):
+        with pytest.raises(UserError) as caught:
+            SettingsPatch.model_validate({"secContactEmail": email})
+        assert caught.value.field == "secContactEmail"
+        assert caught.value.message_key == "settings.email_invalid"
+        assert email not in MESSAGES[caught.value.message_key].format()
+        with pytest.raises(ValidationError):
+            StoredSettings(sec_contact_email=email)
+
+
+@pytest.mark.parametrize("char", ["x", "\U0001f600"])
+def test_email_counts_normalized_python_codepoints(char: str) -> None:
+    email = char * 114 + "@a.com"
+    assert len(email) == 120
+    assert SettingsPatch(sec_contact_email="\x1c" + email + "\x1f").sec_contact_email == email
+    with pytest.raises(UserError) as caught:
+        SettingsPatch(sec_contact_email=char + email)
+    assert caught.value.message_key == "settings.email_invalid"
+
+
+@pytest.mark.parametrize("engine", [" auto ", "\x1cauto\x1c", "AUTO", "jevdb "])
+def test_engine_enum_is_never_trimmed(engine: str) -> None:
+    with pytest.raises(UserError) as caught:
+        SettingsPatch(engine=engine)
+    assert caught.value.field == "engine"
+
+
+@pytest.mark.parametrize("available", [False, True])
+def test_requested_jevdb_never_constructs_an_active_engine(
+    settings: SettingsService, secrets: SecretsService, db: Database, available: bool
+) -> None:
+    secrets.set_jev_key("test-key-do-not-use")
+    settings.update(SettingsPatch(engine="jevdb", sec_contact_email="name@example.com"))
+    actual = EngineSnapshot("auto", "jev_direct", available)
+    snapshot = settings.engine_snapshot(actual)
+    assert snapshot == EngineSnapshot("jevdb", "jev_direct", available)
+    bootstrap = settings.bootstrap(actual, secrets, db, "macos", False)
+    assert bootstrap.engine.requested == "jevdb" and bootstrap.engine.active == "jev_direct"
+    assert bootstrap.engine.jevdb_available is available
+    assert settings.test_connection(FakeProbe(), actual).engine == "jev_direct"
+    assert settings.engine_snapshot(EngineSnapshot("auto", None, available)).active is None
+
+
+def test_corrupt_setting_selects_domain_message(settings: SettingsService, db: Database) -> None:
+    for raw in ("{", "true"):
+        with db.write() as tx:
+            tx.execute(
+                "INSERT INTO setting VALUES (?, ?, ?) ON CONFLICT (key) "
+                "DO UPDATE SET value_json=excluded.value_json",
+                ["dailyTokenBudget", raw, NOW],
+            )
+        with pytest.raises(InternalError) as caught:
+            settings.get()
+        assert caught.value.message_key == "settings.data_corrupt"
+        assert MESSAGES[caught.value.message_key].format()
+
+
+def test_snake_case_fields_alias_input_and_wire_output(settings: SettingsService) -> None:
+    import re
+
+    from sentinel.settings import models
+
+    for value in vars(models).values():
+        if isinstance(value, type) and issubclass(value, models.WireModel):
+            assert all(re.fullmatch(r"[a-z][a-z0-9_]*", name) for name in value.model_fields)
+    patch = SettingsPatch(sec_contact_email="name@example.com", daily_token_budget=3000000)
+    assert patch.model_dump(exclude_unset=True) == {
+        "secContactEmail": "name@example.com",
+        "dailyTokenBudget": 3000000,
+    }
+    assert SettingsPatch.model_validate(patch.model_dump()).daily_token_budget == 3000000
+    assert settings.update(patch).sec_contact_email == "name@example.com"

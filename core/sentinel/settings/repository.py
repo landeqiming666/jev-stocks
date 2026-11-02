@@ -31,7 +31,9 @@ class SettingsRepository:
                     event="settings.data_corrupt",
                     error_code="INTERNAL",
                 )
-                raise InternalError(detail=f"setting:{name}") from None
+                raise InternalError(
+                    message_key="settings.data_corrupt", detail=f"setting:{name}"
+                ) from None
         return values
 
     def write_patch(self, values: Mapping[str, object], now: datetime) -> None:

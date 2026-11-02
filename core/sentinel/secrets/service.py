@@ -20,10 +20,14 @@ class SecretsService:
 
     def set_jev_key(self, value: str) -> None:
         if not isinstance(value, str):
-            raise UserError("INVALID_ARGUMENT", field="value")
+            raise UserError(
+                "INVALID_ARGUMENT", message_key="settings.secret_invalid", field="value"
+            )
         normalized = value.strip()
         if not 1 <= len(normalized) <= MAX_SECRET_CHARS or re.search(r"\s", normalized):
-            raise UserError("INVALID_ARGUMENT", field="value")
+            raise UserError(
+                "INVALID_ARGUMENT", message_key="settings.secret_invalid", field="value"
+            )
         with self._lock:
             self.get_jev_key()
             register_secret(normalized)

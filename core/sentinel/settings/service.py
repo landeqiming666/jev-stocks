@@ -48,7 +48,10 @@ class SettingsService:
         self._lock = threading.RLock()
 
     def bind_secrets(self, secrets: SecretsService) -> None:
-        self._secrets = secrets
+        with self._lock:
+            if self._secrets is not None and self._secrets is not secrets:
+                raise ValueError("settings secrets already bound")
+            self._secrets = secrets
 
     def get(self) -> Settings:
         with self._lock:
@@ -62,8 +65,12 @@ class SettingsService:
                     event="settings.data_corrupt",
                     error_code="INTERNAL",
                 )
-                raise InternalError(detail=f"setting:{field}") from None
-            values = stored.model_dump(exclude={"lastTickerRefreshAt", "lastPriceRefreshAt"})
+                raise InternalError(
+                    message_key="settings.data_corrupt", detail=f"setting:{field}"
+                ) from None
+            values = stored.model_dump(
+                by_alias=True, exclude={"last_ticker_refresh_at", "last_price_refresh_at"}
+            )
             return Settings.model_validate(
                 values
                 | {
@@ -76,10 +83,10 @@ class SettingsService:
         with self._lock:
             # 重新验证绕过构造器的 model_construct/model_copy，验证完成后才允许写入。
             patch = SettingsPatch.model_validate(patch)
-            current = self.get().model_dump()
+            current = self.get().model_dump(by_alias=True)
             changed = {
                 key: value
-                for key, value in patch.model_dump(exclude_unset=True).items()
+                for key, value in patch.model_dump(by_alias=True, exclude_unset=True).items()
                 if current[key] != value
             }
             if changed:
@@ -88,18 +95,7 @@ class SettingsService:
 
     def engine_snapshot(self, engine: EngineSnapshot) -> EngineSnapshot:
         requested = self.get().engine
-        active = engine.active
-        if requested != engine.requested:
-            active = (
-                "jev_direct"
-                if requested == "jev_direct"
-                else "jevdb"
-                if engine.jevdb_available
-                else "jev_direct"
-                if requested == "auto"
-                else None
-            )
-        return EngineSnapshot(requested, active, engine.jevdb_available)
+        return EngineSnapshot(requested, engine.active, engine.jevdb_available)
 
     def bootstrap(
         self,
@@ -112,7 +108,7 @@ class SettingsService:
         with self._lock:
             settings = self.get()
             snapshot = self.engine_snapshot(engine)
-            configured = secrets.status() | {"secEmail": settings.secContactEmail is not None}
+            configured = secrets.status() | {"secEmail": settings.sec_contact_email is not None}
             return Bootstrap.model_validate(
                 dict(
                     protocolVersion="1.0",
@@ -127,7 +123,7 @@ class SettingsService:
                     ),
                     markets=["us"],
                     configured=configured,
-                    demoDataLoaded=settings.demoDataLoaded,
+                    demoDataLoaded=settings.demo_data_loaded,
                     offline=offline,
                     now=to_iso(self._clock()),
                 )
@@ -139,12 +135,12 @@ class SettingsService:
         settings = self.get()
         has_key = self._secrets is not None and self._secrets.status()["jevKey"]
         missing = (["jevKey"] if not has_key else []) + (
-            ["secEmail"] if settings.secContactEmail is None else []
+            ["secEmail"] if settings.sec_contact_email is None else []
         )
         if missing:
             raise UserError("CONFIG_REQUIRED", params={"missing": missing})
-        assert settings.secContactEmail is not None
-        email = settings.secContactEmail
+        assert settings.sec_contact_email is not None
+        email = settings.sec_contact_email
         snapshot = self.engine_snapshot(engine)
         checks: list[ConnectionCheck] = []
         steps: tuple[tuple[str, Callable[[], ProbeResult], str], ...] = (
@@ -168,12 +164,12 @@ class SettingsService:
             message = MESSAGES[f"settings.{message_key}_{suffix}"].format(modelId=MODEL_ID)
             checks.append(
                 ConnectionCheck.model_validate(
-                    dict(name=name, ok=result.ok, latencyMs=result.latencyMs, message=message)
+                    dict(name=name, ok=result.ok, latencyMs=result.latency_ms, message=message)
                 )
             )
         return ConnectionTestResult(
             ok=checks[0].ok and checks[1].ok and snapshot.active is not None,
             engine=snapshot.active,
-            modelId=MODEL_ID,
+            model_id=MODEL_ID,
             checks=checks,
         )

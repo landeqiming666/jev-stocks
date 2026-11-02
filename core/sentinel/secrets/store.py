@@ -8,6 +8,8 @@ import keyring
 
 from sentinel.errors import InternalError
 from sentinel.logging_setup import get_logger, log_event
+from sentinel.platform import keyring_store
+from sentinel.platform.keyring_store import AtomicWriteError, PasswordBackend
 from sentinel.security.redact import register_secret
 
 KEYRING_SERVICE = "sentinel"
@@ -39,12 +41,16 @@ class MemorySecretStore:
 
 
 class KeyringSecretStore:
-    def __init__(self) -> None:
+    def __init__(self, *, backend: PasswordBackend | None = None) -> None:
+        try:
+            self._backend = backend if backend is not None else keyring.get_keyring()
+        except Exception:
+            raise _unavailable() from None
         self._lock = threading.RLock()
 
     def get(self, account: str) -> str | None:
         try:
-            return keyring.get_password(KEYRING_SERVICE, account)
+            return self._backend.get_password(KEYRING_SERVICE, account)
         except Exception:
             raise _unavailable() from None
 
@@ -56,9 +62,12 @@ class KeyringSecretStore:
             if previous == value:
                 return
             try:
-                keyring.set_password(KEYRING_SERVICE, account, value)
+                keyring_store.set_password(self._backend, KEYRING_SERVICE, account, value)
+            except AtomicWriteError:
+                # native 没有删旧值；补偿会覆盖并发更新或制造新的不安全写入。
+                raise _unavailable() from None
             except Exception:
-                # 系统 provider 可能先删后写；仅在发生变化时补偿，避免无谓地重写旧值。
+                # 仅 generic backend 可能先删后写，比较实际变化后再补偿。
                 self._restore(account, previous)
                 raise _unavailable() from None
 
@@ -67,9 +76,9 @@ class KeyringSecretStore:
             current = self.get(account)
             if current != previous:
                 if previous is None:
-                    keyring.delete_password(KEYRING_SERVICE, account)
+                    self._backend.delete_password(KEYRING_SERVICE, account)
                 else:
-                    keyring.set_password(KEYRING_SERVICE, account, previous)
+                    keyring_store.set_password(self._backend, KEYRING_SERVICE, account, previous)
         except Exception:
             log_event(
                 get_logger(__name__),
@@ -77,7 +86,9 @@ class KeyringSecretStore:
                 event="secrets.keyring_restore_failed",
                 error_code="INTERNAL",
             )
-            raise InternalError(detail="keyring:restore_failed") from None
+            raise InternalError(
+                message_key="settings.keyring_unavailable", detail="keyring:restore_failed"
+            ) from None
 
     def delete(self, account: str) -> None:
         with self._lock:
@@ -86,7 +97,9 @@ class KeyringSecretStore:
                 return
             register_secret(previous)
             try:
-                keyring.delete_password(KEYRING_SERVICE, account)
+                self._backend.delete_password(KEYRING_SERVICE, account)
+            except AtomicWriteError:
+                raise _unavailable() from None
             except Exception:
                 self._restore(account, previous)
                 raise _unavailable() from None
@@ -99,4 +112,4 @@ def _unavailable() -> InternalError:
         event="secrets.keyring_unavailable",
         error_code="INTERNAL",
     )
-    return InternalError(detail="keyring:unavailable")
+    return InternalError(message_key="settings.keyring_unavailable", detail="keyring:unavailable")

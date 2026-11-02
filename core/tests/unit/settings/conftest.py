@@ -22,7 +22,7 @@ class FakeProbe:
         self.calls.append(name)
         if name == self.failed and self.raises:
             raise RuntimeError("private-payload test-key-do-not-use")
-        return ProbeResult(ok=name != self.failed, latencyMs=latency, message="private-payload")
+        return ProbeResult(ok=name != self.failed, latency_ms=latency, message="private-payload")
 
     def check_jev(self, model_id: str) -> ProbeResult:
         assert model_id == "jev-1.14.0"
