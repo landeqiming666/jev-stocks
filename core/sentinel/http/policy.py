@@ -79,6 +79,8 @@ class SourcePolicy:
             not _finite_number(self.rate_per_s) or self.rate_per_s <= 0 or self.burst < 1
         ):
             raise ValueError("rate and burst must be positive")
+        object.__setattr__(self, "backoff_s", tuple(self.backoff_s))
+        object.__setattr__(self, "jitter", tuple(self.jitter))
 
 
 POLICIES: dict[str, SourcePolicy] = {

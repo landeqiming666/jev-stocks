@@ -107,6 +107,17 @@ def test_retry_after_invalid_and_jitter_boundaries() -> None:
     assert not is_retryable(httpx.WriteError("no retry"))
 
 
+def test_policy_copies_mutable_retry_sequences() -> None:
+    from sentinel.http import SourcePolicy
+
+    backoff, jitter = [1.0, 2.0, 4.0], [0.5, 1.0]
+    policy = SourcePolicy("copied", backoff_s=backoff, jitter=jitter)  # type: ignore[arg-type]
+    backoff[0] = 0.0
+    jitter.clear()
+    assert policy.backoff_s == (1.0, 2.0, 4.0)
+    assert policy.jitter == (0.5, 1.0)
+
+
 @pytest.mark.parametrize("configured", [False, True])
 def test_default_three_and_configured_four_attempts(configured: bool, clock: FakeClock) -> None:
     from sentinel.http import SourcePolicy, register_policy

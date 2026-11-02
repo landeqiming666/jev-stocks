@@ -89,7 +89,7 @@ def normalize_symbol(raw: str) -> str | None: ...
 def norm_query(value: str) -> str: ...
 
 class SecTickerSource:
-    def __init__(self, http: HttpClient) -> None: ...
+    def __init__(self, http: HttpClient, *, email_provider: Callable[[], str | None] | None = None) -> None: ...
     def fetch(self) -> list[TickerRow]: ...
 
 class InstrumentRepository:
@@ -104,7 +104,7 @@ class InstrumentService:
     def search(self, query: str, limit: int = 20) -> list[SearchHit]: ...
     def ensure_fresh(self, *, offline: bool, has_sec_email: bool) -> ImportStats | None: ...
 ```
-`search` 在 `query` 规范化后为空、原串长度不在 1 到 64、`limit` 不在 1 到 50 时抛 `UserError("INVALID_ARGUMENT", field="query"|"limit")`。`SecTickerSource.fetch` 在网络失败时抛 `SourceError`，在字段缺失时抛 `SourceError("SOURCE_UNAVAILABLE", reason="TICKER_SCHEMA")`。所有仓储方法线程安全，写操作只通过 `Database.write()`。
+`search` 在 `query` 规范化后为空、原串长度不在 1 到 64、`limit` 不在 1 到 50 时抛 `UserError("INVALID_ARGUMENT", field="query"|"limit")`。`SecTickerSource.fetch` 每次通过注入的 `email_provider` 获取当前联系邮箱；未配置或非法时在网络调用前抛 `CONFIG_REQUIRED`（`missing=["secEmail"]`），配置后发送 `User-Agent: Sentinel/<版本> <邮箱>`。网络失败抛 `SourceError`，字段缺失抛 `SourceError("SOURCE_UNAVAILABLE", reason="TICKER_SCHEMA")`。所有仓储方法线程安全，写操作只通过 `Database.write()`。
 
 ### 5.2 数据结构
 | 字段 | 类型 | 必填 | 约束 | 含义 |
@@ -126,13 +126,13 @@ class InstrumentService:
 ## 6. 实现步骤
 
 1. 读取 JSON，断言顶层 `fields == ["cik","name","ticker","exchange"]`；`data` 每行必须 4 个元素，否则整批失败并 `reason=TICKER_SCHEMA`。
-2. 交易所过滤：只保留 `EXCHANGE_MAP` 的键；其余计入 `skipped_exchange`。
+2. source 完整保留形状合法的原始行，repository 统一过滤并计数：只保留 `EXCHANGE_MAP` 的键；其余计入 `skipped_exchange`。避免在 source 提前丢行导致 `ImportStats.total` 和跳过计数错误。
 3. 代码规范化：`strip().upper()`；`-` 换 `.`；只允许 `A-Z0-9.`。重复 `symbol` 保留 `int(cik)` 最小行；CIK 用 `str(int(cik)).zfill(10)`，非数字行计入 `skipped_symbol`。
 4. 中文名：读 `us_zh.json`，以 `symbol` 建映射；文件缺失或 JSON 非法时启动失败 `INTERNAL`，不静默空表。
 5. 单事务：`DELETE FROM instrument_alias` 中本批 `instrument_id` 的行；`INSERT ... ON CONFLICT (market, symbol) DO UPDATE` 更新 `exchange/name/name_zh/currency/cik/is_active/source/updated_at`；把本批未出现的旧 `market='us'` 行 `is_active=FALSE`，计入 `deactivated`。
 6. 别名重建：每行写入 `symbol`（kind `symbol`）、`name` 规范化（`name_en`）、`name_zh`（`name_zh`）、每个 `aliases` 项（`alias`）；同一 `(instrument_id, alias)` 只保留先出现的 kind，顺序为 `symbol`、`name_zh`、`name_en`、`alias`。
 7. 搜索 SQL：`SELECT ... FROM instrument_alias a JOIN instrument i USING(instrument_id) WHERE i.is_active AND a.alias LIKE '%' || ? || '%'`；计分：精确 symbol 120、精确别名 100、前缀 symbol 80、前缀 60、包含 30；排序 `(-score, symbol)` 后截断。
-8. `ensure_fresh`：`last_refresh_at` 为空或 `now - last_refresh_at > 7 天`，且 `offline=False`、`has_sec_email=True` 时刷新；否则返回 `None`。刷新失败只 `warn`，保留旧表。
+8. `ensure_fresh`：`last_refresh_at` 为空或 `now - last_refresh_at > 7 天`，且 `offline=False`、`has_sec_email=True` 时刷新；否则返回 `None`。刷新失败只 `warn`，保留旧表；网络返回空列表时不覆盖已有标的，也不更新刷新水位，避免临时空响应把全市场软下线。
 
 ## 7. 错误与边界情况
 
@@ -149,7 +149,7 @@ class InstrumentService:
 | 测试名 | 文件 | 输入 | 期望 |
 |---|---|---|---|
 | `test_normalize_symbol_and_query` | `.../test_normalize.py` | `" BRK-B "`、`"A B"`、`" 苹果 公司! "` | `"BRK.B"`、`None`、`"苹果公司"` |
-| `test_fetch_maps_exchange_whitelist` | `.../test_source.py` | `company_tickers_exchange.sample.json` | `Nasdaq` 变 `NASDAQ`；OTC 行被丢弃 |
+| `test_fetch_maps_exchange_whitelist` | `.../test_source.py` | `company_tickers_exchange.sample.json` | source 保留原始交易所；repository 映射 `Nasdaq` 为 `NASDAQ`，丢弃 OTC 并计数 |
 | `test_fetch_schema_and_empty` | 同上 | 删掉 `exchange`；`data: []` | `TICKER_SCHEMA`；空列表 |
 | `test_fetch_rate_limit_and_decode_map` | 同上 | D-01 抛 `RATE_LIMITED`；`DECODE_FAILED` | 前者原样抛出且 `retryable`；后者 `SOURCE_UNAVAILABLE` |
 | `test_import_keeps_smallest_cik_on_duplicate` | `.../test_repository.py` | 两行 `BRK-B`，CIK 1067983 与 1 | 保留 1；`duplicates == 1` |
