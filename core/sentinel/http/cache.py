@@ -104,6 +104,8 @@ class HttpCache:
                 self._meta(url).unlink(missing_ok=True)
             except OSError:
                 log_event(get_logger(__name__), logging.WARNING, event="http.cache_discard_failed")
+                return
+            self._prune_bodies(url)
 
     def store(
         self,
@@ -133,9 +135,32 @@ class HttpCache:
                 "fetched_at": datetime.now(UTC).isoformat(),
             }
             body_path = self.directory / f"{self.key(url)}.{digest}.body"
-            self._atomic_write(body_path, content)
-            # Only the manifest is mutable. A crash cannot pair old metadata with a new body.
-            self._atomic_write(self._meta(url), json.dumps(meta).encode())
+            body_existed = body_path.exists()
+            try:
+                self._atomic_write(body_path, content)
+                # Only the manifest is mutable. Publish before pruning previous generations.
+                self._atomic_write(self._meta(url), json.dumps(meta).encode())
+            except OSError:
+                if not body_existed:
+                    self._remove_file(body_path)
+                raise
+            # load() copies bytes under this same root lock; old snapshots no longer need files.
+            self._prune_bodies(url, keep=body_path)
+
+    def _prune_bodies(self, url: str, *, keep: Path | None = None) -> None:
+        try:
+            for path in self.directory.glob(f"{self.key(url)}.*.body"):
+                if path != keep:
+                    self._remove_file(path)
+        except OSError:
+            log_event(get_logger(__name__), logging.WARNING, event="http.cache_cleanup_failed")
+
+    @staticmethod
+    def _remove_file(path: Path) -> None:
+        try:
+            path.unlink(missing_ok=True)
+        except OSError:
+            log_event(get_logger(__name__), logging.WARNING, event="http.cache_cleanup_failed")
 
     def revalidate(
         self, url: str, entry: CacheEntry, headers: Mapping[str, str], *, context: str = ""
@@ -154,4 +179,4 @@ class HttpCache:
                 os.fsync(file.fileno())
             os.replace(temporary, target)
         finally:
-            temporary.unlink(missing_ok=True)
+            self._remove_file(temporary)

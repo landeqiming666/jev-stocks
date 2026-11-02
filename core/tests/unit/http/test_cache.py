@@ -120,6 +120,7 @@ def test_atomic_manifest_failure_keeps_previous_pair(
     entry = cache.load(url)
     assert entry is not None
     assert entry.content == b"old" and entry.etag == "old"
+    assert len(list(cache.directory.glob("*.body"))) == 1
     assert not list(cache.directory.glob(".http-*"))
 
 
@@ -190,12 +191,15 @@ def test_concurrent_304_keeps_its_own_snapshot(tmp_path: Path) -> None:
 
     with HttpClient(cache_dir=tmp_path, transport=httpx.MockTransport(respond)) as client:
         assert client.get(url, source="sec").content == b"old"
+        old_path = next((tmp_path / "http").glob("*.body"))
         with ThreadPoolExecutor(max_workers=1) as pool:
             pending = pool.submit(client.get, url, source="sec")
             try:
                 assert old_requested.wait(2.0)
                 new = client.get(url, source="sec", headers={"X-Variant": "new"})
                 assert new.content == b"new" and not new.from_cache
+                assert not old_path.exists()
+                assert len(list((tmp_path / "http").glob("*.body"))) == 1
             finally:
                 release_old.set()
             old = pending.result(timeout=2.0)
@@ -249,3 +253,87 @@ def test_recorded_fixture_pair_and_retry_header(tmp_path: Path) -> None:
     with HttpClient(cache_dir=tmp_path, transport=httpx.MockTransport(respond)) as client:
         assert client.get_text("https://example.test/fixture", source="sec") == "synthetic-body"
         assert client.get("https://example.test/fixture", source="sec").from_cache
+
+
+def test_repeated_updates_keep_one_body_per_url_and_read_snapshots(tmp_path: Path) -> None:
+    from sentinel.http.cache import HttpCache
+
+    cache = HttpCache(tmp_path)
+    url = "https://example.test/updates"
+    other_url = "https://example.test/other"
+    cache.store(other_url, b"other", {"ETag": "other"})
+    cache.store(url, b"old", {"ETag": "old"})
+    snapshot = cache.load(url)
+    assert snapshot is not None
+    for version in range(20):
+        value = str(version)
+        cache.store(url, value.encode(), {"ETag": value})
+        assert len(list(cache.directory.glob(f"{cache.key(url)}.*.body"))) == 1
+        current = cache.load(url)
+        assert current is not None and current.content == value.encode()
+    assert snapshot.content == b"old" and snapshot.etag == "old"
+    other = cache.load(other_url)
+    assert other is not None and other.content == b"other"
+
+
+@pytest.mark.parametrize("stage", ["body", "manifest"])
+def test_repeated_write_failures_preserve_old_cache_without_orphans(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    stage: str,
+) -> None:
+    from sentinel.http import cache as cache_module
+    from sentinel.http.cache import HttpCache
+
+    cache = HttpCache(tmp_path)
+    url = "https://example.test/failure"
+    cache.store(url, b"old", {"ETag": "old"})
+    replace = cache_module.os.replace
+
+    def fail_write(src: Path, dst: Path) -> None:
+        if dst.name.endswith(".body" if stage == "body" else ".meta.json"):
+            raise OSError("simulated publication failure")
+        replace(src, dst)
+
+    with monkeypatch.context() as patch:
+        patch.setattr(cache_module.os, "replace", fail_write)
+        for version in range(8):
+            with pytest.raises(OSError):
+                cache.store(url, str(version).encode(), {"ETag": str(version)})
+            entry = cache.load(url)
+            assert entry is not None and entry.content == b"old" and entry.etag == "old"
+            assert len(list(cache.directory.glob("*.body"))) == 1
+        with pytest.raises(OSError):
+            cache.store(url, b"old", {"ETag": "changed"})
+        entry = cache.load(url)
+        assert entry is not None and entry.content == b"old" and entry.etag == "old"
+    cache.store(url, b"recovered", {"ETag": "recovered"})
+    assert len(list(cache.directory.glob("*.body"))) == 1
+
+
+def test_cleanup_failure_keeps_published_cache_and_next_update_retries(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from sentinel.http.cache import HttpCache
+
+    cache = HttpCache(tmp_path)
+    url = "https://example.test/cleanup"
+    cache.store(url, b"old", {"ETag": "old"})
+    old_path = next(cache.directory.glob("*.body"))
+    unlink = Path.unlink
+
+    def fail_old_body(path: Path, *, missing_ok: bool = False) -> None:
+        if path == old_path:
+            raise PermissionError("simulated cleanup failure")
+        unlink(path, missing_ok=missing_ok)
+
+    with monkeypatch.context() as patch:
+        patch.setattr(Path, "unlink", fail_old_body)
+        cache.store(url, b"new", {"ETag": "new"})
+        entry = cache.load(url)
+        assert entry is not None and entry.content == b"new" and entry.etag == "new"
+        assert old_path.exists()
+    cache.store(url, b"newer", {"ETag": "newer"})
+    assert len(list(cache.directory.glob("*.body"))) == 1
+    assert not old_path.exists()

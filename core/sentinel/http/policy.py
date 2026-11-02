@@ -40,11 +40,11 @@ class SourcePolicy:
         if not self.name or any(not math.isfinite(n) or n <= 0 for n in positive):
             raise ValueError("name and timeouts/backoff must be positive")
         if (
-            not isinstance(self.max_attempts, int)
-            or not 1 <= self.max_attempts <= DEFAULT_MAX_ATTEMPTS
+            type(self.max_attempts) is not int
+            or not 1 <= self.max_attempts <= 4
             or len(self.backoff_s) < self.max_attempts - 1
         ):
-            raise ValueError("max_attempts must be 1..3 with sufficient backoff values")
+            raise ValueError("max_attempts must be 1..4 with sufficient backoff values")
         if len(self.jitter) != 2 or not 0 < self.jitter[0] <= self.jitter[1] <= 1:
             raise ValueError("jitter must be ordered within (0, 1]")
         if not math.isfinite(self.rate_wait_max_s) or self.rate_wait_max_s < 0:

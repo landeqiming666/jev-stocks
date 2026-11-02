@@ -105,3 +105,50 @@ def test_retry_after_invalid_and_jitter_boundaries() -> None:
     assert retry_delay(2, uniform=lambda a, b: b) == 2.0
     assert not is_retryable(405)
     assert not is_retryable(httpx.WriteError("no retry"))
+
+
+@pytest.mark.parametrize("configured", [False, True])
+def test_default_three_and_configured_four_attempts(configured: bool, clock: FakeClock) -> None:
+    from sentinel.http import SourcePolicy, register_policy
+
+    policy = SourcePolicy("attempts", max_attempts=4) if configured else SourcePolicy("attempts")
+    assert policy.max_attempts == (4 if configured else 3)
+    register_policy(policy)
+    calls: list[httpx.Request] = []
+
+    def respond(request: httpx.Request) -> httpx.Response:
+        calls.append(request)
+        return httpx.Response(503)
+
+    with (
+        HttpClient(
+            transport=httpx.MockTransport(respond),
+            sleeper=clock.sleep,
+            monotonic=clock.monotonic,
+            uniform=lambda a, b: a,
+        ) as client,
+        pytest.raises(SourceError),
+    ):
+        client.get("https://example.test/attempts", source="attempts")
+    assert len(calls) == policy.max_attempts
+    assert clock.sleeps == ([0.5, 1.0, 2.0] if configured else [0.5, 1.0])
+
+
+def test_configured_fourth_attempt_can_succeed(clock: FakeClock) -> None:
+    from sentinel.http import SourcePolicy, register_policy
+
+    register_policy(SourcePolicy("fourth", max_attempts=4))
+    calls: list[httpx.Request] = []
+
+    def respond(request: httpx.Request) -> httpx.Response:
+        calls.append(request)
+        return httpx.Response(200 if len(calls) == 4 else 503, content=b"ok")
+
+    with HttpClient(
+        transport=httpx.MockTransport(respond),
+        sleeper=clock.sleep,
+        monotonic=clock.monotonic,
+        uniform=lambda a, b: a,
+    ) as client:
+        response = client.get("https://example.test/fourth", source="fourth")
+    assert response.attempts == 4 and response.text == "ok"

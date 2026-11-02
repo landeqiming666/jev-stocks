@@ -579,7 +579,7 @@ def test_retry_after_60_is_independent_of_attempt_budget(clock: FakeClock) -> No
     "options",
     [
         {"max_attempts": 0},
-        {"max_attempts": 4},
+        {"max_attempts": 5},
         {"max_attempts": 1.5},
         {"read_timeout_s": float("nan")},
         {"rate_per_s": 0.0, "burst": 1},
@@ -656,3 +656,73 @@ def test_transport_library_does_not_log_raw_secret_urls(
     with HttpClient(transport=httpx.MockTransport(lambda request: httpx.Response(200))) as client:
         client.get("https://example.test/a?token=private-transport-secret", source="nasdaq")
     assert "private-transport-secret" not in caplog.text
+
+
+@pytest.mark.parametrize(
+    "value", [True, False, -1, 0, 5, 1.5, 3.0, float("nan"), float("inf"), "3", None]
+)
+def test_max_attempts_rejects_non_integer_or_out_of_range(value: object) -> None:
+    from sentinel.http import SourcePolicy
+
+    with pytest.raises(ValueError):
+        SourcePolicy("invalid", max_attempts=value)
+
+
+@pytest.mark.parametrize("reuse_cached", [False, True])
+@pytest.mark.parametrize(
+    "body",
+    [
+        b'{"value": NaN}',
+        b'{"value": Infinity}',
+        b'{"value": -Infinity}',
+        b'{"broken":',
+        b"[" * 10000 + b"0" + b"]" * 10000,
+    ],
+)
+def test_invalid_json_discards_cache_and_refetches(
+    body: bytes, reuse_cached: bool, tmp_path: Path, clock: FakeClock
+) -> None:
+    calls: list[httpx.Request] = []
+
+    def respond(request: httpx.Request) -> httpx.Response:
+        calls.append(request)
+        if len(calls) == 1:
+            return httpx.Response(200, headers={"ETag": "invalid"}, content=body)
+        if reuse_cached and len(calls) == 2:
+            assert request.headers["if-none-match"] == "invalid"
+            return httpx.Response(304)
+        assert "if-none-match" not in request.headers
+        return httpx.Response(200, headers={"ETag": "valid"}, content=b'{"value": 2}')
+
+    with HttpClient(
+        cache_dir=tmp_path,
+        transport=httpx.MockTransport(respond),
+        sleeper=clock.sleep,
+        monotonic=clock.monotonic,
+    ) as client:
+        url = "https://example.test/json"
+        if reuse_cached:
+            client.get_text(url, source="sec")
+        with pytest.raises(SourceError) as exc:
+            client.get_json(url, source="sec")
+        assert exc.value.code == "SOURCE_UNAVAILABLE" and exc.value.reason == "INVALID_JSON"
+        assert not list((tmp_path / "http").glob("*.meta.json"))
+        assert not list((tmp_path / "http").glob("*.body"))
+        assert client.get_json(url, source="sec") == {"value": 2}
+    assert len(calls) == (3 if reuse_cached else 2)
+
+
+def test_json_constant_names_in_strings_are_valid() -> None:
+    with HttpClient(
+        transport=httpx.MockTransport(
+            lambda request: httpx.Response(
+                200, content=b'[true, false, null, {"literal": "NaN Infinity -Infinity"}]'
+            )
+        )
+    ) as client:
+        assert client.get_json("https://example.test/json", source="nasdaq") == [
+            True,
+            False,
+            None,
+            {"literal": "NaN Infinity -Infinity"},
+        ]

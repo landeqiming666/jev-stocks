@@ -16,7 +16,7 @@ from dataclasses import dataclass
 from email.message import Message
 from pathlib import Path
 from types import MappingProxyType
-from typing import Protocol
+from typing import NoReturn, Protocol
 from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 
 import httpx
@@ -93,6 +93,10 @@ def _decode(content: bytes, headers: Mapping[str, str], truncated: bool) -> str:
         except (LookupError, UnicodeError):
             pass
     raise SourceError("SOURCE_UNAVAILABLE", reason="DECODE_FAILED")
+
+
+def _reject_json_constant(_: str) -> NoReturn:
+    raise ValueError("non-standard JSON constant")
 
 
 class HttpClient:
@@ -456,6 +460,8 @@ class HttpClient:
             url, source=source, headers=headers, cancel=cancel, use_cache=use_cache
         )
         try:
-            return json.loads(text)
-        except ValueError:
+            return json.loads(text, parse_constant=_reject_json_constant)
+        except (ValueError, RecursionError):
+            if self._cache is not None:
+                self._cache.discard(url)
             raise SourceError("SOURCE_UNAVAILABLE", reason="INVALID_JSON") from None
