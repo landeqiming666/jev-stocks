@@ -83,6 +83,12 @@ def _is_allowed(relative: str) -> bool:
     return any(relative.startswith(prefix) for prefix in ALLOWED_PREFIXES)
 
 
+def _is_fixture_guard(relative: str, line: str) -> bool:
+    return relative == "apps/desktop/src-tauri/tests/bridge.rs" and bool(
+        re.fullmatch(r"\s*#\[cfg\(unix\)\]\s*", line)
+    )
+
+
 def _script_pair_findings(root: Path) -> List[Finding]:
     scripts = root / "scripts"
     findings: List[Finding] = []
@@ -121,6 +127,8 @@ def scan(root: Path) -> List[Finding]:
             continue
         patterns = _patterns(path.suffix)
         for lineno, line in enumerate(text.splitlines(), 1):
+            if _is_fixture_guard(relative, line):
+                continue
             for pattern in patterns:
                 if pattern.search(line):
                     findings.append(

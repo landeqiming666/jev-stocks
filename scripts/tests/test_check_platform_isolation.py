@@ -57,6 +57,28 @@ class ScanTests(unittest.TestCase):
         )
         self.assertEqual(isolation.scan(self.root), [])
 
+    def test_bridge_fixed_unix_fixture_guard_is_allowed(self) -> None:
+        self.write(
+            "apps/desktop/src-tauri/tests/bridge.rs",
+            "#[cfg(unix)]\nfn fixed_shell_fixture() {}\n",
+        )
+        self.assertEqual(isolation.scan(self.root), [])
+
+    def test_fixture_exception_does_not_allow_runtime_or_other_os_checks(self) -> None:
+        self.write(
+            "apps/desktop/src-tauri/tests/bridge.rs",
+            '#[cfg(target_os = "macos")]\nfn a() {}\nfn b() { cfg!(unix); }\n',
+        )
+        self.assertEqual(len(isolation.scan(self.root)), 2)
+
+    def test_unix_guard_is_not_allowed_in_production_or_other_tests(self) -> None:
+        for path in [
+            "apps/desktop/src-tauri/src/bridge.rs",
+            "apps/desktop/src-tauri/tests/other.rs",
+        ]:
+            self.write(path, "#[cfg(unix)]\nfn a() {}\n")
+        self.assertEqual(len(isolation.scan(self.root)), 2)
+
     def test_ts_process_platform_is_reported(self) -> None:
         self.write("apps/desktop/src/x.ts", "const p = process.platform;\n")
         self.assertEqual(len(isolation.scan(self.root)), 1)

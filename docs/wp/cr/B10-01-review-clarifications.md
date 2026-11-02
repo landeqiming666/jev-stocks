@@ -24,6 +24,10 @@
 
 真实 DuckDB 验证表明 cursor 事务独立，不共享未提交数据。写事务内需要读自身写入时传原 `tx`；`WriteTx.execute()` 返回受保护的自身，而非可绕过上下文 commit 的原始连接。备份必须 checkpoint，临时正文 flush/fsync 后原子且不覆盖地发布；迁移恢复也先同步再 replace。排序只按备份 UTC 时间戳，忽略版本和 label。
 
+## C-02
+
+WP-00 的 Mac 平台树清理只调用 `child.kill()`，会留下 uv/Python 的后代。主 agent 负责在 `platform/macos.rs` 设置独立进程组并通过 `/bin/kill` 终止该组，Rust 监督器仍只调用平台接口并负责 wait/reap。新增真实 shell + sleep 后代测试；此基础修复不计为额外工作包。平台检查只放行 C-02 测试文件单独的 `#[cfg(unix)]` fixture guard，不扩张生产代码权限。
+
 ## C-06
 
 前次审核改了 R08 的文档示例，但演示创作源仍使用“计划减持”作为已发生正例。本批批准在 `.kiro/notes/author/data.py` 修正 E1 为已完成减持，问题集升至 `.2`，在契约中保留相同 ID、模拟概率、示例名与计数，再通过生成器生成 `design/prototype/data/mock.js`。句子偏移必须随实际文本重算；额外回归检查计划与执行的区别。
