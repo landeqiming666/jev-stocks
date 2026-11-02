@@ -1,3 +1,4 @@
+use sentinel_lib::bridge::commands::{open_external_with, ExternalOpenError};
 use sentinel_lib::bridge::{process::*, security::*, *};
 use std::{path::PathBuf, sync::mpsc, time::Duration};
 
@@ -429,4 +430,92 @@ fn test_spawn_failure_reports_failed_without_child() {
         })
         .collect();
     assert_eq!(statuses, [CoreState::Starting, CoreState::Failed]);
+}
+
+struct FakeOpener {
+    calls: std::cell::RefCell<Vec<Vec<String>>>,
+    failure: Option<ExternalOpenError>,
+}
+impl FakeOpener {
+    fn open(&self, url: &str) -> Result<(), ExternalOpenError> {
+        let mut command = std::process::Command::new("fake-opener");
+        command.arg(url);
+        assert_eq!(command.get_program(), "fake-opener");
+        self.calls.borrow_mut().push(
+            command
+                .get_args()
+                .map(|arg| arg.to_string_lossy().into_owned())
+                .collect(),
+        );
+        self.failure.clone().map_or(Ok(()), Err)
+    }
+}
+
+#[test]
+fn test_open_external_valid_url_is_one_exact_argv_without_shell() {
+    let opener = FakeOpener {
+        calls: Default::default(),
+        failure: None,
+    };
+    let url = "https://example.com/a%20b?q=%22quoted%22&literal=$(touch%20test);x=1#part";
+    open_external_with(url, |url| opener.open(url)).unwrap();
+    assert_eq!(*opener.calls.borrow(), vec![vec![url.to_owned()]]);
+}
+
+#[test]
+fn test_open_external_invalid_url_never_calls_opener() {
+    let opener = FakeOpener {
+        calls: Default::default(),
+        failure: None,
+    };
+    for url in [
+        "http://example.com",
+        "file:///x",
+        "javascript:alert(1)",
+        "https://",
+        "https:///",
+        "https://?q",
+        "https://#fragment",
+    ] {
+        assert!(open_external_with(url, |url| opener.open(url)).is_err());
+    }
+    assert!(opener.calls.borrow().is_empty());
+}
+
+#[test]
+fn test_open_external_failure_preserves_cause_without_url_or_credentials() {
+    let url = "https://test-user:test-password@example.com/private?token=test-secret";
+    let failures = [
+        (
+            ExternalOpenError::from(std::io::Error::new(
+                std::io::ErrorKind::PermissionDenied,
+                format!("denied {url}"),
+            )),
+            "PermissionDenied",
+        ),
+        (
+            ExternalOpenError::from(std::io::Error::from_raw_os_error(13)),
+            "13",
+        ),
+        (ExternalOpenError::Exited(Some(27)), "27"),
+    ];
+    for (failure, expected) in failures {
+        let opener = FakeOpener {
+            calls: Default::default(),
+            failure: Some(failure),
+        };
+        let error = open_external_with(url, |url| opener.open(url)).unwrap_err();
+        assert!(error.contains(expected), "{error}");
+        for private in [
+            url,
+            "test-user",
+            "test-password",
+            "test-secret",
+            "example.com",
+        ] {
+            assert!(!error.contains(private));
+            assert!(!format!("{:?}", opener.failure).contains(private));
+        }
+        assert_eq!(opener.calls.borrow().len(), 1);
+    }
 }

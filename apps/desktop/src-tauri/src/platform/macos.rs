@@ -1,9 +1,19 @@
 use std::os::unix::process::CommandExt;
 use tauri::{Manager, Runtime, WebviewWindowBuilder};
 
-use super::Platform;
+use super::{ExternalOpenError, Platform};
 
 pub struct MacOs;
+
+fn open_external_command(url: &str) -> std::process::Command {
+    let mut command = std::process::Command::new("/usr/bin/open");
+    command
+        .arg(url)
+        .stdin(std::process::Stdio::null())
+        .stdout(std::process::Stdio::null())
+        .stderr(std::process::Stdio::null());
+    command
+}
 
 impl Platform for MacOs {
     fn name(&self) -> &'static str {
@@ -39,6 +49,15 @@ document.addEventListener("DOMContentLoaded", function () { document.documentEle
             .status();
         let _ = child.kill();
     }
+
+    fn open_external(&self, url: &str) -> Result<(), ExternalOpenError> {
+        let status = open_external_command(url).status()?;
+        if status.success() {
+            Ok(())
+        } else {
+            Err(ExternalOpenError::Exited(status.code()))
+        }
+    }
 }
 
 #[cfg(test)]
@@ -47,7 +66,23 @@ mod tests {
     use std::process::{Child, Command, Stdio};
     use std::time::{Duration, Instant};
 
-    use super::{MacOs, Platform};
+    use super::{open_external_command, MacOs, Platform};
+
+    #[test]
+    fn external_open_command_uses_executable_open_with_one_complete_url_argument() {
+        use std::os::unix::fs::PermissionsExt;
+
+        let url = "https://example.com/a%20b?q=%22value%22&literal=$(touch%20test);x=1#part";
+        let command = open_external_command(url);
+        assert_eq!(command.get_program(), "/usr/bin/open");
+        assert_eq!(
+            command.get_args().collect::<Vec<_>>(),
+            vec![std::ffi::OsStr::new(url)]
+        );
+        let metadata = std::fs::metadata(command.get_program()).unwrap();
+        assert!(metadata.is_file());
+        assert_ne!(metadata.permissions().mode() & 0o111, 0);
+    }
 
     struct OwnedCore(Child);
 
