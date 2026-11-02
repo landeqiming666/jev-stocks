@@ -54,6 +54,120 @@ def decisions(value):
             yield from decisions(child)
 
 
+def normalization_cases(kind):
+    pad = " \t\r\n\u0085\u001c\u00a0\u3000"
+    if kind == "email":
+
+        def email(n):
+            return "a" * (n - len("@example.com")) + "@example.com"
+
+        values = [
+            None,
+            "",
+            pad,
+            "\n" * 1000,
+            "name@example.com",
+            pad + "name@example.com" + pad,
+            pad + email(120) + pad,
+            pad + email(121) + pad,
+            "😀" * 108 + "@example.com",
+            "😀" * 109 + "@example.com",
+            "a b@example.com",
+            "a@b",
+            "a@b\n.c",
+            "a@b.c\nx",
+            12,
+        ]
+    elif kind == "key":
+        values = [
+            "",
+            pad,
+            "fake-key",
+            pad + "fake-key" + pad,
+            pad + "k" * 512 + pad,
+            pad + "k" * 513 + pad,
+            pad + "😀" * 512 + pad,
+            pad + "😀" * 513 + pad,
+            "fake key",
+            "fake\nkey",
+            "fake\u001ckey",
+            "fake\u0085key",
+            "fake\u00a0key",
+            "\ufeff" + "k" * 512,
+            "\u200b" + "k" * 512,
+            None,
+            12,
+        ]
+    elif kind == "statement":
+        values = [
+            "",
+            pad,
+            "\n" * 1000,
+            " 😀\n ",
+            pad + "字😀" * 250 + pad,
+            pad + "字😀" * 250 + "测" + pad,
+            pad + "😀" * 500 + pad,
+            pad + "😀" * 501 + pad,
+            "😀\n" * 249 + "字😀",
+            "😀\n" * 250 + "字",
+            "\ufeff",
+            "\u200b",
+            "字" * 499 + "\ufeff字",
+            None,
+            12,
+        ]
+    else:
+        values = [
+            None,
+            "",
+            pad,
+            "\n" * 1000,
+            " 😀\n ",
+            pad + "字😀" * 150 + pad,
+            pad + "字😀" * 150 + "测" + pad,
+            pad + "😀" * 300 + pad,
+            pad + "😀" * 301 + pad,
+            "😀\n" * 149 + "字😀",
+            "😀\n" * 150 + "字",
+            "\ufeff",
+            "\u200b",
+            12,
+        ]
+    base = {
+        "email": "a@example.com",
+        "key": "k" * 512,
+        "statement": "😀" * 500,
+        "kill": "😀" * 300,
+    }[kind]
+    for cp in range(0x110000):
+        if chr(cp).isspace():
+            whitespace = chr(cp)
+            values.append(whitespace + base + whitespace)
+            if kind in ("email", "key"):
+                values.append("a" + whitespace + base)
+            if kind in ("email", "kill", "statement"):
+                values.append(whitespace * 600)
+    return values
+
+
+def normalized_valid(kind, value):
+    if value is None:
+        return kind in ("email", "kill")
+    if not isinstance(value, str):
+        return False
+    text = value.strip()
+    if kind == "email":
+        return not text or (
+            len(text) <= 120
+            and re.fullmatch(r"[^@\s]+@[^@\s]+\.[^@\s]+", text) is not None
+        )
+    if kind == "key":
+        return 1 <= len(text) <= 512 and re.search(r"\s", text) is None
+    if kind == "statement":
+        return 1 <= len(text) <= 500
+    return len(text) <= 300
+
+
 class ContractTests(unittest.TestCase):
     def checker(self):
         from scripts import check_contracts
@@ -849,6 +963,115 @@ class ContractTests(unittest.TestCase):
         cash_id = errors["insufficient_cash"]["error"]["data"]["orderId"]
         self.assertEqual(cash_id, "01JC8Z5V3Q000000000000RD85")
         self.assertNotIn(cash_id, {order["orderId"] for order in orders})
+
+    def assert_normalized_params(self, method, field, kind):
+        checker = self.checker()
+        types = read(CONTRACTS / "types.schema.json")
+        schema = read(CONTRACTS / "methods" / (method + ".json"))["params"]
+        base = {
+            "settings.update": {},
+            "secrets.set": {"name": "jevKey"},
+            "thesis.create": {"instrumentId": "us:ZZAR", "statement": "虚构逻辑"},
+            "thesis.update": {
+                "thesisId": "fictional",
+                "statement": "虚构逻辑",
+                "expectedVersion": 1,
+            },
+        }[method]
+        for value in normalization_cases(kind):
+            with self.subTest(
+                method=method,
+                field=field,
+                length=len(value) if isinstance(value, str) else None,
+                preview=repr(value)[:50],
+            ):
+                params = dict(base, **{field: value})
+                if normalized_valid(kind, value):
+                    checker.validate(params, schema, types)
+                else:
+                    with self.assertRaises(checker.ContractError):
+                        checker.validate(params, schema, types)
+
+    def test_email_params_accept_stripped_and_empty_values(self):
+        self.assert_normalized_params("settings.update", "secContactEmail", "email")
+
+    def test_secret_params_bound_normalized_codepoints_and_internal_whitespace(self):
+        self.assert_normalized_params("secrets.set", "value", "key")
+
+    def test_thesis_statement_params_bound_stripped_unicode_codepoints(self):
+        for method in ("thesis.create", "thesis.update"):
+            self.assert_normalized_params(method, "statement", "statement")
+
+    def test_thesis_kill_params_accept_empty_and_bound_stripped_codepoints(self):
+        for method in ("thesis.create", "thesis.update"):
+            self.assert_normalized_params(method, "killCondition", "kill")
+
+    def test_normalization_patterns_match_python_and_node_codepoint_semantics(self):
+        cases = []
+        for method, field, kind in (
+            ("settings.update", "secContactEmail", "email"),
+            ("secrets.set", "value", "key"),
+            ("thesis.create", "statement", "statement"),
+            ("thesis.create", "killCondition", "kill"),
+            ("thesis.update", "statement", "statement"),
+            ("thesis.update", "killCondition", "kill"),
+        ):
+            schema = read(CONTRACTS / "methods" / (method + ".json"))["params"][
+                "properties"
+            ][field]
+            string_schema = next(
+                (s for s in schema.get("anyOf", [schema]) if s.get("type") == "string")
+            )
+            for value in normalization_cases(kind):
+                if isinstance(value, str):
+                    cases.append(
+                        {
+                            "method": method,
+                            "field": field,
+                            "pattern": string_schema["pattern"],
+                            "value": value,
+                            "expected": normalized_valid(kind, value),
+                        }
+                    )
+        run = subprocess.run(
+            [
+                "node",
+                "-e",
+                "const fs=require('fs'); const cases=JSON.parse(fs.readFileSync(0,'utf8')); "
+                "console.log(JSON.stringify(cases.map(c=>['','u'].map(flags=>new RegExp(c.pattern,flags).test(c.value)))));",
+            ],
+            input=json.dumps(cases, ensure_ascii=False),
+            cwd=ROOT,
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+            check=True,
+        )
+        all_results = json.loads(run.stdout)
+        self.assertEqual(len(all_results), len(cases))
+        for case, results in zip(cases, all_results):
+            with self.subTest(
+                method=case["method"], field=case["field"], length=len(case["value"])
+            ):
+                self.assertEqual(
+                    re.search(case["pattern"], case["value"]) is not None,
+                    case["expected"],
+                )
+                self.assertEqual(results, [case["expected"], case["expected"]])
+
+    def test_output_schemas_keep_strict_canonical_lengths(self):
+        checker = self.checker()
+        types = read(CONTRACTS / "types.schema.json")
+        for name in ("Thesis", "ThesisVersionItem"):
+            props = types["$defs"][name]["properties"]
+            self.assertEqual(props["statement"]["maxLength"], 500)
+            self.assertEqual(props["killCondition"]["anyOf"][0]["maxLength"], 300)
+            with self.assertRaises(checker.ContractError):
+                checker.validate(" " + "😀" * 500 + " ", props["statement"], types)
+        email = types["$defs"]["Settings"]["properties"]["secContactEmail"]
+        self.assertEqual(email["anyOf"][0]["maxLength"], 120)
+        with self.assertRaises(checker.ContractError):
+            checker.validate(" name@example.com ", email, types)
 
 
 if __name__ == "__main__":
