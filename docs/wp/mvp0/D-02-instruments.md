@@ -94,7 +94,7 @@ class SecTickerSource:
 
 class InstrumentRepository:
     def __init__(self, db: Database) -> None: ...
-    def replace_from_sec(self, rows: Sequence[TickerRow], *, fetched_at: datetime) -> ImportStats: ...
+    def replace_from_sec(self, rows: Sequence[TickerRow], *, fetched_at: datetime, require_nonempty: bool = False) -> ImportStats: ...
     def search(self, query: str, *, limit: int = 20) -> list[SearchHit]: ...
     def get(self, instrument_id: str) -> Instrument | None: ...
     def last_refresh_at(self) -> datetime | None: ...
@@ -104,7 +104,7 @@ class InstrumentService:
     def search(self, query: str, limit: int = 20) -> list[SearchHit]: ...
     def ensure_fresh(self, *, offline: bool, has_sec_email: bool) -> ImportStats | None: ...
 ```
-`search` 在 `query` 规范化后为空、原串长度不在 1 到 64、`limit` 不在 1 到 50 时抛 `UserError("INVALID_ARGUMENT", field="query"|"limit")`。`SecTickerSource.fetch` 每次通过注入的 `email_provider` 获取当前联系邮箱；未配置或非法时在网络调用前抛 `CONFIG_REQUIRED`（`missing=["secEmail"]`），配置后发送 `User-Agent: Sentinel/<版本> <邮箱>`。网络失败抛 `SourceError`，字段缺失抛 `SourceError("SOURCE_UNAVAILABLE", reason="TICKER_SCHEMA")`。所有仓储方法线程安全，写操作只通过 `Database.write()`。
+`search` 在 `query` 规范化后为空、原串长度不在 1 到 64、`limit` 不在 1 到 50 时抛 `UserError("INVALID_ARGUMENT", field="query"|"limit")`。`SecTickerSource.fetch` 每次通过注入的 `email_provider` 获取当前联系邮箱，以与 C-04 相同的 `domain.contact.is_valid_sec_email` 校验；未配置或非法时在网络调用前抛 `CONFIG_REQUIRED`（`missing=["secEmail"]`），配置后发送 `User-Agent: Sentinel/<版本> <邮箱>`。网络失败抛 `SourceError`，字段缺失抛 `SourceError("SOURCE_UNAVAILABLE", reason="TICKER_SCHEMA")`。所有仓储方法线程安全，写操作只通过 `Database.write()`。
 
 ### 5.2 数据结构
 | 字段 | 类型 | 必填 | 约束 | 含义 |
@@ -132,7 +132,7 @@ class InstrumentService:
 5. 单事务：`DELETE FROM instrument_alias` 中本批 `instrument_id` 的行；`INSERT ... ON CONFLICT (market, symbol) DO UPDATE` 更新 `exchange/name/name_zh/currency/cik/is_active/source/updated_at`；把本批未出现的旧 `market='us'` 行 `is_active=FALSE`，计入 `deactivated`。
 6. 别名重建：每行写入 `symbol`（kind `symbol`）、`name` 规范化（`name_en`）、`name_zh`（`name_zh`）、每个 `aliases` 项（`alias`）；同一 `(instrument_id, alias)` 只保留先出现的 kind，顺序为 `symbol`、`name_zh`、`name_en`、`alias`。
 7. 搜索 SQL：`SELECT ... FROM instrument_alias a JOIN instrument i USING(instrument_id) WHERE i.is_active AND a.alias LIKE '%' || ? || '%'`；计分：精确 symbol 120、精确别名 100、前缀 symbol 80、前缀 60、包含 30；排序 `(-score, symbol)` 后截断。
-8. `ensure_fresh`：`last_refresh_at` 为空或 `now - last_refresh_at > 7 天`，且 `offline=False`、`has_sec_email=True` 时刷新；否则返回 `None`。刷新失败只 `warn`，保留旧表；网络返回空列表时不覆盖已有标的，也不更新刷新水位，避免临时空响应把全市场软下线。
+8. `ensure_fresh`：`last_refresh_at` 为空或 `now - last_refresh_at > 7 天`，且 `offline=False`、`has_sec_email=True` 时刷新；否则返回 `None`。刷新失败只 `warn`，保留旧表；网络返回空列表或所有行均被过滤时，不覆盖已有标的，也不更新刷新水位。后台替换传 `require_nonempty=True`，仓储在写事务前拒绝空有效集合；显式仓储调用默认语义不变。
 
 ## 7. 错误与边界情况
 

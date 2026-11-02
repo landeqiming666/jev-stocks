@@ -17,6 +17,7 @@ from .backup import _synced_copy
 from .db import Database
 
 MAX_MIGRATION_BYTES = 2_097_152
+DEFAULT_MIGRATIONS_DIR = Path(__file__).with_suffix("")
 SQL_NAME_RE = re.compile(r"^(\d{3})_([a-z0-9_]+)\.sql$")
 SCHEMA_TABLE_SQL = r"""CREATE TABLE IF NOT EXISTS schema_version (
   version    INTEGER PRIMARY KEY,
@@ -192,7 +193,7 @@ def _restore_file(backup_path: Path, db_path: Path) -> None:
 
 
 def migrate(db: Database, directory: Path | None = None) -> MigrationReport:
-    migrations = discover_migrations(directory or Path(__file__).with_suffix(""))
+    migrations = discover_migrations(directory or DEFAULT_MIGRATIONS_DIR)
     with db.read() as reader:
         reader.execute("SELECT version, name, checksum FROM schema_version")
         recorded = cast(list[tuple[int, str, str]], reader.fetchall())

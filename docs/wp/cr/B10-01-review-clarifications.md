@@ -57,3 +57,9 @@ WP-00 的 Mac 平台树清理只调用 `child.kill()`，会留下 uv/Python 的�
 别名由公开行情/公司资料实际字段整理，记录来源并抽查；不得让模型凭空生成 100 条中文名。主 agent 已取得公开美股名单作为候选来源，最终候选须匹配标的与中文名，不引入真实持仓数据。
 
 既有 `SecTickerSource(http)` 无法从通用 HttpClient 获得用户邮箱，也无法发送合规 UA。批准兼容的 keyword `email_provider`，由 C-07 注入当前设置；缺少有效邮箱时绝不请求 SEC。过滤与完整统计统一在 repository，source 保留原始行。后台刷新遇空网络列表保留旧表与旧水位，不把全市场软下线。
+
+跨包复核发现邮箱规则不一致，且非 ASCII 邮箱无法编码进 HTTPX 的字符串 UA。批准 C-00 的纯 `domain/contact.py` 共用规则：常用 ASCII 邮箱总长 ≤120、local ≤64、dot-atom 与合法域名标签、字母 TLD 2–63；C-04 在存储前拒绝不支持的 EAI，D-02 不再另写验证器，C-06 的输入/输出 schema 同步。保持 Python 首尾空白处理和清除语义，投资文本的 Unicode 能力不变。
+
+非空但全被过滤的网络快照同样不能把全市场下线。批准仓储 keyword `require_nonempty=False`，后台传 True，在事务前拒绝空有效集合并保留旧水位。来源 name 非空字符串，否则整批 TICKER_SCHEMA。
+
+C-03 的五项旧测试默认执行生产目录全部迁移却固定期待 schema 1，002 使其失败。批准明确的 `DEFAULT_MIGRATIONS_DIR` 测试注入：C-03 单测使用自己的 001 副本，显式迁移目录及生产默认发现行为不变；业务/集成测试仍执行真实完整迁移集合，不能隐藏新迁移或跳过失败。

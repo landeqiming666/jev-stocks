@@ -59,7 +59,7 @@ def normalization_cases(kind):
     if kind == "email":
 
         def email(n):
-            return "a" * (n - len("@example.com")) + "@example.com"
+            return "a" * 64 + "@" + "b" * (n - 69) + ".com"
 
         values = [
             None,
@@ -157,9 +157,24 @@ def normalized_valid(kind, value):
         return False
     text = value.strip()
     if kind == "email":
-        return not text or (
-            len(text) <= 120
-            and re.fullmatch(r"[^@\s]+@[^@\s]+\.[^@\s]+", text) is not None
+        if not text:
+            return True
+        if not text.isascii() or len(text) > 120 or text.count("@") != 1:
+            return False
+        local, domain = text.split("@")
+        labels = domain.split(".")
+        return bool(
+            1 <= len(local) <= 64
+            and re.fullmatch(r"[A-Za-z0-9.!#$%&'*+/=?^_`{|}~-]+", local)
+            and not local.startswith(".")
+            and not local.endswith(".")
+            and ".." not in local
+            and len(labels) >= 2
+            and all(
+                re.fullmatch(r"[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?", label)
+                for label in labels
+            )
+            and re.fullmatch(r"[A-Za-z]{2,63}", labels[-1])
         )
     if kind == "key":
         return 1 <= len(text) <= 512 and re.search(r"\s", text) is None

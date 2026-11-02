@@ -112,7 +112,7 @@ Python 属性使用 snake_case 与 camelCase alias，wire 和 setting 表键不�
 |---|---|---|---|---|---|
 | `Settings` | `engine` | str | 是 | `auto`/`jevdb`/`jev_direct` | 请求引擎 |
 | | `modelId` | str | 是 | 固定 `jev-1.14.0` | 模型版本 |
-| | `secContactEmail` | str/null | 是 | ≤120，合法邮箱或 null | SEC 联系邮箱 |
+| | `secContactEmail` | str/null | 是 | ≤120，常用 ASCII 邮箱或 null；local ≤64 | SEC 联系邮箱 |
 | | `dailyTokenBudget` | int | 是 | 10,000–50,000,000 | 每日 token 限额 |
 | | `firstScanLookbackDays` | int | 是 | 1–30 | 首次回看天数 |
 | | `demoDataLoaded` | bool | 是 | 只读 | 演示数据状态 |
@@ -141,7 +141,7 @@ Python 属性使用 snake_case 与 camelCase alias，wire 和 setting 表键不�
 ## 6. 实现步骤
 1. **默认设置**：键不存在时返回 [04] §5 的默认值；`modelId`、`demoDataLoaded` 只从常量/数据库读取；`allowedDomains` 按 [02] §1 返回 5 条，`modelId` 缺省为 `jev-1.14.0`。
 2. **读取**：一次 `db.read()` 查出全部 `setting` 行，用 `json.loads(value_json)`；JSON 损坏时抛 `InternalError("INTERNAL", detail="setting:<key>")`，不猜测默认值。
-3. **校验 patch**：`engine` 只允许三个枚举；邮箱用 `^[^@\s]+@[^@\s]+\.[^@\s]+$`，去首尾空白，空串转 `null`；预算 10,000–50,000,000；回看 1–30。失败立即返回，不写任何键。
+3. **校验 patch**：`engine` 只允许三个枚举，不额外 strip 枚举；邮箱去首尾 Python 空白，空串转 `null`，其余用 `domain.contact.is_valid_sec_email`：ASCII 可打印、总长 ≤120、dot-atom local ≤64、域名标签合法、字母 TLD 2–63。不支持 EAI/非 ASCII 邮箱，避免合法设置无法编码进 HTTP User-Agent。预算 10,000–50,000,000；回看 1–30。失败立即返回，不写任何键。
 4. **原子更新**：把变化的键序列化为 `json.dumps(value, ensure_ascii=False, separators=(",",":"))`；同一事务 `INSERT ... ON CONFLICT DO UPDATE`，`updated_at` 使用同一个 `clock.now()`；提交后重新 `get()`。
 5. **密钥写入**：`value.strip()` 后长度 1–512，且 `re.search(r"\s", value)` 必须为 `None`；否则 `INVALID_ARGUMENT`。调用 `store.set("typesafe_api_key", value)`，再 `register_secret(value)`；成功响应只有 `{ok:true}`。
 6. **密钥清除**：`store.delete`；重复清除仍返回 `{ok:true}`。不清空本进程脱敏登记，防止正在执行的旧请求在清除后泄漏旧密钥；屏蔽记录随进程结束释放。`status()` 只调用 `store.get` 判断非空，读取现有密钥时也登记脱敏，不把值返回给 RPC 层。

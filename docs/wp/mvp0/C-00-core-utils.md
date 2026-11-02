@@ -6,7 +6,7 @@ platform: shared
 lane: core
 deps: [WP-00]
 size: S
-owns: [core/sentinel/ids.py, core/sentinel/clock.py, core/sentinel/errors.py, core/sentinel/logging_setup.py, core/sentinel/security/__init__.py, core/sentinel/security/redact.py, core/sentinel/messages/__init__.py, core/sentinel/messages/common.py, core/sentinel/messages/app.py, core/tests/unit/test_ids.py, core/tests/unit/test_clock.py, core/tests/unit/test_errors.py, core/tests/unit/test_logging_setup.py, core/tests/unit/test_redact.py, core/tests/unit/test_messages.py]
+owns: [core/sentinel/ids.py, core/sentinel/clock.py, core/sentinel/errors.py, core/sentinel/logging_setup.py, core/sentinel/security/__init__.py, core/sentinel/security/redact.py, core/sentinel/messages/__init__.py, core/sentinel/messages/common.py, core/sentinel/messages/app.py, core/sentinel/domain/__init__.py, core/sentinel/domain/contact.py, core/tests/unit/test_sec_contact.py, core/tests/unit/test_ids.py, core/tests/unit/test_clock.py, core/tests/unit/test_errors.py, core/tests/unit/test_logging_setup.py, core/tests/unit/test_redact.py, core/tests/unit/test_messages.py]
 appends: []
 stubs: []
 ---
@@ -70,6 +70,7 @@ ID、时间、错误码、日志格式一旦各写一套，合并后无法对账
 | `core/sentinel/messages/__init__.py` | 新建 | 合并目录、`render`、`MessageKeyError`、`INTERNAL_FALLBACK` |
 | `core/sentinel/messages/common.py` | 新建 | 15 个 `error.*` 文案、`MISSING_LABELS` |
 | `core/sentinel/messages/app.py` | 新建 | `core.*` 生命周期文案 |
+| `core/sentinel/domain/contact.py` | 新建 | C-04/D-02 共用的 SEC ASCII 联系邮箱规则，避免设置与 UA 验证矛盾 |
 | `core/tests/unit/test_{ids,clock,errors,logging_setup,redact,messages}.py` | 新建 | §8.1 的测试 |
 
 ## 5. 接口规格

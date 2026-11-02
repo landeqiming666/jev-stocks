@@ -1,11 +1,14 @@
+import shutil
 from collections.abc import Iterator
 from pathlib import Path
 
 import pytest
 
 from sentinel.storage import Database
+from sentinel.storage import migrations as migration_module
 
 FIXTURES = Path(__file__).resolve().parents[2] / "fixtures" / "storage"
+CORE_MIGRATION = migration_module.DEFAULT_MIGRATIONS_DIR / "001_core.sql"
 
 
 @pytest.fixture(autouse=True)
@@ -13,6 +16,10 @@ def isolated_storage(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("SENTINEL_DATA_DIR", str(tmp_path))
     monkeypatch.setenv("SENTINEL_CLOCK", "2026-11-02T00:35:00Z")
     monkeypatch.setenv("SENTINEL_OFFLINE", "1")
+    directory = tmp_path / "storage-unit-migrations"
+    directory.mkdir()
+    shutil.copyfile(CORE_MIGRATION, directory / "001_core.sql")
+    monkeypatch.setattr(migration_module, "DEFAULT_MIGRATIONS_DIR", directory)
 
 
 @pytest.fixture
