@@ -1,0 +1,32 @@
+[
+  {
+    "symbol": "AAPL",
+    "name_zh": "苹果",
+    "aliases": [
+      "苹果公司"
+    ]
+  },
+  {
+    "symbol": "BRK.B",
+    "name_zh": "伯克希尔",
+    "aliases": [
+      "伯克希尔哈撒韦",
+      "巴菲特"
+    ]
+  },
+  {
+    "symbol": "MSFT",
+    "name_zh": "微软",
+    "aliases": []
+  },
+  {
+    "symbol": "NVDA",
+    "name_zh": "英伟达",
+    "aliases": []
+  },
+  {
+    "symbol": "TSLA",
+    "name_zh": "特斯拉",
+    "aliases": []
+  }
+]

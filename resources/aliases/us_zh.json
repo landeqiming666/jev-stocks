@@ -1,0 +1,1187 @@
+[
+  {
+    "symbol": "NVDA",
+    "name_zh": "英伟达",
+    "aliases": []
+  },
+  {
+    "symbol": "AAPL",
+    "name_zh": "苹果",
+    "aliases": []
+  },
+  {
+    "symbol": "MSFT",
+    "name_zh": "微软",
+    "aliases": []
+  },
+  {
+    "symbol": "GOOGL",
+    "name_zh": "谷歌-A",
+    "aliases": []
+  },
+  {
+    "symbol": "GOOG",
+    "name_zh": "谷歌-C",
+    "aliases": []
+  },
+  {
+    "symbol": "AMZN",
+    "name_zh": "亚马逊",
+    "aliases": []
+  },
+  {
+    "symbol": "TSM",
+    "name_zh": "台积电",
+    "aliases": []
+  },
+  {
+    "symbol": "TSLA",
+    "name_zh": "特斯拉",
+    "aliases": []
+  },
+  {
+    "symbol": "AVGO",
+    "name_zh": "博通",
+    "aliases": []
+  },
+  {
+    "symbol": "LLY",
+    "name_zh": "礼来",
+    "aliases": []
+  },
+  {
+    "symbol": "SKHY",
+    "name_zh": "SK海力士",
+    "aliases": []
+  },
+  {
+    "symbol": "WMT",
+    "name_zh": "沃尔玛",
+    "aliases": []
+  },
+  {
+    "symbol": "MU",
+    "name_zh": "美光科技",
+    "aliases": []
+  },
+  {
+    "symbol": "JPM",
+    "name_zh": "摩根大通",
+    "aliases": []
+  },
+  {
+    "symbol": "AMD",
+    "name_zh": "超威半导体",
+    "aliases": []
+  },
+  {
+    "symbol": "V",
+    "name_zh": "维萨",
+    "aliases": []
+  },
+  {
+    "symbol": "XOM",
+    "name_zh": "埃克森美孚",
+    "aliases": []
+  },
+  {
+    "symbol": "JNJ",
+    "name_zh": "强生",
+    "aliases": []
+  },
+  {
+    "symbol": "ASML",
+    "name_zh": "阿斯麦",
+    "aliases": []
+  },
+  {
+    "symbol": "MA",
+    "name_zh": "万事达",
+    "aliases": []
+  },
+  {
+    "symbol": "ABBV",
+    "name_zh": "艾伯维",
+    "aliases": []
+  },
+  {
+    "symbol": "COST",
+    "name_zh": "开市客",
+    "aliases": []
+  },
+  {
+    "symbol": "CVX",
+    "name_zh": "雪佛龙",
+    "aliases": []
+  },
+  {
+    "symbol": "KO",
+    "name_zh": "可口可乐",
+    "aliases": []
+  },
+  {
+    "symbol": "CSCO",
+    "name_zh": "思科",
+    "aliases": []
+  },
+  {
+    "symbol": "PG",
+    "name_zh": "宝洁",
+    "aliases": []
+  },
+  {
+    "symbol": "ORCL",
+    "name_zh": "甲骨文",
+    "aliases": []
+  },
+  {
+    "symbol": "MRK",
+    "name_zh": "默沙东",
+    "aliases": []
+  },
+  {
+    "symbol": "UNH",
+    "name_zh": "联合健康",
+    "aliases": []
+  },
+  {
+    "symbol": "BAC",
+    "name_zh": "美国银行",
+    "aliases": []
+  },
+  {
+    "symbol": "INTC",
+    "name_zh": "英特尔",
+    "aliases": []
+  },
+  {
+    "symbol": "HD",
+    "name_zh": "家得宝",
+    "aliases": []
+  },
+  {
+    "symbol": "GE",
+    "name_zh": "GE航空航天",
+    "aliases": []
+  },
+  {
+    "symbol": "PM",
+    "name_zh": "菲利普莫里斯国际",
+    "aliases": []
+  },
+  {
+    "symbol": "AMAT",
+    "name_zh": "应用材料",
+    "aliases": []
+  },
+  {
+    "symbol": "NVS",
+    "name_zh": "诺华制药",
+    "aliases": []
+  },
+  {
+    "symbol": "SHEL",
+    "name_zh": "壳牌",
+    "aliases": []
+  },
+  {
+    "symbol": "LRCX",
+    "name_zh": "拉姆研究",
+    "aliases": []
+  },
+  {
+    "symbol": "PANW",
+    "name_zh": "派拓网络",
+    "aliases": []
+  },
+  {
+    "symbol": "HSBC",
+    "name_zh": "汇丰控股",
+    "aliases": []
+  },
+  {
+    "symbol": "MS",
+    "name_zh": "摩根士丹利",
+    "aliases": []
+  },
+  {
+    "symbol": "AZN",
+    "name_zh": "阿斯利康",
+    "aliases": []
+  },
+  {
+    "symbol": "CAT",
+    "name_zh": "卡特彼勒",
+    "aliases": []
+  },
+  {
+    "symbol": "TXN",
+    "name_zh": "德州仪器",
+    "aliases": []
+  },
+  {
+    "symbol": "RY",
+    "name_zh": "加拿大皇家银行",
+    "aliases": []
+  },
+  {
+    "symbol": "RTX",
+    "name_zh": "雷神技术",
+    "aliases": []
+  },
+  {
+    "symbol": "SAP",
+    "name_zh": "思爱普",
+    "aliases": []
+  },
+  {
+    "symbol": "GS",
+    "name_zh": "高盛",
+    "aliases": []
+  },
+  {
+    "symbol": "DELL",
+    "name_zh": "戴尔科技",
+    "aliases": []
+  },
+  {
+    "symbol": "BABA",
+    "name_zh": "阿里巴巴",
+    "aliases": []
+  },
+  {
+    "symbol": "WFC",
+    "name_zh": "富国银行",
+    "aliases": []
+  },
+  {
+    "symbol": "NFLX",
+    "name_zh": "奈飞",
+    "aliases": []
+  },
+  {
+    "symbol": "TMO",
+    "name_zh": "赛默飞世尔科技",
+    "aliases": []
+  },
+  {
+    "symbol": "AMGN",
+    "name_zh": "安进",
+    "aliases": []
+  },
+  {
+    "symbol": "IBM",
+    "name_zh": "IBM国际商业机器",
+    "aliases": []
+  },
+  {
+    "symbol": "MUFG",
+    "name_zh": "三菱日联金融",
+    "aliases": []
+  },
+  {
+    "symbol": "DGP",
+    "name_zh": "二倍做多黄金ETN-DB",
+    "aliases": []
+  },
+  {
+    "symbol": "TM",
+    "name_zh": "丰田汽车(ADR)",
+    "aliases": []
+  },
+  {
+    "symbol": "AXP",
+    "name_zh": "美国运通",
+    "aliases": []
+  },
+  {
+    "symbol": "KLAC",
+    "name_zh": "科磊",
+    "aliases": []
+  },
+  {
+    "symbol": "ADI",
+    "name_zh": "亚德诺",
+    "aliases": []
+  },
+  {
+    "symbol": "GILD",
+    "name_zh": "吉利德科学",
+    "aliases": []
+  },
+  {
+    "symbol": "BHP",
+    "name_zh": "必和必拓(ADR)",
+    "aliases": []
+  },
+  {
+    "symbol": "C",
+    "name_zh": "花旗集团",
+    "aliases": []
+  },
+  {
+    "symbol": "TD",
+    "name_zh": "道明银行",
+    "aliases": []
+  },
+  {
+    "symbol": "APH",
+    "name_zh": "安费诺",
+    "aliases": []
+  },
+  {
+    "symbol": "KOF",
+    "name_zh": "可口可乐凡萨瓶装",
+    "aliases": []
+  },
+  {
+    "symbol": "DIS",
+    "name_zh": "迪士尼",
+    "aliases": []
+  },
+  {
+    "symbol": "CRM",
+    "name_zh": "赛富时",
+    "aliases": []
+  },
+  {
+    "symbol": "PEP",
+    "name_zh": "百事",
+    "aliases": []
+  },
+  {
+    "symbol": "ABT",
+    "name_zh": "雅培",
+    "aliases": []
+  },
+  {
+    "symbol": "MCD",
+    "name_zh": "麦当劳",
+    "aliases": []
+  },
+  {
+    "symbol": "VZ",
+    "name_zh": "威瑞森通讯(Verizon)",
+    "aliases": []
+  },
+  {
+    "symbol": "BLK",
+    "name_zh": "贝莱德",
+    "aliases": []
+  },
+  {
+    "symbol": "DE",
+    "name_zh": "迪尔",
+    "aliases": []
+  },
+  {
+    "symbol": "UNP",
+    "name_zh": "联合太平洋",
+    "aliases": []
+  },
+  {
+    "symbol": "COP",
+    "name_zh": "康菲石油",
+    "aliases": []
+  },
+  {
+    "symbol": "NVO",
+    "name_zh": "诺和诺德",
+    "aliases": []
+  },
+  {
+    "symbol": "QCOM",
+    "name_zh": "高通",
+    "aliases": []
+  },
+  {
+    "symbol": "NEE",
+    "name_zh": "新纪元能源",
+    "aliases": []
+  },
+  {
+    "symbol": "PFE",
+    "name_zh": "辉瑞",
+    "aliases": []
+  },
+  {
+    "symbol": "SAN",
+    "name_zh": "桑坦德银行",
+    "aliases": []
+  },
+  {
+    "symbol": "BUD",
+    "name_zh": "百威英博",
+    "aliases": []
+  },
+  {
+    "symbol": "MRVL",
+    "name_zh": "迈威尔科技",
+    "aliases": []
+  },
+  {
+    "symbol": "DHR",
+    "name_zh": "丹纳赫",
+    "aliases": []
+  },
+  {
+    "symbol": "SNDK",
+    "name_zh": "闪迪",
+    "aliases": []
+  },
+  {
+    "symbol": "SCCO",
+    "name_zh": "南方铜业",
+    "aliases": []
+  },
+  {
+    "symbol": "SCHW",
+    "name_zh": "嘉信理财",
+    "aliases": []
+  },
+  {
+    "symbol": "ACN",
+    "name_zh": "埃森哲",
+    "aliases": []
+  },
+  {
+    "symbol": "SMFG",
+    "name_zh": "三井住友金融",
+    "aliases": []
+  },
+  {
+    "symbol": "ISRG",
+    "name_zh": "直觉外科",
+    "aliases": []
+  },
+  {
+    "symbol": "SONY",
+    "name_zh": "索尼",
+    "aliases": []
+  },
+  {
+    "symbol": "UBS",
+    "name_zh": "瑞银集团",
+    "aliases": []
+  },
+  {
+    "symbol": "LMT",
+    "name_zh": "洛克希德马丁",
+    "aliases": []
+  },
+  {
+    "symbol": "ETN",
+    "name_zh": "伊顿",
+    "aliases": []
+  },
+  {
+    "symbol": "T",
+    "name_zh": "美国电话电报(AT&T)",
+    "aliases": []
+  },
+  {
+    "symbol": "VRTX",
+    "name_zh": "福泰制药",
+    "aliases": []
+  },
+  {
+    "symbol": "UL",
+    "name_zh": "联合利华(英国)",
+    "aliases": []
+  },
+  {
+    "symbol": "STX",
+    "name_zh": "希捷科技",
+    "aliases": []
+  },
+  {
+    "symbol": "BA",
+    "name_zh": "波音",
+    "aliases": []
+  },
+  {
+    "symbol": "CB",
+    "name_zh": "安达保险",
+    "aliases": []
+  },
+  {
+    "symbol": "SPGI",
+    "name_zh": "标普全球",
+    "aliases": []
+  },
+  {
+    "symbol": "UBER",
+    "name_zh": "优步",
+    "aliases": []
+  },
+  {
+    "symbol": "PGR",
+    "name_zh": "前进保险",
+    "aliases": []
+  },
+  {
+    "symbol": "BBVA",
+    "name_zh": "西班牙毕尔巴鄂比斯开银行(ADR)",
+    "aliases": []
+  },
+  {
+    "symbol": "BTI",
+    "name_zh": "英美烟草",
+    "aliases": []
+  },
+  {
+    "symbol": "WDC",
+    "name_zh": "西部数据",
+    "aliases": []
+  },
+  {
+    "symbol": "MO",
+    "name_zh": "奥驰亚集团",
+    "aliases": []
+  },
+  {
+    "symbol": "BMY",
+    "name_zh": "百时美施贵宝",
+    "aliases": []
+  },
+  {
+    "symbol": "BP",
+    "name_zh": "英国石油",
+    "aliases": []
+  },
+  {
+    "symbol": "COF",
+    "name_zh": "第一资本金融",
+    "aliases": []
+  },
+  {
+    "symbol": "MDT",
+    "name_zh": "美敦力",
+    "aliases": []
+  },
+  {
+    "symbol": "MPC",
+    "name_zh": "马拉松原油",
+    "aliases": []
+  },
+  {
+    "symbol": "PLD",
+    "name_zh": "安博",
+    "aliases": []
+  },
+  {
+    "symbol": "LOW",
+    "name_zh": "劳氏",
+    "aliases": []
+  },
+  {
+    "symbol": "BMO",
+    "name_zh": "蒙特利尔银行",
+    "aliases": []
+  },
+  {
+    "symbol": "MFG",
+    "name_zh": "瑞穗金融",
+    "aliases": []
+  },
+  {
+    "symbol": "PDD",
+    "name_zh": "拼多多",
+    "aliases": []
+  },
+  {
+    "symbol": "ADP",
+    "name_zh": "自动数据处理",
+    "aliases": []
+  },
+  {
+    "symbol": "PH",
+    "name_zh": "派克汉尼汾",
+    "aliases": []
+  },
+  {
+    "symbol": "SBUX",
+    "name_zh": "星巴克",
+    "aliases": []
+  },
+  {
+    "symbol": "MCK",
+    "name_zh": "麦克森",
+    "aliases": []
+  },
+  {
+    "symbol": "HDB",
+    "name_zh": "HDFC银行",
+    "aliases": []
+  },
+  {
+    "symbol": "BNS",
+    "name_zh": "加拿大丰业银行",
+    "aliases": []
+  },
+  {
+    "symbol": "SYK",
+    "name_zh": "史赛克",
+    "aliases": []
+  },
+  {
+    "symbol": "NEM",
+    "name_zh": "纽蒙特",
+    "aliases": []
+  },
+  {
+    "symbol": "CVS",
+    "name_zh": "西维斯健康",
+    "aliases": []
+  },
+  {
+    "symbol": "NOW",
+    "name_zh": "现在服务公司",
+    "aliases": []
+  },
+  {
+    "symbol": "CNQ",
+    "name_zh": "加拿大自然资源",
+    "aliases": []
+  },
+  {
+    "symbol": "GLW",
+    "name_zh": "康宁",
+    "aliases": []
+  },
+  {
+    "symbol": "ENB",
+    "name_zh": "恩桥",
+    "aliases": []
+  },
+  {
+    "symbol": "SNY",
+    "name_zh": "赛诺菲",
+    "aliases": []
+  },
+  {
+    "symbol": "VLO",
+    "name_zh": "瓦莱罗能源",
+    "aliases": []
+  },
+  {
+    "symbol": "CME",
+    "name_zh": "芝加哥商业交易所",
+    "aliases": []
+  },
+  {
+    "symbol": "MAR",
+    "name_zh": "万豪国际",
+    "aliases": []
+  },
+  {
+    "symbol": "SO",
+    "name_zh": "南方电力",
+    "aliases": []
+  },
+  {
+    "symbol": "IBN",
+    "name_zh": "印度工业信贷投资银行",
+    "aliases": []
+  },
+  {
+    "symbol": "CM",
+    "name_zh": "加拿大帝国商业银行",
+    "aliases": []
+  },
+  {
+    "symbol": "RIO",
+    "name_zh": "力拓",
+    "aliases": []
+  },
+  {
+    "symbol": "ABNB",
+    "name_zh": "爱彼迎",
+    "aliases": []
+  },
+  {
+    "symbol": "GD",
+    "name_zh": "通用动力",
+    "aliases": []
+  },
+  {
+    "symbol": "BNY",
+    "name_zh": "纽约梅隆银行",
+    "aliases": []
+  },
+  {
+    "symbol": "EQIX",
+    "name_zh": "易昆尼克斯",
+    "aliases": []
+  },
+  {
+    "symbol": "REGN",
+    "name_zh": "再生元制药",
+    "aliases": []
+  },
+  {
+    "symbol": "GSK",
+    "name_zh": "葛兰素史克",
+    "aliases": []
+  },
+  {
+    "symbol": "ADBE",
+    "name_zh": "奥多比",
+    "aliases": []
+  },
+  {
+    "symbol": "DUK",
+    "name_zh": "杜克能源",
+    "aliases": []
+  },
+  {
+    "symbol": "MRSH",
+    "name_zh": "达信",
+    "aliases": []
+  },
+  {
+    "symbol": "FTNT",
+    "name_zh": "防特网",
+    "aliases": []
+  },
+  {
+    "symbol": "ICE",
+    "name_zh": "洲际交易所",
+    "aliases": []
+  },
+  {
+    "symbol": "CSX",
+    "name_zh": "CSX运输",
+    "aliases": []
+  },
+  {
+    "symbol": "MNST",
+    "name_zh": "怪物饮料",
+    "aliases": []
+  },
+  {
+    "symbol": "USB",
+    "name_zh": "美国合众银行",
+    "aliases": []
+  },
+  {
+    "symbol": "EMR",
+    "name_zh": "艾默生电气",
+    "aliases": []
+  },
+  {
+    "symbol": "PWR",
+    "name_zh": "广达服务",
+    "aliases": []
+  },
+  {
+    "symbol": "INTU",
+    "name_zh": "财捷",
+    "aliases": []
+  },
+  {
+    "symbol": "RACE",
+    "name_zh": "法拉利",
+    "aliases": []
+  },
+  {
+    "symbol": "WM",
+    "name_zh": "美国废物管理",
+    "aliases": []
+  },
+  {
+    "symbol": "UPS",
+    "name_zh": "联合包裹服务",
+    "aliases": []
+  },
+  {
+    "symbol": "MMM",
+    "name_zh": "3M公司",
+    "aliases": []
+  },
+  {
+    "symbol": "BX",
+    "name_zh": "黑石集团",
+    "aliases": []
+  },
+  {
+    "symbol": "BN",
+    "name_zh": "布鲁克菲尔德",
+    "aliases": []
+  },
+  {
+    "symbol": "PNC",
+    "name_zh": "PNC金融服务集团",
+    "aliases": []
+  },
+  {
+    "symbol": "ASX",
+    "name_zh": "日月光半导体",
+    "aliases": []
+  },
+  {
+    "symbol": "FCX",
+    "name_zh": "自由港麦克莫兰",
+    "aliases": []
+  },
+  {
+    "symbol": "CDNS",
+    "name_zh": "铿腾电子",
+    "aliases": []
+  },
+  {
+    "symbol": "SNPS",
+    "name_zh": "新思科技",
+    "aliases": []
+  },
+  {
+    "symbol": "TT",
+    "name_zh": "特灵科技",
+    "aliases": []
+  },
+  {
+    "symbol": "SU",
+    "name_zh": "森科能源",
+    "aliases": []
+  },
+  {
+    "symbol": "ING",
+    "name_zh": "荷兰国际",
+    "aliases": []
+  },
+  {
+    "symbol": "WMB",
+    "name_zh": "威廉姆斯",
+    "aliases": []
+  },
+  {
+    "symbol": "JCI",
+    "name_zh": "江森自控",
+    "aliases": []
+  },
+  {
+    "symbol": "CTAS",
+    "name_zh": "信达思",
+    "aliases": []
+  },
+  {
+    "symbol": "MCO",
+    "name_zh": "穆迪",
+    "aliases": []
+  },
+  {
+    "symbol": "AMT",
+    "name_zh": "美国电塔",
+    "aliases": []
+  },
+  {
+    "symbol": "ECL",
+    "name_zh": "艺康",
+    "aliases": []
+  },
+  {
+    "symbol": "RCL",
+    "name_zh": "皇家加勒比邮轮",
+    "aliases": []
+  },
+  {
+    "symbol": "E",
+    "name_zh": "埃尼石油",
+    "aliases": []
+  },
+  {
+    "symbol": "AEM",
+    "name_zh": "伊格尔矿业",
+    "aliases": []
+  },
+  {
+    "symbol": "NGG",
+    "name_zh": "英国国家电网",
+    "aliases": []
+  },
+  {
+    "symbol": "SHW",
+    "name_zh": "宣伟",
+    "aliases": []
+  },
+  {
+    "symbol": "EOG",
+    "name_zh": "EOG能源",
+    "aliases": []
+  },
+  {
+    "symbol": "CMCSA",
+    "name_zh": "康卡斯特",
+    "aliases": []
+  },
+  {
+    "symbol": "MDLZ",
+    "name_zh": "亿滋国际",
+    "aliases": []
+  },
+  {
+    "symbol": "BAM",
+    "name_zh": "布鲁克菲尔德资产管理",
+    "aliases": []
+  },
+  {
+    "symbol": "ITW",
+    "name_zh": "伊利诺伊机械",
+    "aliases": []
+  },
+  {
+    "symbol": "MSI",
+    "name_zh": "摩托罗拉解决方案",
+    "aliases": []
+  },
+  {
+    "symbol": "HLT",
+    "name_zh": "希尔顿酒店",
+    "aliases": []
+  },
+  {
+    "symbol": "TRV",
+    "name_zh": "旅行者保险",
+    "aliases": []
+  },
+  {
+    "symbol": "PBR",
+    "name_zh": "巴西石油",
+    "aliases": []
+  },
+  {
+    "symbol": "CP",
+    "name_zh": "加拿大太平洋堪萨斯城",
+    "aliases": []
+  },
+  {
+    "symbol": "SLB",
+    "name_zh": "斯伦贝谢",
+    "aliases": []
+  },
+  {
+    "symbol": "NOC",
+    "name_zh": "诺斯罗普-格鲁曼",
+    "aliases": []
+  },
+  {
+    "symbol": "NSC",
+    "name_zh": "诺福克南方",
+    "aliases": []
+  },
+  {
+    "symbol": "CI",
+    "name_zh": "信诺",
+    "aliases": []
+  },
+  {
+    "symbol": "CL",
+    "name_zh": "高露洁",
+    "aliases": []
+  },
+  {
+    "symbol": "BCS",
+    "name_zh": "巴克莱",
+    "aliases": []
+  },
+  {
+    "symbol": "GM",
+    "name_zh": "通用汽车",
+    "aliases": []
+  },
+  {
+    "symbol": "FDX",
+    "name_zh": "联邦快递",
+    "aliases": []
+  },
+  {
+    "symbol": "MFC",
+    "name_zh": "宏利金融",
+    "aliases": []
+  },
+  {
+    "symbol": "RSG",
+    "name_zh": "共和废品处理",
+    "aliases": []
+  },
+  {
+    "symbol": "NTES",
+    "name_zh": "网易",
+    "aliases": []
+  },
+  {
+    "symbol": "URI",
+    "name_zh": "联合租赁",
+    "aliases": []
+  },
+  {
+    "symbol": "KMI",
+    "name_zh": "金德摩根",
+    "aliases": []
+  },
+  {
+    "symbol": "AMX",
+    "name_zh": "美洲移动",
+    "aliases": []
+  },
+  {
+    "symbol": "LYG",
+    "name_zh": "劳埃德银行(ADR)",
+    "aliases": []
+  },
+  {
+    "symbol": "ROST",
+    "name_zh": "罗斯百货",
+    "aliases": []
+  },
+  {
+    "symbol": "ORLY",
+    "name_zh": "奥莱利",
+    "aliases": []
+  },
+  {
+    "symbol": "APO",
+    "name_zh": "阿波罗全球管理",
+    "aliases": []
+  },
+  {
+    "symbol": "HPE",
+    "name_zh": "慧与",
+    "aliases": []
+  },
+  {
+    "symbol": "SPG",
+    "name_zh": "西蒙地产",
+    "aliases": []
+  },
+  {
+    "symbol": "AJG",
+    "name_zh": "安睿嘉尔",
+    "aliases": []
+  },
+  {
+    "symbol": "HON",
+    "name_zh": "霍尼韦尔",
+    "aliases": []
+  },
+  {
+    "symbol": "APD",
+    "name_zh": "空气化工",
+    "aliases": []
+  },
+  {
+    "symbol": "TGT",
+    "name_zh": "塔吉特",
+    "aliases": []
+  },
+  {
+    "symbol": "CNI",
+    "name_zh": "加拿大国家铁路",
+    "aliases": []
+  },
+  {
+    "symbol": "AEP",
+    "name_zh": "美国电力",
+    "aliases": []
+  },
+  {
+    "symbol": "CMI",
+    "name_zh": "康明斯",
+    "aliases": []
+  },
+  {
+    "symbol": "AON",
+    "name_zh": "怡安保险",
+    "aliases": []
+  },
+  {
+    "symbol": "NXPI",
+    "name_zh": "恩智浦半导体",
+    "aliases": []
+  },
+  {
+    "symbol": "IMO",
+    "name_zh": "帝国石油",
+    "aliases": []
+  },
+  {
+    "symbol": "TAK",
+    "name_zh": "武田制药",
+    "aliases": []
+  },
+  {
+    "symbol": "DLR",
+    "name_zh": "数字房地产信托",
+    "aliases": []
+  },
+  {
+    "symbol": "ALL",
+    "name_zh": "好事达保险",
+    "aliases": []
+  },
+  {
+    "symbol": "NUE",
+    "name_zh": "纽柯钢铁",
+    "aliases": []
+  },
+  {
+    "symbol": "GWW",
+    "name_zh": "固安捷",
+    "aliases": []
+  },
+  {
+    "symbol": "CRH",
+    "name_zh": "CRH水泥",
+    "aliases": []
+  },
+  {
+    "symbol": "MET",
+    "name_zh": "大都会人寿",
+    "aliases": []
+  },
+  {
+    "symbol": "DB",
+    "name_zh": "德意志银行",
+    "aliases": []
+  },
+  {
+    "symbol": "BSX",
+    "name_zh": "波士顿科学",
+    "aliases": []
+  },
+  {
+    "symbol": "TEL",
+    "name_zh": "泰科电子",
+    "aliases": []
+  },
+  {
+    "symbol": "B",
+    "name_zh": "巴里克矿业",
+    "aliases": []
+  },
+  {
+    "symbol": "OXY",
+    "name_zh": "西方石油",
+    "aliases": []
+  },
+  {
+    "symbol": "AFL",
+    "name_zh": "美国家庭人寿保险",
+    "aliases": []
+  },
+  {
+    "symbol": "PSA",
+    "name_zh": "大众仓储",
+    "aliases": []
+  },
+  {
+    "symbol": "FAST",
+    "name_zh": "快扣",
+    "aliases": []
+  },
+  {
+    "symbol": "NDAQ",
+    "name_zh": "纳斯达克",
+    "aliases": []
+  }
+]
