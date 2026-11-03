@@ -6,6 +6,10 @@ from sentinel.storage import Database
 from .conftest import NOW, add_decision, add_downstream, query
 
 
+def test_portfolio_unit_fixture_migrates_only_its_owned_prerequisites(db: Database) -> None:
+    assert db.schema_version == 3
+
+
 def test_archive_keeps_versions_and_decisions(service: PortfolioService, db: Database) -> None:
     add_downstream(db)
     first = service.create_thesis("us:ZZAR", "First", None)

@@ -23,7 +23,13 @@ def isolated(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
 def db(tmp_path: Path) -> Iterator[Database]:
     database = Database(tmp_path / "portfolio.duckdb")
     database.open()
-    database.migrate()
+    # 单元 fixture 故意补造缺失的下游表；新交付迁移不应改变这些前置假设。
+    migrations = tmp_path / "portfolio-migrations"
+    migrations.mkdir()
+    for source in (ROOT / "core/sentinel/storage/migrations").glob("*.sql"):
+        if int(source.name.split("_", 1)[0]) <= 3:
+            (migrations / source.name).write_bytes(source.read_bytes())
+    database.migrate(migrations)
     with database.write() as tx:
         tx.executemany(
             "INSERT INTO instrument VALUES (?, ?, ?, 'NASDAQ', ?, NULL, ?, NULL, ?, 'demo', ?)",

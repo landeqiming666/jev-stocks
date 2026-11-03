@@ -5,7 +5,8 @@ phase: mvp0
 platform: shared
 lane: data
 deps: [C-03, D-01, G1-US]
-size: M
+size: L
+size_approval: cr/N10-01-execution-clarifications.md
 owns: [core/sentinel/markets/prices/, core/sentinel/storage/migrations/005_prices.sql, resources/calendars/, core/tests/unit/markets/prices/, core/tests/fixtures/prices/]
 appends: []
 stubs: []

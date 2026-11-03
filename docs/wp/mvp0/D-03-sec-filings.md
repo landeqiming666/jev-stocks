@@ -5,7 +5,8 @@ phase: mvp0
 platform: shared
 lane: data
 deps: [C-03, D-01, G1-US]
-size: M
+size: L
+size_approval: cr/N10-01-execution-clarifications.md
 owns: [core/sentinel/markets/sec/, core/sentinel/storage/migrations/004_filings.sql, core/tests/unit/markets/sec/, core/tests/fixtures/sec/]
 appends: []
 stubs: []
@@ -108,7 +109,7 @@ class SecFilingsService:
     def __init__(self, client: SecFilingsClient, repo: SecFilingsRepository, clock: Callable[[], datetime]) -> None: ...
     def fetch_for_instrument(self, instrument: Instrument, *, since: datetime, until: datetime) -> list[FetchedEvent]: ...
 ```
-`parse_submissions` 对缺少 `filings.recent` 或数组长度不一致抛 `SourceError("SOURCE_UNAVAILABLE", reason="SEC_SCHEMA")`；`parse_index` 在找不到表格时返回 `[]`，由调用方退回主文档；`fetch_for_instrument` 对窗口内每个披露返回**按 `published_at` 升序的事件列表**：已入库且 `content_status` 为 `full_text`/`title_only` 的事件直接复用已存正文（不重复下载），其余抓取并抽取正文；每个事件在自己的事务中 upsert `event_doc`/`event_file`。这样 P-02 可以在重试时为已有事件补 `event_passage`。`submissions` 失败时原样抛错，调用方 P-02 把该标的记为失败且不推进水位线。
+`parse_submissions` 对缺少 `filings.recent` 或数组长度不一致抛 `SourceError("SOURCE_UNAVAILABLE", reason="SEC_SCHEMA")`；`parse_index` 在找不到表格时返回 `[]`，由调用方退回主文档；`fetch_for_instrument` 对窗口内每个披露返回**按 `published_at` 升序的事件列表**：已入库且 `content_status` 为 `full_text`/`title_only` 且没有 failed 文件时直接复用已存正文（不重复下载）。其余重新取索引，仅下载缺失或失败文件，复用身份一致的 extracted/empty 成功文件；每个事件在自己的事务中 upsert `event_doc`/`event_file`。`submissions` 失败时原样抛错，调用方 P-02 把该标的记为失败且不推进水位线。
 
 每次 SEC 请求即时调用 `email_provider`，复用 D-02 的共享邮箱规则并发送 `Sentinel/<版本> <邮箱>`；缺少或无效邮箱时抛 `UserError("CONFIG_REQUIRED", params={"missing":["secEmail"]})`，不发请求。组合根注入动态读取设置的 provider，客户端不导入 settings。解析器使用已锁定 selectolax 的 Lexbor 后端，不能回退到已弃用的 Modest。
 
@@ -137,8 +138,8 @@ class SecFilingsService:
 5. `select_files`：主文档合成 `seq=0` 的 `IndexRow`；索引中同文件名也强制为 `seq=0`；取 `EX-99` 前 3 个，其余作为 `skipped` 返回。
 6. `html_to_text`：解析失败或空输入返回 `""`；删除 `script/style/head/noscript` 与注释；`p/div/br/li/tr/h1-h6/table/section` 前后加 `\n`；`td/th` 之间加 `" | "`；`ix:*` 只保留文本；`get_text` 后用 NFC 归一、删控制字符、`\xa0` 变空格、连续空白折叠；截到 200,000 字符并 `warn`。
 7. 标题：8-K 拆分 `items` 查 `ITEM_NAMES`，未知写 `Item {编号}`，用 `"；"` 连接加 `"8-K: "`；6-K 取首个 `EX-99.1` 的首个非空行，截 120 字符。
-8. 状态：全部为空 → `title_only`；至少一个非空 → `full_text`；网络异常且无可写文件 → `fetch_failed`；`skipped` 文件也写入。
-9. 一个事务内 upsert `event_doc`，按 `event_id` 重写 `event_file`；已有 `full_text` 的事件直接跳过。
+8. 状态：索引网络失败、索引身份冲突或任一选中文件 failed → `fetch_failed`（即使主文档有正文也保留该失败状态和已经成功的正文）；没有抓取失败且至少一个非空 → `full_text`；正常全部为空 → `title_only`。skipped 文件也写入，但不会触发失败。旧部分 full_text 且有 failed 文件同样重试；成功后恢复终态，不覆盖已经被 passage 引用的成功正文。
+9. 一个事务内 upsert `event_doc`，保留既有 `event_file` 的永久身份，不删除重建。同键只更新非键列；文件名、类型或 URL 身份变化，或正文/标题变化且已有对应 passage 引用时返回 CONFLICT，整事件回滚。失败附件或索引未完成的事件不是完整缓存，必须按 N10-01 的重试规则补齐，已有成功且被引用的正文不得覆盖。
 
 ## 7. 错误与边界情况
 
