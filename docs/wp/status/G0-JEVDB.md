@@ -30,15 +30,46 @@
 | 原 Python wheel 前后哈希 | 完全相同，未替换 wheel |
 | 当前无 key 的真实探针 | build/load/local PASS，call BLOCKED / CONFIG_REQUIRED，exit 2 |
 | 非 NULL 语义函数及真实 401/403 | BLOCKED / 未验证；没有远端请求 |
-| 专项 core unittest | 31 项 PASS |
-| 专项 core pytest | 31 项 PASS，22 subtests PASS，0 skip |
-| 脚本全量 core pytest | 229 项 PASS，4304 subtests PASS，0 skip |
+| 专项 core unittest | 37 项 PASS |
+| 专项 core pytest | 37 项 PASS，35 subtests PASS，0 skip |
+| 脚本全量 core pytest | 235 项 PASS，4317 subtests PASS，0 skip |
 | 自有脚本 Ruff lint / format，strict doccheck | PASS |
 | 完整 scripts/check.sh | exit 0；15 PASS / 0 FAIL / 2 未就绪或 opt-in 步骤 SKIP |
 | Rust cargo test --locked -- --test-threads=1 | 3 + 28 = 31 项 PASS，0 ignored |
 
 源码、扩展、下载、lock 和所有运行日志均在被忽略的 `.dev-data/jevdb/`，不提交。
 报告不含 key、Authorization 或披露/响应正文。统计只输出已核实字段的有限数字与 NULL。
+
+## 主审补丁：子进程环境与 gateway 端点
+
+基于已验收的 `4bbd6d2f88ce0902b9fe02728ffb1afc7633a5c4` 补两项主审发现。
+本轮仅改 probe、probe tests 与本状态；没有另下载、重建、改 wheel 或依赖锁。
+
+- `isolated_probe(path, env)` 仅传递 `JEV_API_KEY`、`SENTINEL_OFFLINE`、`SSL_CERT_FILE`、
+  `JEV_ENDPOINT` 配置。worker 在 spawn 子进程且 import DuckDB 之前，仅把前三项写入
+  子进程环境；映射中缺省的项移除继承值。`JEV_ENDPOINT` 只作 SQL 配置，不覆盖进程环境。
+  worker 拒绝在父进程直接执行，父环境不变，无关变量不按映射覆盖。
+- 原生 C++ 读取 getenv 的时机已核实；新增真实 spawn + libc getenv 单测，父 key 与映射
+  不同、父 offline/CA 与映射不同以及映射缺项的情况均通过；全父环境快照保持相同。
+  DuckDB 连接/模型结果在该单测中是明确的 fake，没有发模型请求或伪造真实认证结果。
+- `src/jev_client.cpp:197–205` 会在前缀后追加 systemone，`:217` 读取 SSL_CERT_FILE。
+  完整 HTTPS `/v1/systemone` 配置规范化成同一 host/port 的 `/v1/` 前缀，以
+  `con.execute('SET jevdb_endpoint = ?', [prefix])` 绑定，并在 CREATE SECRET / 模型查询前执行。
+  没有配置时保留官方端点；有 gateway 配置时不会把 gateway key 发向官方默认。
+- 拒绝 userinfo、query（含空 query）、fragment、非 HTTPS、控制/空白字符、非法 host/port
+  和不匹配的完整路径。报错只给 INVALID_ARGUMENT 和固定文案；端点绑定异常也不回显 URL
+  或 key。缺 key / offline 优先运行本地核实并 BLOCKED，不验证或请求远端端点。
+- 新回归先红后绿：`logs/endpoint-child-env-red.log`。补丁后专项 37 项通过，包含 6 个新增
+  环境/Endpoint 用例和 13 个非法 URL 子例。真实 30 秒隔离进程绑定设置成功，NULL 短路
+  与 requests=0 见 `logs/endpoint-binding-local.log`。
+- 原 d9f3... 产物再次 LOAD：9 ms；overlap 三值、NULL、32 stats 均通过，请求/重试/token
+  均 0，call BLOCKED / CONFIG_REQUIRED，exit 2。见 `report-endpoint-child-env.json` 和
+  `logs/probe-endpoint-child-env.log`。扩展 SHA 与 wheel SHA 均与原值完全相同。
+
+本轮完整门禁 `logs/full-check-endpoint-child-env.log`：15 PASS / 0 FAIL / 原两个条件 SKIP；
+脚本 235 项、4317 subtests、core 1267 项、web lint/types/test、Rust fmt/clippy 全通过。
+专项 `logs/endpoint-child-env-tests.log` / `logs/unittest-endpoint-child-env.log` 均通过。
+Ruff lint / format 与 strict doccheck 通过，临时 node_modules 链接已移除。
 
 ## 已批准 CR 与前置
 
@@ -130,8 +161,8 @@ node_modules，结束后移除临时链接。第一次 Rust 并行复验曾出�
 最终完整门禁的 core pytest 1267 项 PASS，web lint/types/test（1 项）PASS，
 Rust fmt/clippy PASS；strict doccheck 0 错误、0 警告。
 
-实现加测试实际 **1156 行**，包含空行：probe 352、build driver 383、sh 8、ps1 2、
-build tests 184、probe tests 227；实现 745 行、测试 411 行。pin 与说明/状态文档另计。
+实现加测试实际 **1371 行**，包含空行：probe 416、build driver 383、sh 8、ps1 2、
+build tests 184、probe tests 378；实现 809 行、测试 562 行。pin 与说明/状态文档另计。
 规模 L / 约 1500 行已批准，没有删测试压缩规模。
 
 ## 安全与下游边界

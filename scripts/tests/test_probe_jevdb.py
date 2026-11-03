@@ -1,11 +1,15 @@
 from __future__ import annotations
 
+import ctypes
 import json
+import multiprocessing
+import os
 import sys
 import tempfile
 import time
 import unittest
 from pathlib import Path
+from types import SimpleNamespace
 from unittest.mock import patch
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
@@ -47,6 +51,25 @@ class FakeConnection:
 
     def close(self):
         self.closed = True
+
+
+def native_env_worker_fixture(path, env, channel):
+    native = ctypes.CDLL(None)
+    native.getenv.argtypes = [ctypes.c_char_p]
+    native.getenv.restype = ctypes.c_char_p
+
+    def connect(*args, **kwargs):
+        for name in ("JEV_API_KEY", "SENTINEL_OFFLINE", "SSL_CERT_FILE"):
+            actual = native.getenv(name.encode())
+            expected = env.get(name)
+            if actual != (expected.encode() if expected is not None else None):
+                raise ValueError("native child environment does not match caller")
+        if os.environ.get("JEV_UNRELATED_TEST_SETTING") != "parent-only":
+            raise ValueError("unrelated environment was overwritten")
+        return FakeConnection()
+
+    with patch.dict(sys.modules, {"duckdb": SimpleNamespace(__version__="1.4.3", connect=connect)}):
+        probe.worker(path, env, channel)
 
 
 class ProbeTests(unittest.TestCase):
@@ -221,6 +244,134 @@ class ProbeTests(unittest.TestCase):
         report = self.run_fake(FakeConnection(error=error))
         self.assertNotIn("retry_after_sec", report["call"])
         self.assertNotIn(self.env["JEV_API_KEY"], json.dumps(report))
+
+    def test_endpoint_is_normalized_and_bound_before_secret_or_model(self):
+        con = FakeConnection()
+        report = self.run_fake(
+            con, dict(self.env, JEV_ENDPOINT="https://Gateway.example:8443/v1/systemone")
+        )
+        bound = ("SET jevdb_endpoint = ?", ["https://gateway.example:8443/v1/"])
+        self.assertIn(bound, con.calls)
+        self.assertLess(
+            con.calls.index(bound),
+            con.calls.index(("CREATE SECRET jev (TYPE jev, PROVIDER env)", None)),
+        )
+        self.assertEqual(report["call"]["status"], "PASS")
+
+    def test_endpoint_rejects_credentials_query_fragment_and_invalid_hosts(self):
+        for endpoint in (
+            "http://gateway.example/v1/systemone",
+            "https://user:secret@gateway.example/v1/systemone",
+            "https://gateway.example/v1/systemone?key=secret",
+            "https://gateway.example/v1/systemone#secret",
+            "https://gateway.example/v1/",
+            "https://bad_host/v1/systemone",
+            "https://-bad.example/v1/systemone",
+            "https://gateway..example/v1/systemone",
+            "https://256.0.0.1/v1/systemone",
+            "https://gateway.example:70000/v1/systemone",
+            "https://gateway.example:/v1/systemone",
+            "https://gateway.example/v1/systemone\n",
+            "https://gateway.example/v1/systemone?",
+        ):
+            con = FakeConnection()
+            report = self.run_fake(con, dict(self.env, JEV_ENDPOINT=endpoint))
+            with self.subTest(endpoint=endpoint):
+                self.assertEqual(report["call"]["status"], "FAILED")
+                self.assertEqual(report["call"]["error_code"], "INVALID_ARGUMENT")
+                self.assertNotIn(endpoint, json.dumps(report))
+                self.assertFalse(
+                    any(
+                        sql == probe.PROBABILITY_SQL or sql.startswith("CREATE SECRET")
+                        for sql, _ in con.calls
+                    )
+                )
+                self.assertTrue(con.closed)
+
+    def test_missing_key_still_runs_local_even_with_bad_endpoint(self):
+        con = FakeConnection()
+        report = self.run_fake(
+            con, {"JEV_ENDPOINT": "https://user:secret@gateway.example/v1/systemone"}
+        )
+        self.assertEqual(report["load"]["status"], "PASS")
+        self.assertEqual(report["local"]["status"], "PASS")
+        self.assertEqual(report["call"]["status"], "BLOCKED")
+        self.assertNotIn("secret@gateway", json.dumps(report))
+
+    def test_bound_endpoint_exception_does_not_echo_url_or_key(self):
+        con = FakeConnection()
+        original = con.execute
+        endpoint = "https://secret-gateway.example/v1/systemone"
+
+        def execute(sql, params=None):
+            if sql == "SET jevdb_endpoint = ?":
+                raise ValueError(endpoint + self.env["JEV_API_KEY"])
+            return original(sql, params)
+
+        con.execute = execute
+        report = self.run_fake(con, dict(self.env, JEV_ENDPOINT=endpoint))
+        self.assertEqual(report["call"]["status"], "FAILED")
+        self.assertNotIn(endpoint, json.dumps(report))
+        self.assertNotIn(self.env["JEV_API_KEY"], json.dumps(report))
+
+    def run_native_env_child(self, env):
+        context = multiprocessing.get_context("spawn")
+        parent, child = context.Pipe(duplex=False)
+        process = context.Process(target=native_env_worker_fixture, args=(self.path, env, child))
+        try:
+            process.start()
+            child.close()
+            self.assertTrue(parent.poll(10), "child did not respond")
+            message = parent.recv()
+            if message == "loaded":
+                self.assertTrue(parent.poll(10), "child did not finish")
+                message = parent.recv()
+            return message
+        finally:
+            process.join(timeout=1)
+            if process.is_alive():
+                process.terminate()
+                process.join(timeout=1)
+            process.close()
+            parent.close()
+            child.close()
+
+    def test_caller_mapping_overrides_parent_key_offline_and_ca_only_in_child(self):
+        inherited = {
+            "JEV_API_KEY": "PARENT-KEY",
+            "SENTINEL_OFFLINE": "1",
+            "SSL_CERT_FILE": "/parent-ca.pem",
+            "JEV_UNRELATED_TEST_SETTING": "parent-only",
+        }
+        mapping = dict(
+            self.env,
+            SENTINEL_OFFLINE="0",
+            SSL_CERT_FILE="/mapping-ca.pem",
+            JEV_UNRELATED_TEST_SETTING="ignored",
+        )
+        with patch.dict(os.environ, inherited):
+            before = dict(os.environ)
+            report = self.run_native_env_child(mapping)
+            self.assertEqual(os.environ, before)
+        self.assertEqual(report["call"]["status"], "PASS")
+        self.assertNotIn("PARENT-KEY", json.dumps(report))
+        self.assertNotIn(self.env["JEV_API_KEY"], json.dumps(report))
+
+    def test_absent_mapping_removes_inherited_child_key_offline_and_ca(self):
+        with patch.dict(
+            os.environ,
+            {
+                "JEV_API_KEY": "PARENT-KEY",
+                "SENTINEL_OFFLINE": "1",
+                "SSL_CERT_FILE": "/parent-ca.pem",
+                "JEV_UNRELATED_TEST_SETTING": "parent-only",
+            },
+        ):
+            before = dict(os.environ)
+            report = self.run_native_env_child({})
+            self.assertEqual(os.environ, before)
+        self.assertEqual(report["load"]["status"], "PASS")
+        self.assertEqual(report["call"]["error_code"], "CONFIG_REQUIRED")
 
 
 if __name__ == "__main__":

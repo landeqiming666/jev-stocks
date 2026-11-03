@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import argparse
+import ipaddress
 import json
 import math
 import multiprocessing
@@ -13,6 +14,7 @@ from collections.abc import Mapping, Sequence
 from contextlib import suppress
 from pathlib import Path
 from typing import Callable
+from urllib.parse import urlsplit
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "vendors" / "jevdb"))
 from build import ROOT, sha256_file, valid_path, write_lock  # noqa: E402
@@ -20,6 +22,9 @@ from build import ROOT, sha256_file, valid_path, write_lock  # noqa: E402
 DUCKDB_VERSION = "1.4.3"
 LOAD_TIMEOUT_SEC = 30
 CALL_TIMEOUT_SEC = 450
+DEFAULT_ENDPOINT = "https://api.typesafe.ai/v1/systemone"
+CHILD_ENV_KEYS = ("JEV_API_KEY", "SENTINEL_OFFLINE", "SSL_CERT_FILE")
+PROBE_CONFIG_KEYS = (*CHILD_ENV_KEYS, "JEV_ENDPOINT")
 SETTINGS_SQL = (
     "SET jevdb_backend = 'jev'",
     "SET jevdb_model = 'jev-1.14.0'",
@@ -141,6 +146,46 @@ def read_stats(con) -> dict:
     }
 
 
+def endpoint_prefix(endpoint: str) -> str:
+    try:
+        if (
+            not isinstance(endpoint, str)
+            or len(endpoint) > 2048
+            or any(c.isspace() or ord(c) < 32 or ord(c) == 127 for c in endpoint)
+            or "?" in endpoint
+            or "#" in endpoint
+        ):
+            raise ValueError()
+        parts = urlsplit(endpoint)
+        host = parts.hostname
+        port = parts.port
+        if (
+            parts.scheme != "https"
+            or not host
+            or len(host) > 253
+            or "@" in parts.netloc
+            or parts.netloc.endswith(":")
+            or parts.path != "/v1/systemone"
+            or port is not None
+            and not 1 <= port <= 65535
+        ):
+            raise ValueError()
+        if ":" in host:
+            if "%" in host:
+                raise ValueError()
+            host = f"[{ipaddress.IPv6Address(host).compressed}]"
+        elif all(label.isdigit() for label in host.split(".")):
+            host = str(ipaddress.IPv4Address(host))
+        elif any(
+            not re.fullmatch(r"(?!-)[a-zA-Z0-9-]{1,63}(?<!-)", label) for label in host.split(".")
+        ):
+            raise ValueError()
+        authority = host if port is None else f"{host}:{port}"
+        return f"https://{authority}/v1/"
+    except (ValueError, TypeError):
+        raise ValueError("invalid JEV endpoint") from None
+
+
 def run_probe(
     extension_path: Path,
     *,
@@ -211,6 +256,16 @@ def run_probe(
                 "reason": "offline; no remote query executed",
             }
             return report
+        try:
+            endpoint = endpoint_prefix(env.get("JEV_ENDPOINT", DEFAULT_ENDPOINT))
+        except ValueError:
+            report["call"] = {
+                "status": "FAILED",
+                "error_code": "INVALID_ARGUMENT",
+                "detail": "invalid JEV endpoint",
+            }
+            return report
+        con.execute("SET jevdb_endpoint = ?", [endpoint])
         con.execute("CREATE SECRET jev (TYPE jev, PROVIDER env)")
         thesis = "Zenith Arc Robotics keeps research spending above 15 percent of revenue."
         document = "Zenith Arc Robotics reports research spending at 18 percent of revenue."
@@ -267,6 +322,14 @@ def exit_code(report: dict) -> int:
 
 def worker(path: Path, env: dict, channel) -> None:
     try:
+        if multiprocessing.parent_process() is None:
+            raise ValueError("worker requires an isolated child")
+        # 映射缺省值也必须移除继承值，防止 native getenv 读取父进程另一把 key。
+        for name in CHILD_ENV_KEYS:
+            if name in env:
+                os.environ[name] = env[name]
+            else:
+                os.environ.pop(name, None)
         import duckdb
 
         if duckdb.__version__ != DUCKDB_VERSION:
@@ -294,7 +357,8 @@ def isolated_probe(path: Path, env: dict) -> dict:
     # 独立进程保证 connect/LOAD 卡死或 native 崩溃也能在 30 秒内退出。
     context = multiprocessing.get_context("spawn")
     parent, child = context.Pipe(duplex=False)
-    process = context.Process(target=worker, args=(path, env, child), daemon=True)
+    config = {name: env[name] for name in PROBE_CONFIG_KEYS if name in env}
+    process = context.Process(target=worker, args=(path, config, child), daemon=True)
     report = initial_report(path)
     loaded = False
     try:
