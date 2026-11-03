@@ -108,3 +108,7 @@ semantic 的模型适配层可以静态调用 security.redact 注册和清理密
 RefreshFailure 的原三个字段保持兼容，可增加可选 retry_after_sec。来源提供有效等待秒数时保留并用 error.RATE_LIMITED 格式化；未知秒数时使用主 agent 注册的 `prices.rate_limited` 固定文案，不猜秒数、不漏异常。wire 仍仅 instrumentId 与 error{code,message}。双来源 429 和未知 Retry-After 必须通过真实公共文案目录及 JSON Schema 测试。
 
 腾讯 envelope 必须含 code=0（不能默认缺失为 0）；港股额外 action 对象与 G1 的实际六个键完全一致，不以任意子集冒充已核实结构。普通无第七字段的六列价格行不受影响。
+
+## 17. U-01 与 PageFrame 抽屉不重复占位
+
+原型的抽屉根同时承担 l-drawer 布局和 c-drawer 内容，React 的 U-00 已由 PageFrame 承担 l-drawer 第三列。批准 U-01 在覆盖模式 portal 到 body（固定 topbar/statusbar 之间、右侧 400px），推开模式 inline 到 PageFrame aside 插槽，只渲染 c-drawer 内容/dialog；不再套 l-drawer，也不让推开内容 portal 到 body 留空列。组件浏览器验收要真实组合 PageFrame 与 Drawer，两种模式都证明内容可见、几何正确与焦点语义符合要求；不用修改 U-00 或原型。

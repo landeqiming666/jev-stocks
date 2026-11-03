@@ -135,7 +135,7 @@ interface BarListProps { items: {label:string;value:number}[]; label: string; }
 4. `SegmentedControl` 用 `role="radiogroup"`，每项 `role="radio"` 与 `aria-checked`；左右方向键切换并聚焦；禁用项不参与。
 5. `VerdictChip` 映射：推翻/`alert-triangle`/`over`，削弱/`arrow-down`/`weak`，支持/`check`/`hold`，无关/`minus`/`none`，待确认/`help-circle`/`unsure`。
 6. `Table` 只负责 `<table class="c-table">`、`thead`、`tbody`、`tr`；数值列由页面传 `className="c-table__num"`；行悬停色用 `color-mix`，不得写十六进制。
-7. `Drawer` 用 `createPortal` 挂到 `document.body`；打开时记录 `document.activeElement`，聚焦标题；关闭时恢复焦点；覆盖模式 Tab 在首尾循环。
+7. `Drawer` 在 overlay=true 时用 createPortal 挂到 document.body，固定于顶栏与状态栏之间的右侧，宽 400px，遮罩与焦点陷阱启用。overlay=false 时 inline 渲染 c-drawer/dialog 内容到 PageFrame 的 aside 插槽，由 PageFrame 的 l-drawer 承担第三列；不得再造一层 l-drawer 或 body portal，避免重复占位。打开时记录原焦点并聚焦标题；关闭时恢复；只在覆盖模式 Tab 首尾循环。
 8. `Modal` 最大宽 480px，只用于破坏性确认；打开时焦点落到第一个输入或取消按钮；`Esc` 与遮罩点击都调用 `onClose`。
 9. `Heatmap` 计算 `k = Math.round(Math.abs(rho) * 70)`，正值混 `--heat-pos`，负值混 `--heat-neg`；对角线 `--surface-2`；每格加 `title="{a} 与 {b}：{rho.toFixed(2)}"`。
 10. `BarList` 只允许 `style={{"--w": `${Math.round(value*100)}%`}}`；颜色固定 `--ink-2`；无动画。
