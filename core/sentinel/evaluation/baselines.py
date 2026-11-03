@@ -5,7 +5,7 @@ import time
 from collections.abc import Callable, Iterator, Sequence
 from contextlib import contextmanager
 from dataclasses import dataclass
-from decimal import ROUND_HALF_UP, Decimal, InvalidOperation
+from decimal import Decimal, InvalidOperation, localcontext
 from urllib.parse import urlsplit
 
 import httpx
@@ -15,7 +15,7 @@ from sentinel.errors import ErrorCode, SentinelError
 from sentinel.semantic.base import CancelToken
 
 from .bounded import BoundedCall, CallToken, Cancellation
-from .metrics import GOLD_CLASSES, metric_pair, total_usage
+from .metrics import GOLD_CLASSES, _money_context, metric_pair, total_usage
 from .models import BaselineReport, EvalSample, PredictionRow
 
 _transport_context = threading.local()
@@ -49,10 +49,14 @@ class BaselineConfig:
             or url.query
             or url.fragment
             or not self.model.strip()
+            or type(self.timeout_sec) not in (int, float)
             or not 0 < self.timeout_sec <= 60
         ):
             raise ValueError("invalid baseline endpoint/model/timeout")
-        if any(not p.is_finite() or p < 0 for p in (self.input_price, self.output_price)):
+        if any(
+            not isinstance(p, Decimal) or not p.is_finite() or p < 0
+            for p in (self.input_price, self.output_price)
+        ):
             raise ValueError("baseline prices must be finite nonnegative Decimal")
 
     @classmethod
@@ -78,10 +82,15 @@ class BaselineConfig:
 
 
 def _price(config: BaselineConfig, input_tokens: int, output_tokens: int) -> Decimal:
-    return (
-        (Decimal(input_tokens) * config.input_price + Decimal(output_tokens) * config.output_price)
-        / Decimal(1_000_000)
-    ).quantize(Decimal("0.000001"), rounding=ROUND_HALF_UP)
+    digits = max(len(str(input_tokens)), len(str(output_tokens)))
+    with localcontext(_money_context([config.input_price, config.output_price], digits)):
+        return (
+            (
+                Decimal(input_tokens) * config.input_price
+                + Decimal(output_tokens) * config.output_price
+            )
+            / Decimal(1_000_000)
+        ).quantize(Decimal("0.000001"))
 
 
 def run_baseline(
@@ -123,6 +132,7 @@ def run_baseline(
         )
         if stopped or parent.is_cancelled():
             row.error = "CANCELLED" if parent.is_cancelled() else "STOPPED"
+            row.usage.complete = False
             rows.append(row)
             continue
         snapshot = [row.model_copy(deep=True)]
@@ -196,6 +206,7 @@ def run_baseline(
         except Exception as exc:
             row = snapshot[0].model_copy(deep=True)
             row.status = "failed"
+            row.usage.complete = False
             row.error = exc.code.value if isinstance(exc, SentinelError) else "MODEL_ERROR"
             row.usage.latency_ms = int((time.monotonic() - start) * 1000)
             stopped = row.error in ("UNAUTHENTICATED", "CANCELLED") or bounded.busy

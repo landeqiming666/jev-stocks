@@ -1,9 +1,10 @@
 import random
+from decimal import ROUND_DOWN, Decimal, Inexact, Rounded, localcontext
 
 import numpy as np
 import pytest
-from sentinel.evaluation.metrics import bootstrap_f1, compute_metrics, wilson
-from sentinel.evaluation.models import PredictionRow
+from sentinel.evaluation.metrics import bootstrap_f1, compute_metrics, total_usage, wilson
+from sentinel.evaluation.models import PredictionRow, Usage
 
 
 def row(gold, predicted, **kwargs):
@@ -76,6 +77,7 @@ def test_failed_prediction_is_not_counted_as_none():
     assert metrics.n == 1
     assert sum(map(sum, metrics.matrix)) == 1
     assert metrics.f1 == 0
+    assert not total_usage(rows).complete
 
 
 def test_wilson_for_nonzero_success_matches_independent_formula():
@@ -87,3 +89,27 @@ def test_wilson_for_nonzero_success_matches_independent_formula():
     midpoint = (2 / 3 + z * z / 6) / denominator
     halfwidth = z * math.sqrt((2 / 3) * (1 / 3) / 3 + z * z / 36) / denominator
     assert (lower, upper) == pytest.approx((midpoint - halfwidth, midpoint + halfwidth))
+
+
+def test_usage_cost_sum_isolated_from_caller_decimal_context():
+    rows = [
+        row("none", "none", usage=Usage(cost_usd=Decimal(value)))
+        for value in ("123456789012345678901234567890.123456", ".000001", ".000004")
+    ]
+    with localcontext() as ctx:
+        ctx.prec, ctx.rounding, ctx.Emax, ctx.Emin, ctx.clamp = 1, ROUND_DOWN, 6, -6, 1
+        ctx.traps[Inexact] = ctx.traps[Rounded] = True
+        ctx.flags[Inexact] = True
+        before = (repr(ctx), dict(ctx.flags), dict(ctx.traps))
+        usage = total_usage(rows)
+        assert usage.cost_usd == Decimal("123456789012345678901234567890.123461")
+        assert usage.complete
+        assert (repr(ctx), dict(ctx.flags), dict(ctx.traps)) == before
+
+
+@pytest.mark.parametrize("status", ["failed", "not_run"])
+def test_non_successful_usage_never_claims_complete(status):
+    stopped = row("none", "none", usage=Usage(cost_usd=Decimal(".000001")))
+    stopped.status = status
+    assert total_usage([stopped]).cost_usd == Decimal(".000001")
+    assert not total_usage([stopped]).complete

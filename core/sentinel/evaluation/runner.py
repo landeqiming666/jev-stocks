@@ -41,7 +41,11 @@ class EvalConfig:
             raise ValueError("mix tuning/test requires allow_tuned_test")
         if self.gate and (self.split != "test" or self.lang != "all"):
             raise ValueError("gate requires untouched test split, both languages")
-        if not math.isfinite(self.timeout_sec) or not 0 < self.timeout_sec <= 60:
+        if (
+            type(self.timeout_sec) not in (int, float)
+            or not math.isfinite(self.timeout_sec)
+            or not 0 < self.timeout_sec <= 60
+        ):
             raise ValueError("timeout must be finite in (0, 60]")
         if self.model_id not in load_price_table():
             raise ValueError("unknown pinned pricing model")
@@ -200,6 +204,7 @@ class EvaluationRunner:
             )
             if stop or self.cancel.is_cancelled():
                 row.error = "CANCELLED" if self.cancel.is_cancelled() else stop
+                row.usage.complete = False
                 rows.append(row)
                 continue
             snapshot = [row.model_copy(deep=True)]
@@ -225,6 +230,7 @@ class EvaluationRunner:
             except Exception as exc:
                 row = snapshot[0].model_copy(deep=True)
                 row.status, row.relation = "failed", None
+                row.usage.complete = False
                 row.error = (
                     "MISSING_CASSETTE"
                     if isinstance(exc, MissingCassette)

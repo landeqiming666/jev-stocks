@@ -1,10 +1,10 @@
 import json
-from decimal import Decimal
+from decimal import ROUND_DOWN, Decimal, Inexact, Rounded, localcontext
 from pathlib import Path
 
 import httpx
 import pytest
-from sentinel.evaluation.baselines import BaselineConfig, run_baseline
+from sentinel.evaluation.baselines import BaselineConfig, _price, run_baseline
 from sentinel.evaluation.dataset import load_dataset
 
 FIXTURES = Path(__file__).resolve().parents[2] / "fixtures" / "eval"
@@ -51,6 +51,7 @@ def test_missing_baseline_env_is_explicit_not_run(monkeypatch):
     report = run_baseline(None, [])
     assert report.status == "NOT_RUN" and report.rows == []
     assert report.usage.calls == 0
+    assert not report.usage.complete
 
 
 @pytest.mark.parametrize("bad", ["uncertain", "none extra", "", '"none"'])
@@ -81,6 +82,7 @@ def test_baseline_bad_model_output_is_failed_without_retry(monkeypatch, bad):
     assert report.rows[0].relation is None
     assert report.usage.calls == 1
     assert report.usage.input_tokens == 10
+    assert not report.usage.complete and not report.rows[0].usage.complete
 
 
 def test_offline_baseline_sends_nothing(monkeypatch):
@@ -145,7 +147,49 @@ def test_baseline_auth_failure_keeps_all_partial_rows_and_other_thread_logs(monk
     assert report.usage.calls == 2 and report.usage.input_tokens == 10
     assert not report.usage.complete
     assert report.rows[1].error == "UNAUTHENTICATED"
+    assert all(not r.usage.complete for r in report.rows[1:])
     assert "unrelated-thread-log" in caplog.text
     assert "example.test" not in caplog.text
     assert "test-baseline-secret" not in caplog.text
     assert "test-baseline-secret" not in report.model_dump_json()
+
+
+@pytest.mark.parametrize(
+    "tokens,price,expected",
+    [
+        (1, "1.5", ".000002"),
+        (int("1" * 80), "1", "1" * 74 + ".111111"),
+        (1, "1E40", "1" + "0" * 34 + ".000000"),
+    ],
+)
+def test_price_isolated_from_caller_decimal_context(tokens, price, expected):
+    config = BaselineConfig(
+        "https://example.test/v1", "example-model", Decimal(price), Decimal("0.000000000001")
+    )
+    with localcontext() as ctx:
+        ctx.prec, ctx.rounding, ctx.Emax, ctx.Emin, ctx.clamp = 1, ROUND_DOWN, 6, -6, 1
+        ctx.traps[Inexact] = ctx.traps[Rounded] = True
+        ctx.flags[Inexact] = True
+        before = (repr(ctx), dict(ctx.flags), dict(ctx.traps))
+        assert _price(config, tokens, 0) == Decimal(expected)
+        assert (repr(ctx), dict(ctx.flags), dict(ctx.traps)) == before
+
+
+@pytest.mark.parametrize("timeout", [True, False])
+def test_baseline_timeout_rejects_bool(timeout):
+    with pytest.raises(ValueError, match="timeout"):
+        BaselineConfig(
+            "https://example.test/v1",
+            "example-model",
+            Decimal("1"),
+            Decimal("2"),
+            timeout_sec=timeout,
+        )
+
+
+@pytest.mark.parametrize("field", ["input_price", "output_price"])
+@pytest.mark.parametrize("value", [True, None, "1", 1, 1.0])
+def test_baseline_price_type_error_is_value_error(field, value):
+    prices = {"input_price": Decimal("1"), "output_price": Decimal("2"), field: value}
+    with pytest.raises(ValueError, match="Decimal"):
+        BaselineConfig("https://example.test/v1", "example-model", **prices)

@@ -2,7 +2,7 @@ import math
 import random
 from collections import Counter
 from collections.abc import Sequence
-from decimal import Decimal
+from decimal import ROUND_HALF_UP, Context, Decimal, localcontext
 
 import numpy as np
 
@@ -81,15 +81,26 @@ def metric_pair(rows: Sequence[PredictionRow]) -> MetricPair:
     )
 
 
+def _money_context(amounts: Sequence[Decimal], extra_digits: int = 0) -> Context:
+    # 覆盖整数位、小数对齐、乘数位和累加进位；隔离调用方的 traps/flags/指数范围。
+    integer_digits = max([0, *(a.adjusted() for a in amounts)])
+    fractional_digits = max([6, *(-int(a.as_tuple().exponent) for a in amounts)])
+    precision = integer_digits + fractional_digits + extra_digits + len(str(len(amounts))) + 8
+    return Context(prec=precision, rounding=ROUND_HALF_UP)
+
+
 def total_usage(rows: Sequence[PredictionRow]) -> Usage:
+    costs = [r.usage.cost_usd for r in rows]
+    with localcontext(_money_context(costs)):
+        total_cost = sum(costs, Decimal("0.000000")).quantize(Decimal("0.000001"))
     return Usage(
         calls=sum(r.usage.calls for r in rows),
         input_tokens=sum(r.usage.input_tokens for r in rows),
         output_tokens=sum(r.usage.output_tokens for r in rows),
         latency_ms=sum(r.usage.latency_ms for r in rows),
-        cost_usd=sum((r.usage.cost_usd for r in rows), Decimal("0.000000")),
+        cost_usd=total_cost,
         estimated=any(r.usage.estimated for r in rows),
-        complete=all(r.usage.complete for r in rows),
+        complete=bool(rows) and all(r.status == "ok" and r.usage.complete for r in rows),
     )
 
 

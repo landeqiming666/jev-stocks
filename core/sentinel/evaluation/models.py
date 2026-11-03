@@ -175,7 +175,7 @@ class BaselineReport(Model):
     status: Literal["NOT_RUN", "COMPLETED", "PARTIAL"] = "NOT_RUN"
     reason: str = "not_configured"
     rows: list[PredictionRow] = Field(default_factory=list)
-    usage: Usage = Field(default_factory=Usage)
+    usage: Usage = Field(default_factory=lambda: Usage(complete=False))
     p95_latency_ms: float = 0
     metrics: MetricPair | None = None
     model_id: str | None = None

@@ -111,6 +111,7 @@ def test_cancel_before_request_sends_nothing():
     report = runner.run()
     assert len(report.rows) == 30
     assert all(r.status == "not_run" for r in report.rows)
+    assert not report.usage.complete and all(not r.usage.complete for r in report.rows)
     assert report.exit_code == 4
 
 
@@ -134,6 +135,7 @@ def test_timeout_and_cancellation_are_bounded_and_keep_partial():
         assert time.monotonic() - start < 0.5
         assert report.rows[0].status == "ok"
         assert report.rows[1].error == "TIMEOUT"
+        assert not report.usage.complete and all(not r.usage.complete for r in report.rows[1:])
         assert len(report.rows) == 30
         assert len(calls) == 2
         assert report.exit_code == 4
@@ -312,3 +314,9 @@ raise SystemExit(report.exit_code)
     )
     assert result.returncode == 4, result.stderr
     assert result.stdout.strip() == "30 TIMEOUT"
+
+
+@pytest.mark.parametrize("timeout", [True, False])
+def test_eval_timeout_rejects_bool(timeout):
+    with pytest.raises(ValueError, match="timeout"):
+        setup(timeout_sec=timeout)
