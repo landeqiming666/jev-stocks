@@ -53,6 +53,11 @@ def test_fetch_maps_exchange_whitelist(repo: InstrumentRepository) -> None:
         "a@-example.com",
         "a@example..com",
         "a..b@example.com",
+        "用户@example.com",
+        "a@例子.com",
+        "a\x7f@example.com",
+        "a" * 65 + "@example.com",
+        "a" * 64 + "@" + "b" * 49 + ".abcdef",
         True,
     ],
 )
@@ -136,3 +141,44 @@ def test_fetch_rate_limit_and_decode_map(reason: str) -> None:
     with pytest.raises(SourceError) as error:
         SecTickerSource(FakeHTTP(failure), email_provider=lambda: "test@example.com").fetch()
     assert error.value is failure and error.value.retryable
+
+
+@pytest.mark.parametrize("name", [None, 1, True, [], {}, "", " \t\n"])
+def test_invalid_name_rejects_entire_payload(name: object) -> None:
+    payload = {
+        "fields": ["cik", "name", "ticker", "exchange"],
+        "data": [[1, "Valid", "AAPL", "Nasdaq"], [2, name, "X", "NYSE"]],
+    }
+    with pytest.raises(SourceError) as error:
+        SecTickerSource(FakeHTTP(payload), email_provider=lambda: "test@example.com").fetch()
+    assert error.value.code == "SOURCE_UNAVAILABLE" and error.value.reason == "TICKER_SCHEMA"
+
+
+def test_invalid_ticker_exchange_types_and_otc_are_counted(repo: InstrumentRepository) -> None:
+    payload = {
+        "fields": ["cik", "name", "ticker", "exchange"],
+        "data": [
+            [1, "Valid", "AAPL", "Nasdaq"],
+            [2, "Null ticker", None, "NYSE"],
+            [3, "Integer ticker", 3, "NYSE"],
+            [4, "Null exchange", "NULLX", None],
+            [5, "Integer exchange", "INTX", 1],
+            [6, "OTC fixture", "OTCX", "OTC"],
+        ],
+    }
+    rows = SecTickerSource(FakeHTTP(payload), email_provider=lambda: "test@example.com").fetch()
+    assert len(rows) == 6 and rows[1].ticker is None and rows[3].exchange is None
+    stats = repo.replace_from_sec(rows, fetched_at=NOW, require_nonempty=True)
+    assert (stats.total, stats.kept, stats.skipped_symbol, stats.skipped_exchange) == (6, 1, 2, 3)
+
+
+@pytest.mark.parametrize(
+    "email",
+    ["a" * 64 + "@" + "b" * 48 + ".abcdef", "first.last+tag@example.com"],
+)
+def test_canonical_ascii_email_uses_exact_header(email: str) -> None:
+    http = FakeHTTP({"fields": ["cik", "name", "ticker", "exchange"], "data": []})
+    assert SecTickerSource(http, email_provider=lambda: email).fetch() == []
+    header = http.calls[0][2]["User-Agent"]
+    assert header == f"Sentinel/{__version__} {email}"
+    assert header.encode("ascii").decode("ascii") == header

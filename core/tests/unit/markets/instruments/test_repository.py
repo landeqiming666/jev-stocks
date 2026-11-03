@@ -7,7 +7,7 @@ from time import perf_counter
 import duckdb
 import pytest
 
-from sentinel.errors import InternalError, UserError
+from sentinel.errors import InternalError, SourceError, UserError
 from sentinel.markets.instruments import InstrumentRepository, TickerRow
 from sentinel.storage import Database
 from sentinel.storage.db import WriteTx
@@ -316,3 +316,44 @@ def test_alias_name_zh_wins_name_en(
     with db.read() as reader:
         reader.execute("SELECT kind FROM instrument_alias WHERE alias = ?", ["apple"])
         assert reader.fetchone() == ("name_zh",)
+
+
+@pytest.mark.parametrize("old", [False, True])
+@pytest.mark.parametrize("rows", [[], [TickerRow("bad", "Invalid CIK", "X", "NYSE")]])
+def test_require_nonempty_rejects_before_transaction(
+    repo: InstrumentRepository,
+    db: Database,
+    monkeypatch: pytest.MonkeyPatch,
+    old: bool,
+    rows: list[TickerRow],
+) -> None:
+    if old:
+        repo.replace_from_sec([TickerRow("1", "Apple", "AAPL", "Nasdaq")], fetched_at=NOW)
+    before = snapshot(db)
+
+    def fail_write():
+        pytest.fail("all-filtered protected import entered a transaction")
+
+    monkeypatch.setattr(db, "write", fail_write)
+    with pytest.raises(SourceError) as error:
+        repo.replace_from_sec(rows, fetched_at=NOW + timedelta(days=8), require_nonempty=True)
+    assert error.value.code == "SOURCE_UNAVAILABLE" and error.value.reason == "TICKER_SCHEMA"
+    assert snapshot(db) == before
+
+
+def test_explicit_all_filtered_import_keeps_default_semantics(
+    repo: InstrumentRepository,
+) -> None:
+    repo.replace_from_sec([TickerRow("1", "Apple", "AAPL", "Nasdaq")], fetched_at=NOW)
+    later = NOW + timedelta(days=8)
+    stats = repo.replace_from_sec([TickerRow("bad", "Invalid CIK", "X", "NYSE")], fetched_at=later)
+    assert stats.total == 1 and stats.skipped_symbol == 1 and stats.deactivated == 1
+    assert repo.get("us:AAPL").is_active is False
+    assert repo.last_refresh_at() == later
+
+
+@pytest.mark.parametrize("flag", [None, 0, 1, "true"])
+def test_require_nonempty_requires_bool(repo: InstrumentRepository, flag: object) -> None:
+    with pytest.raises(UserError) as error:
+        repo.replace_from_sec([], fetched_at=NOW, require_nonempty=flag)
+    assert error.value.field == "require_nonempty"

@@ -189,3 +189,36 @@ def test_invalid_clock(repo: InstrumentRepository, value: object) -> None:
         InstrumentService(repo, FakeSource([]), lambda: value).ensure_fresh(
             offline=False, has_sec_email=True
         )
+
+
+@pytest.mark.parametrize("old", [False, True])
+@pytest.mark.parametrize(
+    "rows",
+    [
+        [TickerRow("1", "Bad ticker", "A_%", "NYSE")],
+        [TickerRow("bad", "Bad CIK", "X", "NYSE")],
+        [TickerRow("1", "OTC", "X", "OTC")],
+        [TickerRow("1", "Null exchange", "X", None)],
+    ],
+)
+def test_background_all_filtered_preserves_table_and_watermark(
+    repo: InstrumentRepository,
+    db: Database,
+    old: bool,
+    rows: list[TickerRow],
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    if old:
+        repo.replace_from_sec([TickerRow("1", "Apple", "AAPL", "Nasdaq")], fetched_at=NOW)
+    before = snapshot(db)
+    source = FakeSource(rows)
+    service = InstrumentService(repo, source, lambda: NOW + timedelta(days=8))
+    assert service.ensure_fresh(offline=False, has_sec_email=True) is None
+    assert source.calls == 1 and snapshot(db) == before
+    events = [getattr(record, "sentinel", {}) for record in caplog.records]
+    assert any(
+        event.get("event") == "instruments.refresh_failed"
+        and event.get("reason") == "TICKER_SCHEMA"
+        and event.get("error_code") == "SOURCE_UNAVAILABLE"
+        for event in events
+    )

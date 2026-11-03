@@ -15,7 +15,7 @@ from typing import cast
 import duckdb
 
 from sentinel.clock import parse_iso, to_iso
-from sentinel.errors import InternalError
+from sentinel.errors import InternalError, SourceError, UserError
 from sentinel.logging_setup import get_logger, log_event
 from sentinel.storage import Database
 
@@ -128,8 +128,16 @@ class InstrumentRepository:
             result[symbol] = _AliasEntry(name_zh, tuple(aliases))
         return result
 
-    def replace_from_sec(self, rows: Sequence[TickerRow], *, fetched_at: datetime) -> ImportStats:
+    def replace_from_sec(
+        self,
+        rows: Sequence[TickerRow],
+        *,
+        fetched_at: datetime,
+        require_nonempty: bool = False,
+    ) -> ImportStats:
         """An explicit empty batch deactivates US tickers and advances the watermark."""
+        if type(require_nonempty) is not bool:
+            raise UserError("INVALID_ARGUMENT", field="require_nonempty")
         fetched_at = _utc(fetched_at)
         aliases = self._load_aliases()
         selected: dict[str, tuple[TickerRow, str]] = {}
@@ -147,6 +155,8 @@ class InstrumentRepository:
                 if cik >= selected[symbol][1]:
                     continue
             selected[symbol] = (row, cik)
+        if require_nonempty and not selected:
+            raise SourceError("SOURCE_UNAVAILABLE", reason="TICKER_SCHEMA")
         records: list[list[object]] = []
         alias_rows: list[list[object]] = []
         for symbol, (row, cik) in selected.items():

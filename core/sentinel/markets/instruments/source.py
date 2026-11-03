@@ -1,10 +1,10 @@
 """SEC ticker transport; filtering and counts belong to the repository."""
 
-import re
 from collections.abc import Callable
 from typing import cast
 
 from sentinel import __version__
+from sentinel.domain.contact import is_valid_sec_email
 from sentinel.errors import SourceError, UserError
 from sentinel.http import HttpClient
 
@@ -18,25 +18,6 @@ EXCHANGE_MAP = {
     "CBOE": "CBOE",
 }
 _FIELDS = ["cik", "name", "ticker", "exchange"]
-_LOCAL = re.compile(r"[A-Za-z0-9.!#$%&'*+/=?^_`{|}~-]+", re.ASCII)
-_DOMAIN_LABEL = re.compile(r"[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?", re.ASCII)
-
-
-def _valid_email(value: object) -> bool:
-    if not isinstance(value, str) or len(value) > 254 or value.count("@") != 1:
-        return False
-    local, domain = value.split("@")
-    labels = domain.split(".")
-    return bool(
-        1 <= len(local) <= 64
-        and _LOCAL.fullmatch(local)
-        and not local.startswith(".")
-        and not local.endswith(".")
-        and ".." not in local
-        and len(labels) >= 2
-        and all(_DOMAIN_LABEL.fullmatch(label) for label in labels)
-        and re.fullmatch(r"[A-Za-z]{2,63}", labels[-1])
-    )
 
 
 class SecTickerSource:
@@ -51,7 +32,7 @@ class SecTickerSource:
 
     def fetch(self) -> list[TickerRow]:
         email = self._email_provider() if self._email_provider is not None else None
-        if not _valid_email(email):
+        if not isinstance(email, str) or not is_valid_sec_email(email):
             raise UserError("CONFIG_REQUIRED", params={"missing": ["secEmail"]})
         payload = self._http.get_json(
             TICKERS_URL,
@@ -67,6 +48,8 @@ class SecTickerSource:
         rows: list[TickerRow] = []
         for row in payload["data"]:
             if not isinstance(row, list) or len(row) != 4:
+                raise SourceError("SOURCE_UNAVAILABLE", reason="TICKER_SCHEMA")
+            if not isinstance(row[1], str) or not row[1].strip():
                 raise SourceError("SOURCE_UNAVAILABLE", reason="TICKER_SCHEMA")
             # CIK 的整数用文本无损承载；bool、浮点和非法文本仍由仓储计为跳过。
             rows.append(TickerRow(str(row[0]), *cast(tuple[str, str, str], tuple(row[1:]))))

@@ -43,6 +43,16 @@ class InstrumentService:
             return None
         try:
             rows = self._source.fetch()
+            if not rows:
+                log_event(
+                    self._logger,
+                    logging.WARNING,
+                    event="instruments.refresh_empty",
+                    error_code="SOURCE_UNAVAILABLE",
+                    reason="TICKER_EMPTY",
+                )
+                return None
+            return self._repo.replace_from_sec(rows, fetched_at=now, require_nonempty=True)
         except (SourceError, UserError) as exc:
             if isinstance(exc, UserError) and exc.code != "CONFIG_REQUIRED":
                 raise
@@ -54,16 +64,6 @@ class InstrumentService:
                 reason=exc.reason,
             )
             return None
-        if not rows:
-            log_event(
-                self._logger,
-                logging.WARNING,
-                event="instruments.refresh_empty",
-                error_code="SOURCE_UNAVAILABLE",
-                reason="TICKER_EMPTY",
-            )
-            return None
-        return self._repo.replace_from_sec(rows, fetched_at=now)
 
 
 __all__ = ["DEFAULT_LIMIT", "MAX_LIMIT", "MAX_AGE_DAYS", "InstrumentService"]
