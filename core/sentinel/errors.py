@@ -143,6 +143,8 @@ class EngineError(SentinelError):
             ErrorCode.ENGINE_UNAVAILABLE,
             ErrorCode.MODEL_ERROR,
             ErrorCode.BUDGET_EXCEEDED,
+            ErrorCode.RATE_LIMITED,
+            ErrorCode.TIMEOUT,
         }
     )
 

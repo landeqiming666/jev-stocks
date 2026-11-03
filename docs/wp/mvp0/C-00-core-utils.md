@@ -92,7 +92,7 @@ class SentinelError(Exception):
     def to_wire(self, request_id: str | None = None) -> dict[str, object]: ...
 class UserError(SentinelError): ...        # INVALID_ARGUMENT / NOT_FOUND / CONFLICT / CONFIG_REQUIRED / ORDER_REJECTED / DATA_INSUFFICIENT
 class SourceError(SentinelError): ...      # SOURCE_UNAVAILABLE / RATE_LIMITED / TIMEOUT
-class EngineError(SentinelError): ...      # UNAUTHENTICATED / ENGINE_UNAVAILABLE / MODEL_ERROR / BUDGET_EXCEEDED
+class EngineError(SentinelError): ...      # UNAUTHENTICATED / ENGINE_UNAVAILABLE / MODEL_ERROR / BUDGET_EXCEEDED / RATE_LIMITED / TIMEOUT
 class InternalError(SentinelError): ...    # INTERNAL
 class CancelledError(SentinelError): ...   # CANCELLED
 

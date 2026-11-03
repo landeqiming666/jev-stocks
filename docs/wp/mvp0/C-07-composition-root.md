@@ -139,7 +139,7 @@ def run(argv: Sequence[str] | None = None) -> int: ...
 2. **日志**：调用 C-00 `logging_setup.configure(level, data_dir/"logs")`；失败直接退出码 1。
 3. **数据库**：`Database(path)` → `open()` → `migrate()`；迁移失败记录 `detail` 并退出码 3。`backup()` 只在迁移内部调用。
 4. **设置与密钥**：构造系统 `SecretStore`（钥匙串后端）→ `SecretsService(store, clock)`，再构造 `SettingsService`；读取设置失败时使用默认值并记录 warn；缺 Jev key 不阻止启动，只让 `app.bootstrap.configured.jevKey=false`。`platform_name` 取 `sentinel.platform.current()`，`offline` 取 `SENTINEL_OFFLINE=1`。
-5. **HTTP 与数据源**：按 D-01 构造 `HttpClient`；构造 `InstrumentService`、`SecFilingsService`、`PriceService`。`SecTickerSource` 注入每次实时读取当前设置邮箱的 `email_provider`，不能捕获启动时邮箱快照；SEC 请求必须带 `Sentinel/<版本> <邮箱>`。SEC 联系邮箱为空时仍构造，但第一次请求抛 `CONFIG_REQUIRED`。
+5. **HTTP 与数据源**：按 D-01 构造 `HttpClient`；构造 `InstrumentService`、`SecFilingsService`、`PriceService`。`SecTickerSource` 与 `SecFilingsClient` 都注入每次实时读取当前设置邮箱的 `email_provider`，不能捕获启动时邮箱快照；SEC 请求必须带 `Sentinel/<版本> <邮箱>`。SEC 联系邮箱为空时仍构造，但第一次请求抛 `CONFIG_REQUIRED`。
 6. **引擎与探针**：用 S-02 的 `select_engine(settings.engine, factories)` 构造；`auto` 降级时把 `EngineChange` 存入容器，`app.ready` 之后以 `engine.changed` 通知发出一次。构造 `ConnectionProbe`，它只读引擎健康与 HTTP 可达性，不发送持仓或逻辑内容。
 7. **流水线**：构造 `DecisionPipeline(db, engine, model_id=settings.modelId, daily_budget=settings.dailyTokenBudget)`；不在这里跑扫描。
 8. **业务服务**：按 P-01→P-05→P-06→P-03→P-02→E-01 顺序构造；`ScanService` 注入 `DecisionPipeline`、`SecFilingsService`、`InboxService`，不反向依赖 `app`。

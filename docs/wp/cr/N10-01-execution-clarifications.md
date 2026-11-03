@@ -44,3 +44,9 @@ Rust 的 `core://status` 事件不缓存，核心就绪事件可能早于前端�
 U-00 补全 `styles/tokens.test.ts` 所有权，状态目录下的两张规定截图可随状态报告交付。原型没有 IBM Plex 字体文件时，本批 React 与原型使用同一系统回退；不偷偷下载字体、修改其他包的资产或许可证文件。U-00 的 common 文案包含 U-01 所需的标签、引擎、市场、关闭提示和 `chartInvalid`，U-01 不反向修改其 i18n。
 
 U-01 的 Menu 必须提供 `onClose`；React 19 触发按钮 ref 允许 null。补全 Modal 和非有限条形值两项测试，使文档规定的 12 项有对应清单。组件 CSS 与仅开发用的陈列入口可位于 U-01 自有 `components/ui/`；不得修改原型来凑像素结果。主 agent 独立检查键盘、两种抽屉模式、图表和两个规定视口。
+
+## 8. 数据源与模型错误的消费者一致性
+
+D-01 不替调用方补 SEC User-Agent。D-03 的 `SecFilingsClient` 追加与 D-02 相同的可选 keyword-only `email_provider`；每次请求动态校验，缺配置不发请求。C-07 同时为 ticker 与 filing 两个客户端注入 provider。D-03 使用当前 selectolax Lexbor，不新增依赖。
+
+C-00 的 EngineError 扩充允许 RATE_LIMITED/TIMEOUT，与 S-03 和 06 的已定错误映射一致，既有 15 个公开错误码与 retryable 不变。S-03 的 `map_sdk_exception` 返回共同基类 SentinelError，对实现错误使用 InternalError；不放宽 EngineError 接受 INTERNAL。主 agent 先增回归再修正基础错误族。

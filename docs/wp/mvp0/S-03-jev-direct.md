@@ -89,10 +89,12 @@ class JevDirectEngine:
     def locate_evidence(self, thesis: ThesisInput, relation: Relation,
                         sentences: Sequence[str], cancel: CancelToken) -> EvidenceScore: ...
 
-def map_sdk_exception(exc: BaseException) -> EngineError: ...
+def map_sdk_exception(exc: BaseException) -> SentinelError: ...
 def allocate_tokens(total: int, pair_count: int) -> list[int]: ...
 ```
 构造时 `api_key` 只传给 `client_factory`，**不得保存为实例属性、写日志或放进异常**。`max_workers` 必须为 `1..4`，越界抛 `ValueError`。`score_pairs` 返回数必须等于 `len(pairs)`，不得返回未请求的 pair；`score_event(company, theses, passages, cancel)` 等价于把全部逻辑 × 段落组成 `PairInput` 后调用 `score_pairs`。`health()` 不发网络请求：已配置返回 `ok`，上次批次认证失败可返回 `degraded`，缺 key 返回 `unconfigured`。
+
+`map_sdk_exception` 对模型与传输错误返回 `EngineError`（含 RATE_LIMITED/TIMEOUT），对 400/422 的实现错误返回 `InternalError`；因此返回类型是共同基类 `SentinelError`，不能把 INTERNAL 塞入受限的 EngineError 错误族。
 
 ### 5.2 数据结构
 | 字段 | 类型 | 必填 | 约束 | 含义 |
