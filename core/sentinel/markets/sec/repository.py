@@ -1,3 +1,4 @@
+from collections.abc import Sequence
 from dataclasses import replace
 from datetime import date, datetime
 from typing import cast
@@ -11,12 +12,44 @@ from .models import (
     EventFileDraft,
     FetchedEvent,
     FilingRef,
+    IndexRow,
     TextStatus,
     file_warnings,
 )
 from .submissions import FORMS, as_utc
 from .title import build_title
 from .urls import document_url, schema_error
+
+
+def file_drafts(rows: Sequence[tuple[object, ...]]) -> list[EventFileDraft]:
+    return [
+        EventFileDraft(
+            cast(int, row[0]),
+            cast(str, row[1]),
+            cast(str, row[2]),
+            cast(str, row[3]),
+            cast(TextStatus, row[4]),
+            cast(str | None, row[5]),
+            cast(int | None, row[6]),
+        )
+        for row in rows
+    ]
+
+
+def ensure_file_identity(
+    existing: Sequence[EventFileDraft],
+    incoming: Sequence[EventFileDraft | IndexRow],
+) -> None:
+    by_seq = {file.seq: file for file in existing}
+    by_name = {file.file_name: file for file in existing}
+    for file in incoming:
+        old = by_seq.get(file.seq)
+        named = by_name.get(file.file_name)
+        if (
+            old is not None
+            and (old.file_name, old.doc_type, old.url) != (file.file_name, file.doc_type, file.url)
+        ) or (named is not None and named.seq != file.seq):
+            raise UserError("CONFLICT", reason="SEC_FILE_IDENTITY")
 
 
 def event_title(event: FetchedEvent) -> str:
@@ -58,18 +91,7 @@ class SecFilingsRepository:
                 FROM event_file WHERE event_id = ? ORDER BY seq""",
                 [ref.event_id],
             )
-            files = [
-                EventFileDraft(
-                    cast(int, item[0]),
-                    cast(str, item[1]),
-                    cast(str, item[2]),
-                    cast(str, item[3]),
-                    cast(TextStatus, item[4]),
-                    cast(str | None, item[5]),
-                    cast(int | None, item[6]),
-                )
-                for item in reader.fetchall()
-            ]
+            files = file_drafts(reader.fetchall())
         stored_ref = replace(
             ref,
             cik=cast(str, row[8]).split("/")[-3].zfill(10),
@@ -115,8 +137,50 @@ class SecFilingsRepository:
             ):
                 raise schema_error()
             seen.add(file.seq)
-        title = event.title if event.title is not None else event_title(event)
         with self._db.write() as tx:
+            tx.execute(
+                """SELECT seq, file_name, doc_type, url, text_status, text, char_count
+                FROM event_file WHERE event_id = ? ORDER BY seq""",
+                [ref.event_id],
+            )
+            previous_files = file_drafts(tx.fetchall())
+            ensure_file_identity(previous_files, event.files)
+            merged = {file.seq: file for file in previous_files}
+            updates = []
+            for file in event.files:
+                previous = merged.get(file.seq)
+                if previous is not None:
+                    if previous == file or (
+                        previous.text_status == "failed" and file.text_status == "skipped"
+                    ):
+                        continue
+                    if previous.text_status in {"extracted", "empty"} and file.text_status in {
+                        "failed",
+                        "skipped",
+                    }:
+                        raise UserError("CONFLICT", reason="SEC_FILE_CONTENT")
+                    if previous.text != file.text:
+                        tx.execute(
+                            """SELECT 1 FROM event_passage
+                            WHERE event_id = ? AND file_seq = ? LIMIT 1""",
+                            [ref.event_id, file.seq],
+                        )
+                        if tx.fetchone() is not None:
+                            raise UserError("CONFLICT", reason="SEC_PASSAGE_REFERENCE")
+                    if previous.text_status in {"extracted", "empty"} and (
+                        previous.text != file.text or previous.text_status != file.text_status
+                    ):
+                        raise UserError("CONFLICT", reason="SEC_FILE_CONTENT")
+                merged[file.seq] = file
+                updates.append(file)
+            content_status = event.content_status
+            if any(file.text_status == "failed" for file in merged.values()):
+                content_status = "fetch_failed"
+            title = (
+                event.title
+                if event.title is not None
+                else event_title(replace(event, files=list(merged.values())))
+            )
             tx.execute(
                 "SELECT instrument_id, url, title FROM event_doc WHERE event_id = ?", [ref.event_id]
             )
@@ -151,29 +215,12 @@ class SecFilingsRepository:
                     ref.filing_date,
                     url,
                     ref.items,
-                    event.content_status,
+                    content_status,
                     fetched_at,
                     "sec_edgar",
                 ],
             )
-            for file in event.files:
-                tx.execute(
-                    """SELECT file_name, doc_type, url, text FROM event_file
-                    WHERE event_id = ? AND seq = ?""",
-                    [ref.event_id, file.seq],
-                )
-                previous = tx.fetchone()
-                if previous is not None:
-                    if previous[:3] != (file.file_name, file.doc_type, file.url):
-                        raise UserError("CONFLICT", reason="SEC_FILE_IDENTITY")
-                    if previous[3] != file.text:
-                        tx.execute(
-                            """SELECT 1 FROM event_passage
-                            WHERE event_id = ? AND file_seq = ? LIMIT 1""",
-                            [ref.event_id, file.seq],
-                        )
-                        if tx.fetchone() is not None:
-                            raise UserError("CONFLICT", reason="SEC_PASSAGE_REFERENCE")
+            for file in updates:
                 # 04 的永久引用要求保留既有行；仅覆盖同键的非键列。
                 tx.execute(
                     """INSERT INTO event_file VALUES (?, ?, ?, ?, ?, ?, ?, ?)

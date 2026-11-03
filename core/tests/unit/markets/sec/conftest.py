@@ -40,6 +40,7 @@ class FakeClient:
         self.rows = [IndexRow(2, "Press", "ex99.htm", "EX-99.1", BASE + "ex99.htm")]
         self.files = {BASE + "main.htm": "", BASE + "ex99.htm": ""}
         self.calls = []
+        self.index_calls = []
         self.list_error = None
         self.index_error = None
 
@@ -49,6 +50,7 @@ class FakeClient:
         return self.refs
 
     def fetch_index(self, ref):
+        self.index_calls.append(ref.event_id)
         if self.index_error:
             raise self.index_error
         return self.rows

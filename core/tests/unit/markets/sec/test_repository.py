@@ -49,7 +49,14 @@ def test_event_and_all_files_rollback_after_second_file_write(
 ):
     repo = SecFilingsRepository(db)
     if has_existing:
-        repo.upsert(event(draft(), draft("Press", 2, "ex99.htm")))
+        repo.upsert(
+            event(
+                *[
+                    replace(file, text_status="failed", text=None, char_count=None)
+                    for file in (draft(), draft("Press", 2, "ex99.htm"))
+                ]
+            )
+        )
     before = snapshot(db)
     original = db.write
 
@@ -82,6 +89,9 @@ def test_event_and_all_files_rollback_after_second_file_write(
 
         def fetchone(self):
             return self.tx.fetchone()
+
+        def fetchall(self):
+            return self.tx.fetchall()
 
     @contextmanager
     def fail_write():

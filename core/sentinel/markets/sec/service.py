@@ -19,7 +19,7 @@ from .models import (
     TextStatus,
     file_warnings,
 )
-from .repository import SecFilingsRepository, event_title
+from .repository import SecFilingsRepository, ensure_file_identity, event_title
 from .submissions import as_utc
 
 _LOGGER = get_logger(__name__)
@@ -57,7 +57,12 @@ class SecFilingsService:
                 count = len(text)
         return EventFileDraft(row.seq, row.file_name, row.doc_type, row.url, status, text, count)
 
-    def _fetch(self, ref: FilingRef, fetched_at: datetime) -> FetchedEvent:
+    def _fetch(
+        self,
+        ref: FilingRef,
+        fetched_at: datetime,
+        stored: FetchedEvent | None,
+    ) -> FetchedEvent:
         warnings: tuple[str, ...] = ()
         try:
             rows = self._client.fetch_index(ref)
@@ -84,14 +89,25 @@ class SecFilingsService:
             )
             warnings = (*warnings, "INDEX_CONFLICT")
         selected[0] = replace(selected[0], doc_type=ref.form_type)
-        files = [self._file(row) for row in selected]
-        files.extend(self._file(row, skipped=True) for row in skipped)
-        files.sort(key=lambda file: file.seq)
+        previous = stored.files if stored is not None else []
+        ensure_file_identity(previous, [*selected, *skipped])
+        # 索引消失或附件超出本轮上限不能抹掉旧 failed，成功正文与引用也必须保留。
+        merged = {file.seq: file for file in previous}
+        for row in selected:
+            existing = merged.get(row.seq)
+            if existing is None or existing.text_status not in {"extracted", "empty"}:
+                merged[row.seq] = self._file(row)
+        for row in skipped:
+            if row.seq not in merged:
+                merged[row.seq] = self._file(row, skipped=True)
+        files = sorted(merged.values(), key=lambda file: file.seq)
         status: ContentStatus = "title_only"
-        if any(file.text for file in files):
-            status = "full_text"
-        elif any(file.text_status == "failed" for file in files) or "INDEX_FAILED" in warnings:
+        if any(file.text_status == "failed" for file in files) or any(
+            warning in {"INDEX_FAILED", "INDEX_CONFLICT"} for warning in warnings
+        ):
             status = "fetch_failed"
+        elif any(file.text for file in files):
+            status = "full_text"
         event = FetchedEvent(
             ref, files, status, fetched_at=fetched_at, warnings=(*warnings, *file_warnings(files))
         )
@@ -109,12 +125,18 @@ class SecFilingsService:
         result = []
         for ref in sorted(refs, key=lambda ref: (ref.published_at, ref.event_id)):
             stored = self._repo.get(ref)
-            if stored is not None and stored.content_status in {"full_text", "title_only"}:
-                if stored.warnings:
-                    log_event(_LOGGER, logging.WARNING, event="sec.cached_file_failed")
+            if (
+                stored is not None
+                and stored.content_status in {"full_text", "title_only"}
+                and not any(file.text_status == "failed" for file in stored.files)
+            ):
                 result.append(stored)
                 continue
-            event = self._fetch(ref, fetched_at)
+            event = self._fetch(ref, fetched_at, stored)
             self._repo.upsert(event)
-            result.append(event)
+            saved = self._repo.get(ref)
+            assert saved is not None
+            result.append(
+                replace(saved, warnings=tuple(dict.fromkeys((*event.warnings, *saved.warnings))))
+            )
         return result

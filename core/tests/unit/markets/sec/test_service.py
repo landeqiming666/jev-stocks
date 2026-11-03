@@ -55,18 +55,21 @@ def test_partial_download_failure_keeps_text_and_visible_failed_file_cr(stack, c
     client.files[BASE + "main.htm"] = "<p>Saved cover</p>"
     client.files[BASE + "ex99.htm"] = SourceError("SOURCE_UNAVAILABLE", reason="SEC_FORBIDDEN")
     first = scan(stack)[0]
-    assert first.content_status == "full_text"
+    assert first.content_status == "fetch_failed"
     assert [(file.text_status, file.text) for file in first.files] == [
         ("extracted", "Saved cover"),
         ("failed", None),
     ]
     assert first.warnings == ("FILE_FAILED",)
     assert repo.get(first.event).files[1].text_status == "failed"
-    client.files[BASE + "ex99.htm"] = "<p>Would recover with a future approved retry</p>"
+    client.files[BASE + "ex99.htm"] = "<p>Recovered exhibit</p>"
     client.calls.clear()
     second = scan(stack)[0]
-    assert second == first and client.calls == []
-    assert "sec.cached_file_failed" in caplog.text
+    assert second.content_status == "full_text"
+    assert second.files[0] == first.files[0]
+    assert second.files[1].text == "Recovered exhibit"
+    assert client.calls == [BASE + "ex99.htm"]
+    assert "sec.file_failed" in caplog.text
 
 
 def test_fetch_failed_retries_and_then_reuses_full_text(stack):
@@ -78,7 +81,7 @@ def test_fetch_failed_retries_and_then_reuses_full_text(stack):
     client.files[BASE + "main.htm"] = "<p>Recovered 😀</p>"
     client.calls.clear()
     second = scan(stack)[0]
-    assert second.content_status == "full_text" and len(client.calls) == 2
+    assert second.content_status == "full_text" and client.calls == [BASE + "main.htm"]
     assert repo.get(first.event).files[0].text == "Recovered 😀"
     client.calls.clear()
     assert scan(stack) == [second] and client.calls == []
