@@ -1,0 +1,75 @@
+{
+  "items": [
+    {
+      "runId": "01JC8Z5V3Q000000000000C6M1",
+      "trigger": "manual",
+      "market": "us",
+      "status": "succeeded",
+      "windowStart": "2026-10-26T00:00:00Z",
+      "windowEnd": "2026-11-02T00:30:41Z",
+      "stats": {
+        "instruments": 4,
+        "skippedNoThesis": 2,
+        "filings": 6,
+        "passages": 17,
+        "decisions": 21,
+        "cachedDecisions": 0,
+        "requests": 17,
+        "inputTokens": 18420,
+        "estCostUsd": "0.000774",
+        "durationMs": 31000
+      },
+      "engine": "jev_direct",
+      "modelId": "jev-1.14.0",
+      "startedAt": "2026-11-02T00:30:41Z",
+      "finishedAt": "2026-11-02T00:31:12Z",
+      "error": null,
+      "batchSummary": {
+        "total": 17,
+        "succeeded": 17,
+        "failed": 0,
+        "pending": 0
+      }
+    },
+    {
+      "runId": "01JC8Z5V3Q000000000000C6M2",
+      "trigger": "manual",
+      "market": "us",
+      "status": "partial",
+      "windowStart": "2026-10-28T00:00:00Z",
+      "windowEnd": "2026-10-31T09:10:00Z",
+      "stats": {
+        "instruments": 4,
+        "skippedNoThesis": 2,
+        "filings": 2,
+        "passages": 5,
+        "decisions": 6,
+        "cachedDecisions": 0,
+        "requests": 5,
+        "inputTokens": 6110,
+        "estCostUsd": "0.000257",
+        "durationMs": 78000
+      },
+      "engine": "jev_direct",
+      "modelId": "jev-1.14.0",
+      "startedAt": "2026-10-31T09:10:02Z",
+      "finishedAt": "2026-10-31T09:11:20Z",
+      "error": {
+        "code": "MODEL_ERROR",
+        "message": "1 个批次判定失败，已保留其余结果，下次扫描会自动重试"
+      },
+      "batchSummary": {
+        "total": 5,
+        "succeeded": 4,
+        "failed": 1,
+        "pending": 0
+      }
+    }
+  ],
+  "nextCursor": null,
+  "budget": {
+    "usedTokens": 2000000,
+    "limitTokens": 2000000,
+    "resetAt": "2026-11-03T00:00:00Z"
+  }
+}
