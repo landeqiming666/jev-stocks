@@ -1,0 +1,56 @@
+{
+  "source": "synthetic",
+  "annotationStatus": "unadjudicated",
+  "annotatorIds": [],
+  "independentAnnotation": false,
+  "sha256": "768f960fc3fe3d8a5054633592ed42e0e0d4c678b0304461d8d3297d9503d360",
+  "splitSeed": 20261102,
+  "generation": "Manually designed controlled scenarios; deterministic seed shuffles language assignment only. Labels and probabilities are synthetic, not model output or human adjudication.",
+  "counts": {
+    "total": 60,
+    "positive": 22,
+    "negative": 38,
+    "splits": {
+      "tuning": {
+        "total": 30,
+        "labels": {
+          "overturn": 4,
+          "weaken": 7,
+          "support": 5,
+          "none": 14
+        },
+        "languages": {
+          "zh": 15,
+          "en": 15
+        },
+        "subsets": {
+          "numeric": 5,
+          "title_only": 3,
+          "long": 3,
+          "adversarial": 3,
+          "multi_thesis": 3
+        }
+      },
+      "test": {
+        "total": 30,
+        "labels": {
+          "overturn": 4,
+          "weaken": 7,
+          "support": 5,
+          "none": 14
+        },
+        "languages": {
+          "en": 15,
+          "zh": 15
+        },
+        "subsets": {
+          "numeric": 5,
+          "title_only": 3,
+          "long": 3,
+          "adversarial": 3,
+          "multi_thesis": 3
+        }
+      }
+    }
+  }
+}
