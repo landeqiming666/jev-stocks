@@ -117,18 +117,19 @@ def normalization_cases(kind):
             12,
         ]
     else:
+        limit = 200 if kind == "note" else 300
         values = [
             None,
             "",
             pad,
             "\n" * 1000,
             " 😀\n ",
-            pad + "字😀" * 150 + pad,
-            pad + "字😀" * 150 + "测" + pad,
-            pad + "😀" * 300 + pad,
-            pad + "😀" * 301 + pad,
-            "😀\n" * 149 + "字😀",
-            "😀\n" * 150 + "字",
+            pad + "字😀" * (limit // 2) + pad,
+            pad + "字😀" * (limit // 2) + "测" + pad,
+            pad + "😀" * limit + pad,
+            pad + "😀" * (limit + 1) + pad,
+            "😀\n" * (limit // 2 - 1) + "字😀",
+            "😀\n" * (limit // 2) + "字",
             "\ufeff",
             "\u200b",
             12,
@@ -138,6 +139,7 @@ def normalization_cases(kind):
         "key": "k" * 512,
         "statement": "😀" * 500,
         "kill": "😀" * 300,
+        "note": "😀" * 200,
     }[kind]
     for cp in range(0x110000):
         if chr(cp).isspace():
@@ -145,14 +147,14 @@ def normalization_cases(kind):
             values.append(whitespace + base + whitespace)
             if kind in ("email", "key"):
                 values.append("a" + whitespace + base)
-            if kind in ("email", "kill", "statement"):
+            if kind in ("email", "kill", "statement", "note"):
                 values.append(whitespace * 600)
     return values
 
 
 def normalized_valid(kind, value):
     if value is None:
-        return kind in ("email", "kill")
+        return kind in ("email", "kill", "note")
     if not isinstance(value, str):
         return False
     text = value.strip()
@@ -180,7 +182,7 @@ def normalized_valid(kind, value):
         return 1 <= len(text) <= 512 and re.search(r"\s", text) is None
     if kind == "statement":
         return 1 <= len(text) <= 500
-    return len(text) <= 300
+    return len(text) <= (200 if kind == "note" else 300)
 
 
 class ContractTests(unittest.TestCase):
@@ -796,6 +798,22 @@ class ContractTests(unittest.TestCase):
         value["avgCost"] = None
         checker.validate(value, params, types)
 
+    def test_holding_market_value_is_not_limited_by_quantity_storage_capacity(self):
+        checker = self.checker()
+        types = read(CONTRACTS / "types.schema.json")
+        fields = types["$defs"]["Holding"]["properties"]
+        # A legal maximum position valued at 1000 exceeds the quantity column's range.
+        checker.validate("99999999999999.9999", fields["quantity"], types)
+        checker.validate("99999999999999999.9000", fields["marketValue"], types)
+        for value in ("999999999999999.0000", "1e14", "1.00000", "-1.0000"):
+            with self.subTest(value=value):
+                with self.assertRaises(checker.ContractError):
+                    checker.validate(value, fields["quantity"], types)
+        for value in ("1e17", "1.00000", "-1.0000", 1000):
+            with self.subTest(value=value):
+                with self.assertRaises(checker.ContractError):
+                    checker.validate(value, fields["marketValue"], types)
+
     def test_risk_insufficient_error_requires_sample_counts(self):
         for field in ("observations", "required"):
             with self.subTest(field=field):
@@ -986,6 +1004,7 @@ class ContractTests(unittest.TestCase):
         base = {
             "settings.update": {},
             "secrets.set": {"name": "jevKey"},
+            "holdings.upsert": {"instrumentId": "us:ZZAR", "quantity": "1"},
             "thesis.create": {"instrumentId": "us:ZZAR", "statement": "虚构逻辑"},
             "thesis.update": {
                 "thesisId": "fictional",
@@ -1021,11 +1040,15 @@ class ContractTests(unittest.TestCase):
         for method in ("thesis.create", "thesis.update"):
             self.assert_normalized_params(method, "killCondition", "kill")
 
+    def test_holding_note_params_bound_stripped_unicode_codepoints(self):
+        self.assert_normalized_params("holdings.upsert", "note", "note")
+
     def test_normalization_patterns_match_python_and_node_codepoint_semantics(self):
         cases = []
         for method, field, kind in (
             ("settings.update", "secContactEmail", "email"),
             ("secrets.set", "value", "key"),
+            ("holdings.upsert", "note", "note"),
             ("thesis.create", "statement", "statement"),
             ("thesis.create", "killCondition", "kill"),
             ("thesis.update", "statement", "statement"),
