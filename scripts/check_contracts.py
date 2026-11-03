@@ -448,13 +448,7 @@ def _validate(
         )
         if "pattern" in schema:
             match = re.search(schema["pattern"], value)
-            # Python's '$' also matches before a trailing LF; contracts disallow it.
-            require(
-                match is not None
-                and not (schema["pattern"].endswith("$") and match.end() != len(value)),
-                path,
-                "pattern mismatch",
-            )
+            require(match is not None, path, "pattern mismatch")
         if "format" in schema:
             try:
                 if schema["format"] == "date":

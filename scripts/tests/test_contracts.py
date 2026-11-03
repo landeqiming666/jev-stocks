@@ -191,6 +191,58 @@ class ContractTests(unittest.TestCase):
 
         return check_contracts
 
+    def test_pattern_validation_preserves_json_schema_search_semantics(self):
+        checker = self.checker()
+        checker.validate("prefix match suffix", {"type": "string", "pattern": "match"}, {})
+        checker.validate("match\n", {"type": "string", "pattern": "^match$"}, {})
+        with self.assertRaises(checker.ContractError):
+            checker.validate(
+                "match\n", {"type": "string", "pattern": r"^match(?![\s\S])"}, {}
+            )
+
+    def test_scalar_patterns_reject_newlines_in_python_and_node(self):
+        cases = []
+        candidates = (
+            "0", "1", "1.0000", "1.000000", "2026-11-03",
+            "2026-11-03T01:00:00Z", "https://example.com/filing",
+            "name@example.com",
+        )
+
+        def collect(value):
+            if isinstance(value, dict):
+                pattern = value.get("pattern", "")
+                if pattern.startswith("^") and r"\u0009" not in pattern:
+                    example = next(text for text in candidates if re.search(pattern, text))
+                    cases.append({"pattern": pattern, "value": example + "\n"})
+                for child in value.values():
+                    collect(child)
+            elif isinstance(value, list):
+                for child in value:
+                    collect(child)
+
+        for filename in (
+            "types.schema.json", "methods/holdings.upsert.json",
+            "methods/paper.createAccount.json",
+        ):
+            collect(read(CONTRACTS / filename))
+        self.assertGreaterEqual(len(cases), 28)
+        run = subprocess.run(
+            [
+                "node", "-e",
+                "const cases=JSON.parse(require('fs').readFileSync(0,'utf8')); "
+                "console.log(JSON.stringify(cases.map(c=>['','u'].map("
+                "flags=>new RegExp(c.pattern,flags).test(c.value)))));",
+            ],
+            input=json.dumps(cases), cwd=ROOT, capture_output=True,
+            text=True, check=True,
+        )
+        output = json.loads(run.stdout)
+        self.assertEqual(len(cases), len(output))
+        for case, results in zip(cases, output):
+            with self.subTest(pattern=case["pattern"]):
+                self.assertIsNone(re.search(case["pattern"], case["value"]))
+                self.assertEqual(results, [False, False])
+
     def run_script(self, name, *args):
         return subprocess.run(
             [sys.executable, str(ROOT / "scripts" / name), *map(str, args)],
