@@ -3,11 +3,11 @@ from datetime import timedelta
 from decimal import Decimal
 
 import pytest
-from test_account import START, account, intent, rows, set_price
-from test_account import service as service
 
 from sentinel.errors import InternalError
 from sentinel.storage.db import WriteTx
+from tests.unit.trading.test_account import START, account, intent, rows, set_price
+from tests.unit.trading.test_account import service as service
 
 
 def test_buy_fill_updates_avg_cost_with_fee(service):

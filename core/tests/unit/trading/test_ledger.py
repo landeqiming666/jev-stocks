@@ -2,11 +2,11 @@ from dataclasses import replace
 from decimal import Decimal
 
 import pytest
-from test_account import NOW, START, account, intent, rows
-from test_account import service as service
 
 from sentinel.errors import InternalError
 from sentinel.trading.ledger import Ledger
+from tests.unit.trading.test_account import NOW, START, account, intent, rows
+from tests.unit.trading.test_account import service as service
 
 
 def entry(service, aid, kind, amount):

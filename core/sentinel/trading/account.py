@@ -350,7 +350,7 @@ class PaperService:
 
     def reset(self, account_id: str, confirm_text: str) -> None:
         # 与 Database 的所有句柄共用锁，备份与删除之间不能插入未备份的订单。
-        with self.db._gate.lock:
+        with self.db.exclusive():
             self._reset(account_id, confirm_text)
 
     def _reset(self, account_id: str, confirm_text: str) -> None:

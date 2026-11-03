@@ -338,17 +338,22 @@ def test_initial_cash_boundaries_do_not_write(service, cash):
     assert service.list_accounts() == []
 
 
-def test_decimal_context_is_isolated(service):
+@pytest.mark.parametrize("dirty_flags", [False, True])
+def test_decimal_context_is_isolated(service, dirty_flags):
     with localcontext() as ctx:
         ctx.prec = 3
         ctx.rounding = ROUND_DOWN
         ctx.traps[Inexact] = True
+        ctx.clear_flags()
+        if dirty_flags:
+            ctx.flags[Inexact] = True
+        flags = dict(ctx.flags)
         a = account(service, "10000.1234")
         service.place_order(intent(a, qty=3))
         p = service.advance(a.account_id).portfolio
         assert p.cash == Decimal("9699.9734")
         assert p.positions[0].avg_cost == Decimal("100.050000")
-        assert ctx.prec == 3 and ctx.rounding == ROUND_DOWN and not any(ctx.flags.values())
+        assert ctx.prec == 3 and ctx.rounding == ROUND_DOWN and dict(ctx.flags) == flags
 
 
 @pytest.mark.parametrize("backup_kind", ["raises", "missing", "empty"])
@@ -377,6 +382,44 @@ def test_reset_confirm_is_exact_and_precedes_backup(service, monkeypatch):
     monkeypatch.setattr(service.db, "backup", lambda _: pytest.fail("must not backup"))
     with pytest.raises(UserError, match="INVALID_ARGUMENT"):
         service.reset(a.account_id, a.name + " ")
+
+
+def test_reset_uses_public_exclusive_for_backup_and_write(service, monkeypatch):
+    from contextlib import contextmanager
+
+    a = account(service)
+    service.place_order(intent(a))
+    active, scopes = False, []
+    exclusive, backup, write = service.db.exclusive, service.db.backup, service.db.write
+
+    @contextmanager
+    def protected():
+        nonlocal active
+        with exclusive():
+            active = True
+            try:
+                yield
+            finally:
+                active = False
+
+    def observed_backup(label):
+        assert active
+        scopes.append("backup")
+        return backup(label)
+
+    @contextmanager
+    def observed_write():
+        assert active
+        scopes.append("write")
+        with write() as tx:
+            yield tx
+
+    monkeypatch.setattr(service.db, "exclusive", protected)
+    monkeypatch.setattr(service.db, "backup", observed_backup)
+    monkeypatch.setattr(service.db, "write", observed_write)
+    service.reset(a.account_id, a.name)
+    assert scopes == ["backup", "write"] and not active
+    assert service.list_orders(a.account_id).items == []
 
 
 def test_idempotency_across_status_and_accounts(service):

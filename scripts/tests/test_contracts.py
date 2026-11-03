@@ -471,6 +471,14 @@ class ContractTests(unittest.TestCase):
                 {"name": "fake", "initialCash": "1.00001", "startDate": "2026-09-01"},
             ),
             (
+                "paper.createAccount",
+                {"name": "fake", "initialCash": "100000000000000", "startDate": "2026-09-01"},
+            ),
+            (
+                "paper.createAccount",
+                {"name": "fake", "initialCash": "100000000000000.0000", "startDate": "2026-09-01"},
+            ),
+            (
                 "paper.order.place",
                 {
                     "accountId": "fake",
