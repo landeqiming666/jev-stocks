@@ -7,3 +7,5 @@ The tencent US/HK/CN and Nasdaq US sample files are byte-for-byte copies of G1 r
 `prices_tencent_bad.json`, `prices_invalid_ohlc.json` and `prices_synthetic.py` are explicitly synthetic. The encoding and error transport variants are created in tests. Decimal precision is checked before converting reliable integers to `Bar.volume`; units are not inferred. `qfqday` maps to `adj_close=close` per D-04, but split/dividend adjustment semantics remain unverified. `day` and Nasdaq use `adj_close=None`.
 
 NYSE date verification is documented separately in `resources/calendars/SOURCES.md`. SEC, source adjustment, terms and rate gates remain unpassed.
+
+Tencent envelopes require an explicit integer `code=0`. Seven-column HK rows require the exact observed action keys `cqr`, `FHcontent`, `HGcontent`, `paixiri`, `hgcgContent`, `ggContent`, string values and `cqr` equal to the row date; subsets are rejected. Known rate-limit waits are preserved for the central error template, and unknown waits use the registered `prices.rate_limited` message without adding fields to the wire error.

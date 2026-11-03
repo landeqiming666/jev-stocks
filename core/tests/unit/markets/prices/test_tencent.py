@@ -13,7 +13,7 @@ def test_tencent_maps_close_before_high():
     from sentinel.markets.prices.tencent import TencentPriceSource
 
     row = ["2026-10-30", "346.72", "344.63", "349.19", "334.35", "67841555"]
-    with client({"data": {"usZZAR": {"day": [row]}}}) as http:
+    with client({"code": 0, "data": {"usZZAR": {"day": [row]}}}) as http:
         bar = TencentPriceSource(http).fetch_daily("us:ZZAR", START, END)[0]
     assert (bar.open, bar.close, bar.high, bar.low) == (346.72, 344.63, 349.19, 334.35)
 
@@ -31,14 +31,16 @@ def test_tencent_adjustment_keys():
 def test_tencent_empty_returns_empty():
     from sentinel.markets.prices.tencent import TencentPriceSource
 
-    with client({"data": {"usZZAR": {"day": []}}}) as http:
+    with client({"code": 0, "data": {"usZZAR": {"day": []}}}) as http:
         assert TencentPriceSource(http).fetch_daily("us:ZZAR", START, END) == []
 
 
 def test_tencent_missing_field_and_errors():
     from sentinel.markets.prices.tencent import TencentPriceSource
 
-    with client({"data": {"usZZAR": {"day": [["2026-10-30", "1", "1", "1", "1"]]}}}) as http:
+    with client(
+        {"code": 0, "data": {"usZZAR": {"day": [["2026-10-30", "1", "1", "1", "1"]]}}}
+    ) as http:
         with pytest.raises(SourceError) as caught:
             TencentPriceSource(http).fetch_daily("us:ZZAR", START, END)
         assert caught.value.code == "SOURCE_UNAVAILABLE"
@@ -93,7 +95,7 @@ def test_volume_keeps_precision_and_never_truncates(value, expected):
     from sentinel.markets.prices.tencent import TencentPriceSource
 
     row = ["2026-10-30", "10", "11", "12", "9", value]
-    with client({"data": {"usZZAR": {"day": [row]}}}) as http:
+    with client({"code": 0, "data": {"usZZAR": {"day": [row]}}}) as http:
         bars = TencentPriceSource(http).fetch_daily("ZZAR", START, END)
     assert bars[0].volume == expected
 
@@ -115,7 +117,7 @@ def test_unknown_hk_action_shape_is_rejected(extra):
 
     row = ["2026-10-30", "10", "11", "12", "9", "100", extra]
     with (
-        client({"data": {"hk00700": {"day": [row]}}}) as http,
+        client({"code": 0, "data": {"hk00700": {"day": [row]}}}) as http,
         pytest.raises(SourceError, match="SOURCE_UNAVAILABLE"),
     ):
         TencentPriceSource(http).fetch_daily("hk00700", START, END)
@@ -124,14 +126,29 @@ def test_unknown_hk_action_shape_is_rejected(extra):
 def test_known_hk_action_only_and_unknown_eighth_column():
     from sentinel.markets.prices.tencent import TencentPriceSource
 
-    row = ["2026-10-30", "10", "11", "12", "9", "100", {"cqr": "2026-10-30", "FHcontent": ""}]
+    row = [
+        "2026-10-30",
+        "10",
+        "11",
+        "12",
+        "9",
+        "100",
+        {
+            "cqr": "2026-10-30",
+            "FHcontent": "",
+            "HGcontent": "",
+            "paixiri": "",
+            "hgcgContent": "",
+            "ggContent": "",
+        },
+    ]
     for symbol, raw, accepted in [
         ("hk00700", row, True),
         ("usZZAR", row, False),
         ("sh600519", row, False),
         ("hk00700", row + ["x"], False),
     ]:
-        with client({"data": {symbol: {"day": [raw]}}}) as http:
+        with client({"code": 0, "data": {symbol: {"day": [raw]}}}) as http:
             if accepted:
                 assert TencentPriceSource(http).fetch_daily(symbol, START, END)[0].close == 11
             else:
@@ -149,7 +166,7 @@ def test_invalid_close_dropped_with_valid_neighbor(bad):
         ["2026-10-29", "10", bad, "12", "9", "100"],
         ["2026-10-30", "10", "11", "12", "9", "100"],
     ]
-    with client({"data": {"usZZAR": {"day": rows}}}) as http:
+    with client({"code": 0, "data": {"usZZAR": {"day": rows}}}) as http:
         bars = TencentPriceSource(http).fetch_daily("ZZAR", START, END)
     assert [bar.trade_date for bar in bars] == [date(2026, 10, 30)]
 
@@ -167,7 +184,9 @@ def test_tencent_request_policy_mapping_and_qfq_preference():
 
     def respond(request):
         requests.append(request)
-        return httpx.Response(200, json={"data": {"usZZAR": {"day": [], "qfqday": [row]}}})
+        return httpx.Response(
+            200, json={"code": 0, "data": {"usZZAR": {"day": [], "qfqday": [row]}}}
+        )
 
     with HttpClient(transport=httpx.MockTransport(respond)) as http:
         bar = TencentPriceSource(http).fetch_daily(
@@ -237,7 +256,9 @@ def test_json_fractional_volume_lexeme_must_not_round_to_integer():
     from sentinel.http.client import HttpClient
     from sentinel.markets.prices.tencent import TencentPriceSource
 
-    raw = b'{"data":{"usZZAR":{"day":[["2026-10-30",10,11,12,9,100.00000000000000000001]]}}}'
+    raw = (
+        b'{"code":0,"data":{"usZZAR":{"day":[["2026-10-30",10,11,12,9,100.00000000000000000001]]}}}'
+    )
     with HttpClient(
         transport=httpx.MockTransport(lambda _: httpx.Response(200, content=raw))
     ) as http:
@@ -250,7 +271,10 @@ def test_tencent_date_requires_canonical_iso_date(day):
     from sentinel.markets.prices.tencent import TencentPriceSource
 
     row = [day, "10", "11", "12", "9", "100"]
-    with client({"data": {"usZZAR": {"day": [row]}}}) as http, pytest.raises(SourceError):
+    with (
+        client({"code": 0, "data": {"usZZAR": {"day": [row]}}}) as http,
+        pytest.raises(SourceError),
+    ):
         TencentPriceSource(http).fetch_daily("ZZAR", START, END)
 
 
@@ -286,8 +310,54 @@ def test_request_limit_uses_us_trading_days_plus_ten():
 
     def respond(request):
         requests.append(request)
-        return httpx.Response(200, json={"data": {"usZZAR": {"day": []}}})
+        return httpx.Response(200, json={"code": 0, "data": {"usZZAR": {"day": []}}})
 
     with HttpClient(transport=httpx.MockTransport(respond)) as http:
         TencentPriceSource(http).fetch_daily("ZZAR", date(2026, 11, 26), date(2026, 11, 27))
     assert requests[0].url.params["param"] == "usZZAR,day,,,11,qfq"
+
+
+@pytest.mark.parametrize("code", [None, False, "NaN"])
+def test_envelope_requires_explicit_integer_zero_code(code):
+    import httpx
+
+    from sentinel.http.client import HttpClient
+    from sentinel.markets.prices.tencent import TencentPriceSource
+
+    raw = b'{"data":{"usZZAR":{"day":[]}}}'
+    if code is False:
+        raw = b'{"code":false,"data":{"usZZAR":{"day":[]}}}'
+    elif code == "NaN":
+        raw = b'{"code":NaN,"data":{"usZZAR":{"day":[]}}}'
+    with (
+        HttpClient(
+            transport=httpx.MockTransport(lambda _: httpx.Response(200, content=raw))
+        ) as http,
+        pytest.raises(SourceError) as caught,
+    ):
+        TencentPriceSource(http).fetch_daily("ZZAR", START, END)
+    assert caught.value.code == "SOURCE_UNAVAILABLE"
+    assert caught.value.reason == "PRICE_SCHEMA"
+
+
+@pytest.mark.parametrize(
+    "missing", ["cqr", "FHcontent", "HGcontent", "paixiri", "hgcgContent", "ggContent", "only_cqr"]
+)
+def test_hk_action_requires_exact_observed_six_keys(missing):
+    from sentinel.markets.prices.tencent import TencentPriceSource
+
+    action = {
+        key: "" for key in ("cqr", "FHcontent", "HGcontent", "paixiri", "hgcgContent", "ggContent")
+    }
+    action["cqr"] = "2026-10-30"
+    if missing == "only_cqr":
+        action = {"cqr": "2026-10-30"}
+    else:
+        del action[missing]
+    row = ["2026-10-30", "10", "11", "12", "9", "100", action]
+    with (
+        client({"code": 0, "data": {"hk00700": {"day": [row]}}}) as http,
+        pytest.raises(SourceError) as caught,
+    ):
+        TencentPriceSource(http).fetch_daily("hk00700", START, END)
+    assert caught.value.reason == "PRICE_SCHEMA"

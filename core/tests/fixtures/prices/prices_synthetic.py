@@ -13,4 +13,4 @@ def generate(start: date, count: int, seed: int = 4) -> dict[str, object]:
             close = round(10 + random.random(), 2)
             rows.append([day.isoformat(), "10", str(close), "12", "9", "100"])
         day += timedelta(days=1)
-    return {"synthetic": True, "data": {"usZZAR": {"day": rows}}}
+    return {"synthetic": True, "code": 0, "data": {"usZZAR": {"day": rows}}}

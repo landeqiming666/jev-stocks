@@ -370,3 +370,97 @@ def test_migration_is_exact_document_sql():
     content = (ROOT / "docs/04-数据模型.md").read_text()
     sql = content.split("### 3.5 `005_prices.sql`")[1].split("```sql\n")[1].split("```")[0]
     assert (ROOT / "core/sentinel/storage/migrations/005_prices.sql").read_text() == sql
+
+
+@pytest.mark.parametrize("waits,expected", [((5, 17), 17), ((None, 12), 12), ((None, None), None)])
+def test_dual_rate_limits_to_wire_and_schema(db, waits, expected):
+    primary = FakeSource(
+        "tencent",
+        error=SourceError(
+            "RATE_LIMITED", params={} if waits[0] is None else {"retryAfterSec": waits[0]}
+        ),
+    )
+    backup = FakeSource(
+        "nasdaq",
+        error=SourceError(
+            "RATE_LIMITED", params={} if waits[1] is None else {"retryAfterSec": waits[1]}
+        ),
+    )
+    result = service(db, primary, backup).refresh(["us:ZZAR"])
+    wire = result.to_wire()
+    assert result.failed[0].retry_after_sec == expected
+    error = wire["failed"][0]["error"]
+    assert error["code"] == "RATE_LIMITED"
+    assert error["message"] == (
+        f"请求过于频繁，请在 {expected} 秒后重试。"
+        if expected is not None
+        else "行情源请求过于频繁，请稍后重试。"
+    )
+    assert set(wire["failed"][0]) == {"instrumentId", "error"}
+    assert set(error) == {"code", "message"}
+    contract = json.loads((ROOT / "contracts/methods/prices.refresh.json").read_text())
+    types = json.loads((ROOT / "contracts/types.schema.json").read_text())
+    registry = Registry().with_resource("types.schema.json", Resource.from_contents(types))
+    jsonschema.Draft202012Validator(contract["result"], registry=registry).validate(wire)
+
+
+def test_mock_http_dual_429_preserves_retry_after_to_wire(db):
+    import httpx
+
+    from sentinel.http.client import HttpClient
+    from sentinel.markets.prices.nasdaq import NasdaqPriceSource
+    from sentinel.markets.prices.tencent import TencentPriceSource
+
+    calls = []
+    elapsed = [200.0]
+
+    def sleep(delay):
+        elapsed[0] += delay
+
+    def respond(request):
+        calls.append(request)
+        return httpx.Response(429, headers={"Retry-After": "7"})
+
+    with HttpClient(
+        transport=httpx.MockTransport(respond), sleeper=sleep, monotonic=lambda: elapsed[0]
+    ) as http:
+        result = service(db, TencentPriceSource(http), NasdaqPriceSource(http)).refresh(["us:ZZAR"])
+    wire = result.to_wire()
+    assert len(calls) == 6
+    assert wire["failed"][0]["error"] == {
+        "code": "RATE_LIMITED",
+        "message": "请求过于频繁，请在 7 秒后重试。",
+    }
+    contract = json.loads((ROOT / "contracts/methods/prices.refresh.json").read_text())
+    types = json.loads((ROOT / "contracts/types.schema.json").read_text())
+    registry = Registry().with_resource("types.schema.json", Resource.from_contents(types))
+    jsonschema.Draft202012Validator(contract["result"], registry=registry).validate(wire)
+
+
+def test_refresh_failure_from_error_preserves_known_wait():
+    from sentinel.markets.prices import RefreshFailure
+
+    failure = RefreshFailure.from_error(
+        "us:ZZAR", SourceError("RATE_LIMITED", reason="HTTP_429", params={"retryAfterSec": 4})
+    )
+    assert (failure.instrument_id, failure.code, failure.reason) == (
+        "us:ZZAR",
+        "RATE_LIMITED",
+        "HTTP_429",
+    )
+    assert failure.retry_after_sec == 4
+    assert failure.to_wire()["error"]["message"] == "请求过于频繁，请在 4 秒后重试。"
+    assert RefreshFailure("us:ZZAR", "RATE_LIMITED", "HTTP_429").to_wire()["error"]["message"] == (
+        "行情源请求过于频繁，请稍后重试。"
+    )
+
+
+@pytest.mark.parametrize("wait", [True, -1, float("nan"), float("inf"), "5"])
+def test_invalid_retry_after_is_unknown_without_guessing(wait):
+    from sentinel.markets.prices import RefreshFailure
+
+    failure = RefreshFailure.from_error(
+        "us:ZZAR", SourceError("RATE_LIMITED", params={"retryAfterSec": wait})
+    )
+    assert failure.retry_after_sec is None
+    assert failure.to_wire()["error"]["message"] == "行情源请求过于频繁，请稍后重试。"

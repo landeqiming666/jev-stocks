@@ -1,11 +1,20 @@
 from __future__ import annotations
 
+import math
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from datetime import date
 
 from sentinel.errors import ErrorCode, SentinelError, UserError
 from sentinel.messages import INTERNAL_FALLBACK, render
+
+
+def known_retry_after(value: object) -> int | float | None:
+    if type(value) is int and value >= 0:
+        return value
+    if type(value) is float and math.isfinite(value) and value >= 0:
+        return value
+    return None
 
 
 @dataclass(frozen=True)
@@ -24,10 +33,21 @@ class RefreshFailure:
     instrument_id: str
     code: str
     reason: str
+    retry_after_sec: int | float | None = None
 
     def to_wire(self) -> dict[str, object]:
         code = ErrorCode(self.code)
-        message = INTERNAL_FALLBACK if code == ErrorCode.INTERNAL else render(f"error.{code}")
+        if code == ErrorCode.INTERNAL:
+            message = INTERNAL_FALLBACK
+        elif code == ErrorCode.RATE_LIMITED:
+            wait = known_retry_after(self.retry_after_sec)
+            message = (
+                render("error.RATE_LIMITED", {"retryAfterSec": wait})
+                if wait is not None
+                else render("prices.rate_limited")
+            )
+        else:
+            message = render(f"error.{code}")
         return {
             "instrumentId": self.instrument_id,
             "error": {"code": code.value, "message": message},
@@ -35,7 +55,12 @@ class RefreshFailure:
 
     @classmethod
     def from_error(cls, instrument_id: str, error: SentinelError) -> RefreshFailure:
-        return cls(instrument_id, error.code.value, error.reason or error.code.value)
+        return cls(
+            instrument_id,
+            error.code.value,
+            error.reason or error.code.value,
+            known_retry_after(error.params.get("retryAfterSec")),
+        )
 
 
 @dataclass(frozen=True)

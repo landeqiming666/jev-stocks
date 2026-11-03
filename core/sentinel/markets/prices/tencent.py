@@ -24,8 +24,7 @@ def _action_valid(row: list[object], symbol: str) -> bool:
         return False
     action = row[6]
     return (
-        bool(action)
-        and set(action) <= _ACTION_KEYS
+        set(action) == _ACTION_KEYS
         and action.get("cqr") == row[0]
         and all(isinstance(value, str) for value in action.values())
     )
@@ -56,8 +55,8 @@ class TencentPriceSource:
         )
         if (
             not isinstance(payload, dict)
-            or type(payload.get("code", 0)) is not int
-            or payload.get("code", 0) != 0
+            or type(payload.get("code")) is not int
+            or payload.get("code") != 0
         ):
             raise schema_error()
         data = payload.get("data")

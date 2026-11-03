@@ -13,7 +13,7 @@ from sentinel.errors import InternalError, SentinelError, SourceError, UserError
 from sentinel.storage.db import Database
 
 from .calendar import TradingCalendar, _utc
-from .models import Bar, RefreshFailure, RefreshParams, RefreshResult
+from .models import Bar, RefreshFailure, RefreshParams, RefreshResult, known_retry_after
 from .source import MAX_ROWS, US_SYMBOL, PriceSource, clean_bars
 
 DEFAULT_LOOKBACK_DAYS = 1095
@@ -136,7 +136,13 @@ class PriceService:
                 if errors and all(e.reason == "OFFLINE" for e in errors)
                 else "NO_VALID_PRICES"
             )
-            raise SourceError(code, reason=reason)
+            waits = [
+                wait
+                for error in errors
+                if (wait := known_retry_after(error.params.get("retryAfterSec"))) is not None
+            ]
+            params = {"retryAfterSec": max(waits)} if code == "RATE_LIMITED" and waits else {}
+            raise SourceError(code, reason=reason, params=params)
         covered = len(wanted.intersection(bar.trade_date for bar in chosen))
         if covered < len(wanted):
             _logger.warning(
