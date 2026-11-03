@@ -1,9 +1,11 @@
 """check.py 的单元测试。运行：python3 -m unittest discover -s scripts/tests -v"""
 from __future__ import annotations
 
+import io
 import sys
 import tempfile
 import unittest
+from contextlib import redirect_stderr
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
@@ -114,6 +116,22 @@ class RunStepsTests(unittest.TestCase):
         self.assertEqual([call[0][0] for call in rec.calls], ["echo"])
         self.assertEqual(len(rec.calls), 1)
         self.assertTrue(any("SKIP" in line and "未选中" in line for line in lines))
+
+    def test_unknown_only_step_is_rejected_before_running_any_steps(self) -> None:
+        rec = Recorder()
+        errors = io.StringIO()
+        with redirect_stderr(errors), self.assertRaises(SystemExit) as raised:
+            runner.main(
+                ["--only", "known", "--only", "no-such-step"],
+                steps=[make_step("known")],
+                root=self.root,
+                runner=rec,
+                which=fake_which,
+                out=collect([]),
+            )
+        self.assertEqual(raised.exception.code, 2)
+        self.assertIn("no-such-step", errors.getvalue())
+        self.assertEqual(rec.calls, [])
 
     def test_optional_step_requires_flag(self) -> None:
         rec = Recorder([0])

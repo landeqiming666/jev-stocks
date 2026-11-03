@@ -178,6 +178,9 @@ def main(
     base = root if root is not None else Path(__file__).resolve().parents[1]
     if args.list:
         return list_steps(active, base, out=out)
+    unknown = set(args.only or ()) - {step.name for step in active}
+    if unknown:
+        parser.error("未知检查步骤: %s" % ", ".join(sorted(unknown)))
     flags = {"e2e"} if args.e2e else set()
     return run_steps(active, base, only=args.only, flags=flags, runner=runner, which=which, out=out)
 
