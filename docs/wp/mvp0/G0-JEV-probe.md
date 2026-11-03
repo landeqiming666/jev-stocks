@@ -109,7 +109,7 @@ def main(argv: Sequence[str] | None = None) -> int: ...
 | 名称 | 值 | 位置 | 含义 |
 |---|---|---|---|
 | `DEFAULT_ENDPOINT` | `https://api.typesafe.ai/v1/systemone` | `probe_jev.py` | 官方默认端点 |
-| `DEFAULT_TIMEOUT_SEC` | `30.0` | 同上 | 单次 HTTP 总超时 |
+| `DEFAULT_TIMEOUT_SEC` | `30.0` | 同上 | 当前探针为网络操作超时；总请求时限尚未验证，报告不得声称已验证 |
 | `SAMPLE_SIZE` | `20` | 同上 | 延迟/token 对比样本数 |
 | `MAX_RETRY_AFTER_SEC` | `5` | 同上 | 探针等待上限，不模拟生产长退避 |
 | `YES` / `NO` | `0.7` / `0.3` | 同上 | 只用于报告分类，不改变问题 |
