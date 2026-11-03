@@ -116,3 +116,40 @@ def test_order_main_at_zero_and_nonhtml_exhibits_do_not_consume_cap():
     )
     assert [row.seq for row in selected] == [0, 2, 3, 4]
     assert {row.seq for row in skipped} == {1, 5}
+
+
+@pytest.mark.parametrize(
+    "doc_type,accepted",
+    [
+        ("EX-99", True),
+        ("EX-99.1", True),
+        ("EX-99.123", True),
+        ("EX-990", False),
+        ("EX-99X", False),
+        ("EX-99.1FOO", False),
+        ("EX-99.", False),
+        ("EX-99.1.2", False),
+        ("EX-99.1\n", False),
+        ("EX-99.١", False),
+    ],
+)
+def test_ex99_type_requires_exact_numeric_suffix(doc_type, accepted):
+    row = IndexRow(1, "Exhibit", "exhibit.htm", doc_type, BASE + "exhibit.htm")
+    selected, skipped = select_files(
+        [row], cik=CIK, accession=ACCESSION, primary_document="main.htm"
+    )
+    assert selected[1:] == ([row] if accepted else [])
+    assert skipped == ([] if accepted else [row])
+
+
+def test_false_positive_types_do_not_consume_three_exhibit_cap():
+    types = ["EX-990", "EX-99X", "EX-99.1FOO", "EX-99", "EX-99.1", "EX-99.20", "EX-99.3"]
+    rows = [
+        IndexRow(seq, "Exhibit", f"ex{seq}.htm", doc_type, BASE + f"ex{seq}.htm")
+        for seq, doc_type in enumerate(types, 1)
+    ]
+    selected, skipped = select_files(
+        list(reversed(rows)), cik=CIK, accession=ACCESSION, primary_document="main.htm"
+    )
+    assert [row.doc_type for row in selected[1:]] == ["EX-99", "EX-99.1", "EX-99.20"]
+    assert [row.seq for row in skipped] == [1, 2, 3, 7]

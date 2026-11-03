@@ -1,4 +1,5 @@
 import logging
+import re
 from collections.abc import Sequence
 from dataclasses import replace
 from pathlib import PurePosixPath
@@ -12,6 +13,7 @@ from .models import IndexRow
 from .urls import directory, document_url, resolve_link, schema_error, validate_archive_url
 
 MAX_EX99 = 3
+_EX99_TYPE = re.compile(r"EX-99(?:\.[0-9]+)?")
 _LOGGER = get_logger(__name__)
 
 
@@ -97,7 +99,9 @@ def select_files(
         elif row.seq == 0:
             raise schema_error("SEC_INDEX_CONFLICT")
         elif (
-            row.doc_type.startswith("EX-99") and is_html(row.file_name) and len(selected) < MAX_EX99
+            _EX99_TYPE.fullmatch(row.doc_type) is not None
+            and is_html(row.file_name)
+            and len(selected) < MAX_EX99
         ):
             selected.append(row)
         else:
