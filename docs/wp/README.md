@@ -235,9 +235,9 @@ graph LR
 | [WP-00](mvp0/WP-00-skeleton.md) | 仓库骨架与工具链 | 核心 | 共享 | M | 0 | — | 已写 | done |
 | [C-00](mvp0/C-00-core-utils.md) | 基础模块：ID、时钟、错误、日志、脱敏、文案 | 核心 | 共享 | S | 1 | WP-00 | 已写 | 待派发 |
 | [C-06](mvp0/C-06-contracts.md) | 契约文件与原型数据生成 | 核心 | 共享 | M | 1 | WP-00 | 已写 | 待派发 |
-| [G0-JEV](mvp0/G0-JEV-probe.md) | 闸门探针：Jev 直连实测 | 语义 | 共享 | S | 1 | WP-00 | 已写 | 待派发 |
-| [G0-JEVDB](mvp0/G0-JEVDB-build.md) | 闸门探针：macOS 构建并加载 JEVDB | 语义 | macOS | M | 1 | WP-00 | 已写 | 待派发 |
-| [G1-US](mvp0/G1-US-market-probe.md) | 闸门探针：SEC、行情源实测与录制 | 数据 | 共享 | S | 1 | WP-00 | 已写 | 待派发 |
+| [G0-JEV](mvp0/G0-JEV-probe.md) | 闸门探针：Jev 直连实测 | 语义 | 共享 | L | 1 | WP-00 | 已写 | 待派发 |
+| [G0-JEVDB](mvp0/G0-JEVDB-build.md) | 闸门探针：macOS 构建并加载 JEVDB | 语义 | macOS | L | 1 | WP-00 | 已写 | 待派发 |
+| [G1-US](mvp0/G1-US-market-probe.md) | 闸门探针：SEC、行情源实测与录制 | 数据 | 共享 | L | 1 | WP-00 | 已写 | 待派发 |
 | [W-00](mvp0/W-00-windows-survey.md) | Windows 环境摸底与对等矩阵 | Windows | Windows | S | 1 | WP-00 | 已写 | doing |
 | [C-01](mvp0/C-01-rpc-server.md) | RPC 服务端：线程模型、分发、取消 | 核心 | 共享 | M | 2 | C-00 | 已写 | 待派发 |
 | [C-03](mvp0/C-03-storage.md) | 存储：DuckDB 封装、迁移、备份 | 核心 | 共享 | M | 2 | C-00 | 已写 | 待派发 |

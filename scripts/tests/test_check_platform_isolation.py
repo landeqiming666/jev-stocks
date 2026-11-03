@@ -92,6 +92,20 @@ class ScanTests(unittest.TestCase):
         self.write("apps/desktop/src/rpc/generated/a.ts", "navigator.userAgent;\n")
         self.assertEqual(isolation.scan(self.root), [])
 
+    def test_ignored_development_sources_do_not_hide_active_source_violations(self) -> None:
+        self.write(".dev-data/jevdb/src/upstream.py", "import sys\nprint(sys.platform)\n")
+        self.write("core/sentinel/active.py", "import sys\nprint(sys.platform)\n")
+        self.assertEqual(
+            [finding.path for finding in isolation.scan(self.root)], ["core/sentinel/active.py"]
+        )
+
+    def test_only_explicit_jevdb_build_helper_can_check_platform(self) -> None:
+        self.write("vendors/jevdb/build.py", "import platform\nplatform.system()\n")
+        self.write("vendors/jevdb/other.py", "import platform\nplatform.system()\n")
+        self.assertEqual(
+            [finding.path for finding in isolation.scan(self.root)], ["vendors/jevdb/other.py"]
+        )
+
     def test_unpaired_shell_script_is_reported(self) -> None:
         self.write("scripts/a.sh", "#!/bin/sh\n")
         findings = isolation.scan(self.root)

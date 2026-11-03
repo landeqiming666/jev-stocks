@@ -7,6 +7,7 @@ sys.platform / cfg(target_os) / process.platform 等一律报错。
 from __future__ import annotations
 
 import argparse
+import os
 import re
 import sys
 from dataclasses import dataclass
@@ -24,6 +25,7 @@ class Finding:
 SOURCE_SUFFIXES = {".py", ".rs", ".ts", ".tsx", ".js", ".jsx"}
 SKIP_DIRS = {
     ".git",
+    ".dev-data",
     "node_modules",
     "target",
     "dist",
@@ -67,20 +69,18 @@ def _patterns(suffix: str) -> Sequence[re.Pattern[str]]:
 
 
 def _iter_sources(root: Path) -> Iterable[Path]:
-    for path in sorted(root.rglob("*")):
-        if not path.is_file() or path.suffix not in SOURCE_SUFFIXES:
-            continue
-        relative = path.relative_to(root)
-        if any(part in SKIP_DIRS for part in relative.parts[:-1]):
-            continue
-        posix = relative.as_posix()
-        if "/generated/" in "/" + posix:
-            continue
-        yield path
+    for directory, folders, files in os.walk(root):
+        folders[:] = sorted(name for name in folders if name not in SKIP_DIRS and name != "generated")
+        for name in sorted(files):
+            path = Path(directory) / name
+            if path.is_file() and path.suffix in SOURCE_SUFFIXES:
+                yield path
 
 
 def _is_allowed(relative: str) -> bool:
-    return any(relative.startswith(prefix) for prefix in ALLOWED_PREFIXES)
+    return relative == "vendors/jevdb/build.py" or any(
+        relative.startswith(prefix) for prefix in ALLOWED_PREFIXES
+    )
 
 
 def _is_fixture_guard(relative: str, line: str) -> bool:

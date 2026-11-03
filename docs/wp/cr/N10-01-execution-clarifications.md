@@ -50,3 +50,13 @@ U-01 的 Menu 必须提供 `onClose`；React 19 触发按钮 ref 允许 null。�
 D-01 不替调用方补 SEC User-Agent。D-03 的 `SecFilingsClient` 追加与 D-02 相同的可选 keyword-only `email_provider`；每次请求动态校验，缺配置不发请求。C-07 同时为 ticker 与 filing 两个客户端注入 provider。D-03 使用当前 selectolax Lexbor，不新增依赖。
 
 C-00 的 EngineError 扩充允许 RATE_LIMITED/TIMEOUT，与 S-03 和 06 的已定错误映射一致，既有 15 个公开错误码与 retryable 不变。S-03 的 `map_sdk_exception` 返回共同基类 SentinelError，对实现错误使用 InternalError；不放宽 EngineError 接受 INTERNAL。主 agent 先增回归再修正基础错误族。
+
+## 9. 探针 CR、规模与构建路线
+
+已批准 G0-JEV、G0-JEVDB、G1-US 的 MVP-0 规模为 L：分别约 1600、1500、1200 行实现加测试，最终报告实际计数；安全、来源、超时和失败回归不得通过删测试压缩。生成数据单列；继续保持独立所有权与完整主审。
+
+G0-JEVDB 的固定 MIT 文件没有 SPDX 行，上游脚本硬编码并行 4；批准验证标准 MIT 文本、固定源哈希并执行等价 CMake 配置且并行 2。DuckDB 1.4.3 CMake 明确将 `EXTENSION_STATIC_BUILD=ON` 列为可分发加载扩展的常规路线，用于宿主未导出 C++ 符号的情形。批准在 ignored 开发目录构建同版本静态 DuckDB 扩展（`BUILD_EXTENSIONS_ONLY=OFF`），不替换 Python wheel、版本、锁文件或系统策略；是否实际可加载仍必须实测，不能先宣称修复。
+
+隔离检查只排除已 ignored 的 `.dev-data` 开发源码，并采用目录剪枝避免扫描巨量构建缓存；新增回归保证真实应用源码仍被检查。`vendors/jevdb/build.py` 是自有平台构建包装，批准仅该精确文件读取平台，不允许其他 vendor 源码绕过。前置红色证据为 `/tmp/jev-next10-isolation-red.log`。
+
+G1-US 历史 SEC 表不存在重复或空白 ticker，不伪造真实行；独立 synthetic 边界 fixture 必须显式标注。当前腾讯港股实际行可带第七个公司行动对象；批准仅在核实该对象形状时解析前六列并保存原始来源，不接受未知额外列。成交量精度与单位不猜测，低行数、陈旧数据和 250 日不足都不能判为通过。06 的问题集声明统一为已经批准的 `.2`，探针局部问题快照在 S-02 接管之前仅为可核对 bootstrap 数据。

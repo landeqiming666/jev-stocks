@@ -5,7 +5,8 @@ phase: mvp0
 platform: shared
 lane: semantic
 deps: [WP-00]
-size: S
+size: L
+size_approval: cr/N10-01-execution-clarifications.md
 owns: [scripts/probe_jev.py, scripts/tests/test_probe_jev.py, core/tests/fixtures/jev/]
 appends: []
 stubs: []

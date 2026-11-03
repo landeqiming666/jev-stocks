@@ -5,7 +5,8 @@ phase: mvp0
 platform: shared
 lane: data
 deps: [WP-00]
-size: S
+size: L
+size_approval: cr/N10-01-execution-clarifications.md
 owns: [scripts/probe_sources.py, core/tests/unit/markets/probe/, core/tests/fixtures/markets/probe/]
 appends: []
 stubs: []
@@ -122,7 +123,7 @@ def main(argv: list[str] | None = None) -> int: ...
 6. 纳斯达克：请求 `limit=30`，断言 `data.tradesTable.rows` 非空；`close`、`open`、`high`、`low` 以 `$` 开头时去掉后再 `float()`；日期用 `%m/%d/%Y` 解析。
 7. 连续性：5 个代码各请求 `--days` 行，统计行数、首尾日期、超过 4 个自然日的间隔；`rows < 250` 记 `fail`，`gaps > 0` 记 `warn`。250 日连续性、复权语义、条款、限速本轮未验证，必须由本包完成；未完成项写 `TODO-VERIFY(G1-US)`，不得声称已验证。
 8. 负向对照：Yahoo `query1.finance.yahoo.com/v8/finance/chart/AAPL?range=1mo&interval=1d`、Stooq CSV、东方财富 `push2his`；只记录状态码与内容类型，不判定通过。
-9. 写 fixture：标的表保留前 25 条并强制包含 `BRK-B`、一个 `OTC`、一个重复 `ticker`、一个带空格 `ticker`；`submissions` 保留 15 条并包含 8-K、8-K/A、10-Q 各 1 条；行情各保留 30 行。
+9. 写 fixture：标的表裁剪 25 条并尽量包含来源真实存在的 `BRK-B` 和 OTC；不存在的重复、空白 ticker 或表单不得伪造进真实录制，只在独立标注 synthetic 的边界测试中构造。`submissions` 裁剪最多 15 条、行情最多 30 行；来源不足必须如实记行数和未通过项。
 10. 写 `REPORT.md`：表格列为检查项、必需、状态、HTTP、耗时、关键数值、结论；末尾固定列出四个 `TODO-VERIFY(G1-US)` 的当前结论。
 
 ## 7. 错误与边界情况
