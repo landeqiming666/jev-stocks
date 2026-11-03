@@ -1,0 +1,14 @@
+# TODO-VERIFY(G0-JEV): model availability, prices and billing effective dates remain unverified.
+[models."jev-1.14.0"]
+input_usd_per_mtok = "0.042"
+effective_from = "2026-10-14"
+source = "https://docs.typesafe.ai/models"
+accessed = "2026-11-02"
+verification = "TODO-VERIFY(G0-JEV)"
+
+[models."jev-1.13.0"]
+input_usd_per_mtok = "0.042"
+effective_from = "2026-10-02"
+source = "https://docs.typesafe.ai/models"
+accessed = "2026-11-02"
+verification = "TODO-VERIFY(G0-JEV)"
