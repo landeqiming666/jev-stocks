@@ -7,6 +7,29 @@ import pytest
 from .conftest import trading_days
 
 
+def test_weight_calculation_isolated_from_caller_decimal_traps_and_flags(calendar):
+    from decimal import ROUND_DOWN, Inexact, Rounded, localcontext
+
+    from sentinel.quant.models import HoldingPoint, PricePoint
+    from sentinel.quant.prices import build_risk_input
+
+    days = trading_days(calendar)
+    prices = {
+        name: [PricePoint(day, 100.0, 100.0) for day in days]
+        for name in ("us:ZZAR", "us:ZZFD")
+    }
+    holdings = [HoldingPoint("us:ZZAR", "ZZAR", 1), HoldingPoint("us:ZZFD", "ZZFD", 2)]
+    with localcontext() as context:
+        context.prec = 3
+        context.rounding = ROUND_DOWN
+        context.traps[Inexact] = context.traps[Rounded] = True
+        context.flags[Inexact] = True
+        before = repr(context), dict(context.flags), dict(context.traps)
+        data = build_risk_input(holdings, prices, "1Y", calendar=calendar, as_of=days[-1])
+        np.testing.assert_allclose(data.weights, [1 / 3, 2 / 3])
+        assert (repr(context), dict(context.flags), dict(context.traps)) == before
+
+
 def test_window_and_calendar_start(calendar):
     from sentinel.quant.models import HoldingPoint, PricePoint
     from sentinel.quant.prices import build_risk_input, calendar_start

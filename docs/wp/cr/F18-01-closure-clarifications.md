@@ -181,3 +181,7 @@ Holding.pendingCount 仅推翻/削弱，uncertainCount 独立；两者之和才�
 今日页标题 N 仍仅 items.length，乐观动作重算 wire 汇总不得混用标题数量。
 U-02 排序以真实 P-03/04 的关系、headline、event.publishedAt、decisionId 为准，
 修正旧页面文档 createdAt 与服务端排序冲突，不改判定阈值或原型概率。
+
+风险 Decimal 市值权重使用独立 Context(prec=60, ROUND_HALF_UP)，不继承调用方 traps。
+主审先红回归证明 1/3 权重原先会被调用方 Inexact trap 中断；修复后结果与调用方 flags
+均稳定。此补充不修改收益、协方差、零方差处理或年化规则。
