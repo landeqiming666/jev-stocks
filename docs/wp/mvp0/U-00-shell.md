@@ -103,7 +103,7 @@ function useAppStore(): AppState;
 ```
 - `parseHash` 对未知路由返回 `today`；空 hash 返回 `today`；保留未知 query 参数但不解释。
 - `navigate` 默认 `pushState`，`replace` 为真时替换当前历史；切换路由后滚动到顶部。
-- `bootstrapApp` 在 30 秒后抛 `TIMEOUT`；`protocolVersion` 不以 `1.` 开头时抛前端本地错误，映射为 `INTERNAL` 且 `data.reason="PROTOCOL_MISMATCH"`。
+- `bootstrapApp` 先 `whenReady` 再调用 `app.bootstrap`，两步合计 30 秒后抛 `TIMEOUT`；`protocolVersion` 不以 `1.` 开头时抛前端本地错误，映射为 `INTERNAL` 且 `data.reason="PROTOCOL_MISMATCH"`。卸载时 dispose 客户端及通知订阅。
 - `PageFrame` 在 `asideOpen` 为真时渲染 `<aside class="l-drawer" aria-label={asideLabel}>`；否则不渲染该元素。
 
 ### 5.2 数据结构
@@ -139,6 +139,8 @@ function useAppStore(): AppState;
 8. `RouterView` 用 `import.meta.glob("../pages/*/index.tsx", { eager: true })` 建立页面表；没有页面模块时渲染 `PageFrame` + 空状态“页面正在搭建”，不得让路由崩溃。页面模块必须默认导出 `Page` 组件。
 9. 路由切换后把焦点移到 `main` 内第一个 `h1`（`tabIndex=-1`）；`Esc` 由页面处理，外壳只提供 `useEscape` 工具，不越权关闭业务抽屉。
 10. `bootstrapApp` 成功后写入 store，并订阅 `engine.changed`、`source.degraded`、`budget.updated`；未知通知忽略。失败时由 `AppShell` 渲染启动失败页，提供“重试启动”和“复制错误详情”，不显示堆栈给普通用户。
+
+`Bootstrap` 的实际契约不包含 DataStatus、扫描统计或已用预算。框架初始值为未知或空，不从本机时间或示例虚构市场状态、成功扫描和零用量；后续页面取到真实 Inbox/DataStatus 后更新共享 store。只允许本包的 bootstrap 与框架通知，不为填顶栏私自增加业务 RPC。mock 模式始终显示可见的“界面预览 · 示例数据”标识，不能把 fixture 的 JEVDB 标签当真实模型连接。
 
 ## 7. 错误与边界情况
 

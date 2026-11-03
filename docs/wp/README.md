@@ -241,7 +241,7 @@ graph LR
 | [W-00](mvp0/W-00-windows-survey.md) | Windows 环境摸底与对等矩阵 | Windows | Windows | S | 1 | WP-00 | 已写 | doing |
 | [C-01](mvp0/C-01-rpc-server.md) | RPC 服务端：线程模型、分发、取消 | 核心 | 共享 | M | 2 | C-00 | 已写 | 待派发 |
 | [C-03](mvp0/C-03-storage.md) | 存储：DuckDB 封装、迁移、备份 | 核心 | 共享 | M | 2 | C-00 | 已写 | 待派发 |
-| [C-05](mvp0/C-05-frontend-rpc.md) | 前端 RpcClient、mock 与契约类型生成 | 核心 | 共享 | M | 2 | C-06, WP-00 | 已写 | 待派发 |
+| [C-05](mvp0/C-05-frontend-rpc.md) | 前端 RpcClient、mock 与契约类型生成 | 核心 | 共享 | L | 2 | C-06, WP-00 | 已写 | 待派发 |
 | [D-01](mvp0/D-01-http.md) | HTTP 基础设施：重试、熔断、限速、缓存 | 数据 | 共享 | M | 2 | C-00 | 已写 | 待派发 |
 | [P-04](mvp0/P-04-trading-rules.md) | 模拟交易规则：校验、费用、撮合 | 数据 | 共享 | S | 2 | C-00 | 已写 | 待派发 |
 | [S-01](mvp0/S-01-segment.md) | 分句与分段 | 语义 | 共享 | S | 2 | C-00 | 已写 | 待派发 |

@@ -5,7 +5,8 @@ phase: mvp0
 platform: shared
 lane: core
 deps: [C-06, WP-00]
-size: M
+size: L
+size_approval: cr/N10-01-execution-clarifications.md
 owns: [apps/desktop/src/rpc/, apps/desktop/src/mocks/, scripts/gen_ts_types.py, scripts/tests/test_gen_ts_types.py]
 appends: []
 stubs: []
@@ -90,11 +91,15 @@ export interface RpcClient {
     name: N, handler: (params: ParamsOfNotification<N>) => void,
   ): () => void;
   status(): "starting" | "ready" | "restarting" | "failed";
+  whenReady(options?: { timeoutMs?: number; signal?: AbortSignal }): Promise<void>;
+  dispose(): void;
 }
 export function createRpcClient(options?: RpcClientOptions): RpcClient;
 export function createMockRpcClient(options: { scenario?: string }): RpcClient;
 ```
-`createRpcClient` 通过 `invoke("rpc_send", { line })` 发送紧凑 JSON，通过 `listen("core://message", ...)` 接收响应/通知，通过 `listen("core://status", ...)` 更新状态。`call` 的默认超时为 30,000 ms；`settings.testConnection` 为 20,000 ms；导出方法为 60,000 ms。`scan.start` 使用默认值，立即返回 `runId`，后续靠通知。
+`createRpcClient` 通过 `invoke("rpc_send", { line })` 发送紧凑 JSON，通过 `listen("core://message", ...)` 接收响应/通知，通过 `listen("core://status", ...)` 更新状态；监听建立后只读一次 `core_status`。`call` 默认使用生成的 `METHOD_TIMEOUTS`，调用方 `timeoutMs` 可覆盖：普通方法 30,000 ms、`settings.testConnection` 20,000 ms、`scan.retryBatch` 60,000 ms、`app.ping` 2,000 ms、`app.shutdown` 5,000 ms。`scan.start` 立即返回 `runId`，后续靠通知。
+
+`whenReady` 不轮询，等待监听与快照初始化后实际进入 ready；取消、失败、dispose 或等待超时均拒绝。`dispose` 释放监听、所有 pending 和就绪等待者，重复调用安全。U-00 的握手使用两步合计 30 秒预算，不能分别等待两次 30 秒。
 
 ### 5.2 数据结构
 | 结构 | 字段 | 类型 | 必填 | 约束 | 含义 |
