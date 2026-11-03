@@ -13,8 +13,10 @@ export function TopBar() {
   const market = data ? `${common.market[data.market]} ${common.marketState[data.marketState]}${
     data.marketState === "closed" && data.nextOpenAt ? ` · ${common.nextOpen} ${formatDateTime(data.nextOpenAt)}` : ""}` : common.marketUnknown;
   const configured = data ? data.engine.state !== "unconfigured" : value?.configured.jevKey;
+  const degraded = data ? data.engine.state === "degraded" : value?.engine.requested !== "jev_direct" &&
+    value?.engine.active === "jev_direct" && !value.engine.jevdbAvailable;
   const badge = !engine ? common.engine.unknown : !active || !configured ? common.engine.unconfigured :
-    `${common.engine[active]} · ${engine.modelId}${data?.engine.state === "degraded" ? " · " + common.engine.degraded : ""}`;
+    `${common.engine[active]} · ${engine.modelId}${degraded ? " · " + common.engine.degraded : ""}`;
   return <header className="l-top">
     <span className="l-top__brand">{common.appName}</span>
     <span className="l-top__market">{market}</span>

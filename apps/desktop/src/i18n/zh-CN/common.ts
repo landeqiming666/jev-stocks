@@ -8,6 +8,9 @@ export const common = {
   marketUnknown: "市场状态未就绪",
   nextOpen: "下次开盘",
   engine: { jev_direct: "Jev 直连", jevdb: "JEVDB 加速", unconfigured: "引擎未配置", unknown: "引擎未就绪", degraded: "已降级" },
+  engineTitle: "语义引擎",
+  engineDegradedTitle: "已从 JEVDB 降级为 Jev 直连（同一模型）",
+  probabilityTitle: "Jev 回答“是”的概率",
   verdict: { overturn: "推翻", weaken: "削弱", support: "支持", none: "无关", uncertain: "待确认" },
   relation: { overturn: "推翻", weaken: "削弱", support: "支持", none: "无关", uncertain: "待确认" },
   action: { still_valid: "仍然成立", revise: "修正逻辑", exit_intent: "准备卖出", ignore: "忽略", reopen: "重新打开" },
@@ -30,6 +33,13 @@ export const common = {
   goSettings: "去设置",
   goToday: "回到今天",
   configurationRequired: "尚未配置 Jev 密钥和 SEC 联系邮箱，扫描无法开始。",
+  configurationRequiredKey: "尚未配置 Jev 密钥，扫描无法开始。",
+  configurationRequiredEmail: "尚未配置 SEC 联系邮箱，扫描无法开始。",
+  configurationRequiredFor(configured: { jevKey: boolean; secEmail: boolean }): string {
+    if (!configured.jevKey && !configured.secEmail) return common.configurationRequired;
+    if (!configured.jevKey) return common.configurationRequiredKey;
+    return configured.secEmail ? "" : common.configurationRequiredEmail;
+  },
   engineChanged: "引擎已切换",
   sourceDegraded: "数据源暂时不可用",
   dismiss: "关闭提示",
@@ -44,6 +54,10 @@ export const common = {
   save: "保存",
   confirm: "确认",
   loading: "加载中",
+  empty: "暂无数据",
+  tableEmpty: "暂无记录",
+  chartEmpty: "暂无图表数据",
+  chartUnits: { percent: "%", correlation: "相关系数", explainedVariance: "解释方差" },
   unknown: "未知",
   invalidValue: "—",
   dataAsOf: "数据截至",

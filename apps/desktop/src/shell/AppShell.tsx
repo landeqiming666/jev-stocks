@@ -25,7 +25,7 @@ export function AppShell({ children, onRetry }: { children: ReactNode; onRetry?:
     <div className="l-body">
       <div className="l-banners">
         {boot.status === "ready" && unconfigured && route !== "settings" && <div className="l-notice" role="status">
-          <span>{common.configurationRequired}</span><button className="l-action l-action--secondary" onClick={() => navigate("settings")}>{common.goSettings}</button>
+          <span>{common.configurationRequiredFor(boot.value!.configured)}</span><button className="l-action l-action--secondary" onClick={() => navigate("settings")}>{common.goSettings}</button>
         </div>}
         {offline && <div className="l-notice" role="status">{common.offlineNotice}</div>}
         {ui.engineNotice && <div className="l-notice" role="status">

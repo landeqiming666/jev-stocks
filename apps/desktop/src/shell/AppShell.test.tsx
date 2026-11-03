@@ -9,6 +9,6 @@ it("shell_renders_disclaimer_and_engine_badge", async () => {
   const { useAppStore } = await import("../app/store");
   useAppStore.setState({ bootstrap: { status: "ready", value: ready as Bootstrap, error: null } });
   render(<AppShell><h1>Page</h1></AppShell>);
-  expect(screen.getByText("Jev 直连 · jev-1.14.0")).toBeTruthy();
+  expect(screen.getByText(/Jev 直连 · jev-1\.14\.0/)).toBeTruthy();
   expect(screen.getByText("仅记录与提醒，不构成投资建议。")).toBeTruthy();
 });

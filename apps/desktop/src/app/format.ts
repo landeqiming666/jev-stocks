@@ -30,8 +30,11 @@ export function formatTokens(value: number): string {
   return Number.isSafeInteger(value) && value >= 0 ? new Intl.NumberFormat("zh-CN").format(value) : missing;
 }
 function instant(value: string): Date | null {
-  if (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,3})?Z$/.test(value)) return null;
-  const date = new Date(value);
+  const match = /^(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2})(?:\.(\d+))?Z(?![\s\S])/.exec(value);
+  if (!match) return null;
+  // 契约允许微秒及更高精度；截取毫秒，不能舍入越过原始秒或日期。
+  const fraction = match[2] ? "." + match[2].slice(0, 3).padEnd(3, "0") : "";
+  const date = new Date(match[1] + fraction + "Z");
   return Number.isFinite(date.getTime()) && date.toISOString().slice(0, 19) === value.slice(0, 19) ? date : null;
 }
 export function formatDate(value: string, timeZone?: string): string {
