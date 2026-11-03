@@ -260,7 +260,7 @@ graph LR
 | [P-05](mvp0/P-05-paper-account.md) | 模拟账户与订单：账本、回放时钟 | 数据 | 共享 | M | 4 | P-04, C-03, D-04, C-01 | 已写 | 待派发 |
 | [P-06](mvp0/P-06-risk.md) | 风险计算 | 数据 | 共享 | M | 4 | C-03, D-04, C-01 | 已写 | 待派发 |
 | [S-05](mvp0/S-05-decision-pipeline.md) | 判定流水线：证据、缓存、落库 | 语义 | 共享 | M | 4 | S-01, S-03, C-03 | 已写 | 待派发 |
-| [U-01](mvp0/U-01-components.md) | 组件库 | 界面 | 共享 | M | 4 | U-00 | 已写 | 待派发 |
+| [U-01](mvp0/U-01-components.md) | 组件库 | 界面 | 共享 | L | 4 | U-00 | 已写 | 待派发 |
 | [W-02](mvp0/W-02-windows-bridge.md) | Windows 核心进程桥接对等 | Windows | Windows | M | 4 | W-01, C-02 | 已写 | 待派发 |
 | [W-04](mvp0/W-04-windows-credentials.md) | Windows 凭据管理器验证 | Windows | Windows | S | 4 | W-01, C-04 | 已写 | 待派发 |
 | [E-02](mvp0/E-02-eval.md) | 标注集与评测脚本 | 语义 | 共享 | M | 5 | S-05 | 已写 | 待派发 |

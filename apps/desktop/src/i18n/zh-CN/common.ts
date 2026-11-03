@@ -48,6 +48,13 @@ export const common = {
   closeMenu: "关闭菜单",
   closeModal: "关闭对话框",
   chartInvalid: "图表数据不完整。",
+  chartTableView: "表格视图",
+  chartVisualView: "图表视图",
+  chartLegend: "颜色深浅表示相关程度",
+  chartNoData: "无数据",
+  chartCellTitle(a: string, b: string, value: number | null): string {
+    return `${a} 与 ${b}：${value === null ? common.chartNoData : value.toFixed(2)}`;
+  },
   retry: "重试",
   refresh: "刷新",
   cancel: "取消",

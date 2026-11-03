@@ -120,3 +120,11 @@ RefreshFailure 的原三个字段保持兼容，可增加可选 retry_after_sec�
 采用有界 daemon 调用槽；每个获得槽位的逻辑请求有 60 秒总预算，覆盖首次发送、SDK 重试、退避、读取、解析和一次上下文拆分。consumer 可按取消/截止返回，OS 阻塞线程无法强杀、远端请求不保证撤回；旧线程继续占用槽位，不能靠无限新建线程规避。并发应用日志不能被全局 disable，脱敏限定到当前调用线程的 SDK 日志。
 
 SDK 工厂缺配置可用性与 S-02 默认选择文字不一致时，选择器可返回 unconfigured 引擎，组合根/扫描按配置阻断；不把构造失败作为唯一缺 key 行为。任何 mock 响应、NULL 短路或可用 adapter 都不能替代真实 G0 模型闸门。
+
+## 19. U-01 组件合同补全与规模
+
+已批准 U-01 规模 L，约 2600 行实现、复制 CSS、仅开发陈列和测试，Markdown/PNG另列，保留全部规定和新增回归。Field 的 number count 签名不变，有单一文本控件时按其 string value/defaultValue 的 trim 码点计数，无文本时用显式 count.value。非交互组件 ref 到原型根，不为标签图表添加 Tab 停靠点；交互组件到实际控件，Table ref 到 table。
+
+Heatmap 保持 SVG、BarList 保持可读的 ul/list 语义；风险页负责同数据 Table 替代和视图切换，开发陈列显式展示该组合。主 agent 在 common 集中文案增加视图切换、图例、单元格标题函数，U-01 只消费。Probability 保留原型直接文本 DOM，03 同步；SegmentedControl 保持类名但点击高度至少 32px（可访问性优先于原型 28px），Toast 关闭使用标准 32px 按钮。
+
+ui/index 导入的 CSS 不能重新定义 U-00 顶栏的重叠 c-engine/c-tag/c-icon；批准在组件根加 data-ui 并限定相关选择器，既有类名不改，不影响独立原型。上述语义修正不新增依赖、不改变业务页面所有权或产品范围。
