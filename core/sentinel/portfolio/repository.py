@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import math
 from datetime import date, datetime
 from typing import Literal, cast
 
@@ -189,6 +190,9 @@ class PortfolioRepository:
                 }
             )
             close, trade_date, change, count, pending, uncertain = row[17:]
+            last_close = cast(float | None, close)
+            if last_close is not None and (not math.isfinite(last_close) or last_close < 0):
+                raise InternalError(detail="invalid latest holding price")
             status: Literal["unguarded", "attention", "guarded"] = (
                 "unguarded" if count == 0 else "attention" if cast(int, pending) > 0 else "guarded"
             )
@@ -199,14 +203,14 @@ class PortfolioRepository:
                     quantity=holding.quantity,
                     avg_cost=holding.avg_cost,
                     note=holding.note,
-                    last_close=cast(float | None, close),
+                    last_close=last_close,
                     last_close_date=None
                     if trade_date is None
                     else cast(date, trade_date).isoformat(),
                     day_change_pct=cast(float | None, change),
                     market_value=None
-                    if close is None
-                    else market_value(holding.quantity, cast(float, close)),
+                    if last_close is None
+                    else market_value(holding.quantity, last_close),
                     thesis_count=cast(int, count),
                     pending_count=cast(int, pending),
                     uncertain_count=cast(int, uncertain),
