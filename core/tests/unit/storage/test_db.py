@@ -190,7 +190,8 @@ def test_exclusive_composes_backup_and_write_without_exposing_executor(db: Datab
         assert protected is None
         backup = db.backup("exclusive")
         with db.read() as reader:
-            assert reader.execute("SELECT * FROM exclusive_sample").fetchall() == [(1,)]
+            reader.execute("SELECT * FROM exclusive_sample")
+            assert reader.fetchall() == [(1,)]
         with db.write() as tx:
             tx.execute("DELETE FROM exclusive_sample")
     with duckdb.connect(str(backup), read_only=True) as restored:
@@ -224,7 +225,8 @@ def test_exclusive_blocks_other_handle_until_entire_sequence_finishes(db: Databa
                 assert not entered.is_set()
             task.result(timeout=3)
         with db.read() as reader:
-            assert reader.execute("SELECT * FROM exclusive_sample").fetchall() == [(2,)]
+            reader.execute("SELECT * FROM exclusive_sample")
+            assert reader.fetchall() == [(2,)]
         with duckdb.connect(str(backup), read_only=True) as restored:
             assert restored.execute("SELECT * FROM exclusive_sample").fetchall() == [(1,)]
     finally:
