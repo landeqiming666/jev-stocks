@@ -81,7 +81,7 @@ def test_budget_out_of_range_is_rejected(settings: SettingsService) -> None:
 
 
 def test_normalization_boundaries_and_noop(settings: SettingsService, db: Database) -> None:
-    email = "x" * 114 + "@a.com"
+    email = "x" * 64 + "@" + "a" * 48 + ".abcdef"
     value = settings.update(
         SettingsPatch(
             sec_contact_email="\x1c " + email + " \x1c",
@@ -162,7 +162,7 @@ def test_bootstrap_fields_match_contract(
     assert result == dict(
         protocolVersion="1.0",
         appVersion="0.1.0",
-        dbSchemaVersion=1,
+        dbSchemaVersion=db.schema_version,
         platform="macos",
         engine=dict(
             requested="auto", active="jev_direct", modelId="jev-1.14.0", jevdbAvailable=False
@@ -274,14 +274,14 @@ def test_all_python_whitespace_normalizes_only_email(whitespace: str) -> None:
             StoredSettings(sec_contact_email=email)
 
 
-@pytest.mark.parametrize("char", ["x", "\U0001f600"])
-def test_email_counts_normalized_python_codepoints(char: str) -> None:
-    email = char * 114 + "@a.com"
+def test_email_enforces_ascii_and_local_part_limit_after_normalization() -> None:
+    email = "x" * 64 + "@" + "a" * 48 + ".abcdef"
     assert len(email) == 120
     assert SettingsPatch(sec_contact_email="\x1c" + email + "\x1f").sec_contact_email == email
-    with pytest.raises(UserError) as caught:
-        SettingsPatch(sec_contact_email=char + email)
-    assert caught.value.message_key == "settings.email_invalid"
+    for invalid in ("x" * 65 + "@a.com", "😀@a.com", "x@例子.测试"):
+        with pytest.raises(UserError) as caught:
+            SettingsPatch(sec_contact_email=invalid)
+        assert caught.value.message_key == "settings.email_invalid"
 
 
 @pytest.mark.parametrize("engine", [" auto ", "\x1cauto\x1c", "AUTO", "jevdb "])

@@ -11,6 +11,7 @@ from sentinel.settings.repository import SettingsRepository
 from sentinel.storage import Database
 
 NOW = parse_iso("2026-11-02T00:35:00Z")
+MIGRATIONS = Path(__file__).parent / "fixtures" / "migrations"
 
 
 class FakeProbe:
@@ -42,7 +43,7 @@ def db(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Iterator[Database]:
     monkeypatch.setenv("SENTINEL_CLOCK", "2026-11-02T00:35:00Z")
     database = Database(tmp_path / "sentinel.duckdb")
     database.open()
-    database.migrate()
+    database.migrate(MIGRATIONS)
     yield database
     database.close()
 

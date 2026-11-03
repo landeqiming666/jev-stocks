@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import re
 from collections.abc import Mapping
 from dataclasses import dataclass
 from typing import Annotated, Literal
@@ -18,6 +17,7 @@ from pydantic import (
 from pydantic.alias_generators import to_camel
 
 from sentinel.clock import parse_iso
+from sentinel.domain.contact import is_valid_sec_email
 from sentinel.errors import UserError
 
 MODEL_ID: Literal["jev-1.14.0"] = "jev-1.14.0"
@@ -28,8 +28,7 @@ Lookback = Annotated[int, Field(ge=1, le=30)]
 
 
 def _email(value: str) -> str:
-    # Python \s 与 strip 使用同一 whitespace 集合，包含 Rust regex 缺少的四个控制符。
-    if re.fullmatch(r"[^@\s]+@[^@\s]+\.[^@\s]+", value) is None:
+    if not is_valid_sec_email(value):
         raise ValueError("invalid email")
     return value
 

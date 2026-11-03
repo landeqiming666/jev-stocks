@@ -216,9 +216,10 @@ SETTINGS = {
     "language": "zh-CN",
     "allowedDomains": [
         {"domain": "api.typesafe.ai", "purpose": "Jev 判定", "sends": "逻辑正文、失效条件、披露段落；不含持仓数量、成本、备注"},
-        {"domain": "www.sec.gov", "purpose": "披露原文", "sends": "请求地址和含联系邮箱的 User-Agent"},
-        {"domain": "data.sec.gov", "purpose": "披露列表与标的表", "sends": "请求地址和含联系邮箱的 User-Agent"},
-        {"domain": "（行情源，待 G1-US 确定）", "purpose": "日线行情", "sends": "股票代码"},
+        {"domain": "www.sec.gov", "purpose": "披露与标的表", "sends": "请求 URL 与含联系邮箱的 User-Agent"},
+        {"domain": "data.sec.gov", "purpose": "披露与标的表", "sends": "请求 URL 与含联系邮箱的 User-Agent"},
+        {"domain": "web.ifzq.gtimg.cn", "purpose": "日线行情（主源，覆盖美股/港股/A 股）", "sends": "股票代码与市场前缀"},
+        {"domain": "api.nasdaq.com", "purpose": "日线行情（美股备源）", "sends": "股票代码"},
     ],
 }
 SETTINGS_EMPTY = dict(SETTINGS, secContactEmail=None, demoDataLoaded=False)
