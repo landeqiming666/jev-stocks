@@ -1,0 +1,162 @@
+import { StrictMode } from "react";
+import { act, cleanup, fireEvent, render, screen, waitFor as waitForUI } from "@testing-library/react";
+import { afterEach, beforeEach, expect, it, vi } from "vitest";
+import { createMockRpcClient, createRpcClient, RpcError, type Bootstrap } from "../rpc";
+import { deferred, FakeTransport, waitFor } from "../rpc/test-fixtures";
+import ready from "./__fixtures__/bootstrap.json";
+import { Application } from "./Application";
+import { bootstrapApp, startApp } from "./bootstrap";
+import { useAppStore } from "./store";
+
+const value = ready as Bootstrap;
+beforeEach(() => useAppStore.getState().reset());
+afterEach(() => { cleanup(); vi.useRealTimers(); vi.restoreAllMocks(); useAppStore.getState().reset(); });
+function clientWithResult(result = Promise.resolve(value)) {
+  const client = createMockRpcClient({});
+  vi.spyOn(client, "whenReady").mockResolvedValue();
+  vi.spyOn(client, "call").mockImplementation(() => result);
+  vi.spyOn(client, "dispose");
+  return client;
+}
+
+it("readiness_and_bootstrap_share_one_signal_and_remaining_30_second_budget", async () => {
+  vi.useFakeTimers();
+  const transport = new FakeTransport();
+  const client = createRpcClient({ transport });
+  const readySpy = vi.spyOn(client, "whenReady");
+  const callSpy = vi.spyOn(client, "call");
+  const result = bootstrapApp(client);
+  const assertion = expect(result).rejects.toMatchObject({ code: "TIMEOUT" });
+  await waitFor();
+  await vi.advanceTimersByTimeAsync(20_000);
+  transport.ready();
+  await waitFor();
+  expect(callSpy).toHaveBeenCalledOnce();
+  expect(callSpy.mock.calls[0]?.[2]?.signal).toBe(readySpy.mock.calls[0]?.[0]?.signal);
+  expect(callSpy.mock.calls[0]?.[2]?.timeoutMs).toBe(10_000);
+  await vi.advanceTimersByTimeAsync(9999);
+  expect(transport.lines).toHaveLength(1);
+  await vi.advanceTimersByTimeAsync(1);
+  await assertion;
+  expect(transport.lines.map(line => line.method)).toEqual(["app.bootstrap", "$/cancel"]);
+  client.dispose();
+});
+it("readiness_timeout_never_calls_bootstrap", async () => {
+  vi.useFakeTimers();
+  const client = createRpcClient({ transport: new FakeTransport() });
+  const call = vi.spyOn(client, "call");
+  const assertion = expect(bootstrapApp(client)).rejects.toMatchObject({ code: "TIMEOUT" });
+  await vi.advanceTimersByTimeAsync(30_000);
+  await assertion;
+  expect(call).not.toHaveBeenCalled();
+  client.dispose();
+});
+it("external_abort_cancels_readiness_and_leaves_no_timer", async () => {
+  vi.useFakeTimers();
+  const client = createRpcClient({ transport: new FakeTransport() });
+  const controller = new AbortController();
+  const assertion = expect(bootstrapApp(client, controller.signal)).rejects.toMatchObject({ code: "CANCELLED" });
+  controller.abort();
+  await assertion;
+  expect(vi.getTimerCount()).toBe(0);
+  client.dispose();
+});
+it("strict_mode_remount_creates_a_fresh_client_and_subscribes_only_once", async () => {
+  const clients: ReturnType<typeof clientWithResult>[] = [];
+  const factory = () => {
+    const client = clientWithResult();
+    vi.spyOn(client, "subscribe"); clients.push(client); return client;
+  };
+  const view = render(<StrictMode><Application createClient={factory} /></StrictMode>);
+  await waitForUI(() => expect(useAppStore.getState().bootstrap.status).toBe("ready"));
+  expect(clients).toHaveLength(2);
+  expect(clients[0]?.dispose).toHaveBeenCalledOnce();
+  expect(clients[0]?.call).not.toHaveBeenCalled();
+  expect(clients[0]?.subscribe).not.toHaveBeenCalled();
+  expect(clients[1]?.dispose).not.toHaveBeenCalled();
+  expect(clients[1]?.subscribe).toHaveBeenCalledTimes(3);
+  expect(useAppStore.getState().client).toBe(clients[1]);
+  expect(screen.getByText("页面正在搭建。")).toBeTruthy();
+  view.unmount();
+  expect(clients[1]?.dispose).toHaveBeenCalledOnce();
+  expect(useAppStore.getState().client).toBeNull();
+});
+it("old_async_bootstrap_cannot_overwrite_or_subscribe_after_a_new_session", async () => {
+  const late = deferred<Bootstrap>();
+  const old = clientWithResult(late.promise), next = clientWithResult();
+  const subscribe = vi.spyOn(old, "subscribe");
+  const stopOld = startApp(old);
+  await waitFor();
+  expect(old.call).toHaveBeenCalledOnce();
+  stopOld();
+  const stopNext = startApp(next);
+  await waitFor();
+  late.resolve({ ...value, platform: "windows" });
+  await waitFor();
+  expect(useAppStore.getState().bootstrap.value?.platform).toBe("macos");
+  expect(subscribe).not.toHaveBeenCalled();
+  expect(useAppStore.getState().client).toBe(next);
+  stopNext();
+});
+it("old_async_failure_cannot_clear_a_new_ready_session", async () => {
+  const late = deferred<Bootstrap>();
+  const old = clientWithResult(late.promise), next = clientWithResult();
+  const stopOld = startApp(old);
+  await waitFor(); stopOld();
+  const stopNext = startApp(next);
+  await waitFor(); late.reject(new RpcError("INTERNAL", "old")); await waitFor();
+  expect(useAppStore.getState().bootstrap.status).toBe("ready");
+  expect(useAppStore.getState().client).toBe(next);
+  stopNext();
+});
+it("cleanup_unsubscribes_and_stale_notifications_cannot_write_new_state", async () => {
+  const old = clientWithResult(), next = clientWithResult();
+  const captured = new Map<string, (payload: unknown) => void>();
+  const unsubscribe = vi.fn();
+  vi.spyOn(old, "subscribe").mockImplementation((name, handler) => {
+    captured.set(name, handler as (payload: unknown) => void); return unsubscribe;
+  });
+  const stopOld = startApp(old);
+  await waitFor();
+  captured.get("budget.updated")?.({ usedTokens: 42, limitTokens: 100, resetAt: value.now });
+  expect(useAppStore.getState().budget?.usedTokens).toBe(42);
+  stopOld();
+  expect(unsubscribe).toHaveBeenCalledTimes(3);
+  const stopNext = startApp(next); await waitFor();
+  captured.get("budget.updated")?.({ usedTokens: 999, limitTokens: 100, resetAt: value.now });
+  captured.get("engine.changed")?.({ from: "jev_direct", to: "jevdb", reason: "late" });
+  captured.get("source.degraded")?.({ source: "SEC", reason: "late" });
+  expect(useAppStore.getState().budget).toBeNull();
+  expect(useAppStore.getState().bootstrap.value?.engine.active).toBe("jev_direct");
+  expect(useAppStore.getState().ui.sourceDegraded).toBe(false);
+  stopNext();
+});
+it("retry_disposes_failed_client_and_bootstraps_a_fresh_one", async () => {
+  const broken = clientWithResult();
+  vi.mocked(broken.call).mockRejectedValue(new RpcError("TIMEOUT", "private detail"));
+  const next = clientWithResult();
+  const factory = vi.fn().mockReturnValueOnce(broken).mockReturnValueOnce(next);
+  render(<Application createClient={factory} />);
+  await screen.findByText("核心进程没有响应，请重试启动。");
+  expect(broken.dispose).toHaveBeenCalled();
+  expect(useAppStore.getState().client).toBeNull();
+  fireEvent.click(screen.getByRole("button", { name: "重试启动" }));
+  await waitForUI(() => expect(useAppStore.getState().bootstrap.status).toBe("ready"));
+  expect(factory).toHaveBeenCalledTimes(2);
+  expect(useAppStore.getState().client).toBe(next);
+});
+it("current_notifications_update_only_their_shared_slices", async () => {
+  const client = createMockRpcClient({});
+  const call = vi.spyOn(client, "call");
+  const stop = startApp(client); await waitFor();
+  client.injectNotification("engine.changed", { from: "jev_direct", to: "jevdb", reason: "test" });
+  client.injectNotification("source.degraded", { source: "SEC", reason: "test" });
+  client.injectNotification("budget.updated", { usedTokens: 6, limitTokens: 10, resetAt: value.now });
+  await act(waitFor);
+  expect(useAppStore.getState().bootstrap.value?.engine.active).toBe("jevdb");
+  expect(useAppStore.getState().ui).toMatchObject({ engineNotice: true, sourceDegraded: true });
+  expect(useAppStore.getState().budget?.usedTokens).toBe(6);
+  expect(useAppStore.getState().dataStatus).toBeNull();
+  expect(call.mock.calls.map(args => args[0])).toEqual(["app.bootstrap"]);
+  stop();
+});
