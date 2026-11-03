@@ -1,0 +1,22 @@
+/* 沿用原型页头与列表；窄主区只调整换行，抽屉布局仍由 PageFrame 提供。 */
+.p-today-frame { display: flex; flex-direction: column; flex: 1 1 auto; min-width: 0; min-height: 0; }
+.p-today-alerts .c-banner { padding-block: calc(var(--space-3) - var(--space-1) / 2); }
+.p-page__head { display: flex; align-items: flex-end; justify-content: space-between; gap: var(--space-5); margin-bottom: var(--space-5); }
+.p-page__eyebrow { color: var(--ink-2); margin-bottom: var(--space-1); }
+.p-page__title { font-size: var(--text-h1-size); line-height: var(--text-h1-lh); font-weight: 600; }
+.p-page__actions { display: flex; align-items: center; gap: var(--space-3); flex: none; }
+.p-page__sub { color: var(--muted); font-size: var(--text-small-size); }
+.p-today { container-type: inline-size; }
+.p-today__list { display: flex; flex-direction: column; gap: var(--space-3); }
+.p-today__scan { margin-bottom: var(--space-4); }
+.p-today__scan .c-progress { margin-top: var(--space-3); }
+.p-today > .c-banner { margin-bottom: var(--space-4); }
+.p-today__refresh { margin-top: var(--space-4); }
+.p-today .c-decision__meta { overflow-wrap: anywhere; }
+@container (max-width: 800px) {
+  .p-page__head { align-items: flex-start; flex-wrap: wrap; }
+  .p-page__actions { flex-wrap: wrap; }
+  .c-decision__head { flex-wrap: wrap; }
+  .c-decision__title { flex: 1 1 200px; }
+  .c-decision__actions { flex-wrap: wrap; }
+}

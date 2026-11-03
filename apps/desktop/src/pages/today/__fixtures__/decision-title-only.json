@@ -1,0 +1,51 @@
+{
+  "decisionId": "01JC8Z5V3Q00000000000094Z5",
+  "thesisId": "01JC8Z5V3Q00000000000063A4",
+  "thesisVersion": 1,
+  "thesisCurrentVersion": 2,
+  "instrument": {
+    "instrumentId": "us:ZZCL",
+    "market": "us",
+    "symbol": "ZZCL",
+    "name": "Zhongzhi Cloud Ltd.",
+    "nameZh": "众智云",
+    "exchange": "NASDAQ",
+    "currency": "USD",
+    "isActive": true
+  },
+  "thesisStatement": "云业务收入保持两位数增长",
+  "killCondition": "云业务收入同比增速低于 10%",
+  "relation": "uncertain",
+  "headline": 0.42,
+  "probabilities": {
+    "relevant": 0.58,
+    "against": 0.42,
+    "contradicts": 0.2,
+    "killMet": 0.35,
+    "supports": 0.1
+  },
+  "engine": "jev_direct",
+  "modelId": "jev-1.14.0",
+  "questionSetVersion": "qs-2026-11-02.2",
+  "event": {
+    "eventId": "us:0009990001-26-000006",
+    "instrumentId": "us:ZZCL",
+    "title": "6-K: Notice of Extraordinary General Meeting",
+    "formType": "6-K",
+    "publishedAt": "2026-10-28T09:45:00Z",
+    "url": "https://www.sec.gov/Archives/edgar/data/9990001/000999000126000006/zzcl-6k.htm"
+  },
+  "evidence": {
+    "kind": "title",
+    "text": "6-K: Notice of Extraordinary General Meeting",
+    "passageText": "6-K: Notice of Extraordinary General Meeting",
+    "sentenceStart": null,
+    "sentenceEnd": null,
+    "filePart": "标题"
+  },
+  "contentStatus": "title_only",
+  "createdAt": "2026-11-02T00:31:12Z",
+  "action": null,
+  "actions": [],
+  "thesisIsLatest": true
+}
