@@ -1,13 +1,15 @@
 from __future__ import annotations
 
 import hashlib
-from dataclasses import replace
+from dataclasses import astuple, replace
+from datetime import UTC, datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any
 
 import pytest
 
 from sentinel.semantic.cache import (
+    _row,
     decision_cache_key,
     find_decisions,
     insert_decision,
@@ -129,3 +131,15 @@ def test_insert_conflict_reads_own_tx_and_preserves_identity(tmp_path: Path) -> 
             assert find_decisions(reader, [row.cache_key]) == {row.cache_key: row}
     finally:
         db.close()
+
+
+@pytest.mark.parametrize(
+    "created_at",
+    [datetime(2026, 11, 3, 4), datetime(2026, 11, 3, 12, tzinfo=timezone(timedelta(hours=8)))],
+)
+def test_decision_row_restores_utc_timestamp(created_at: datetime) -> None:
+    from test_pipeline import make_row
+
+    row = _row(astuple(make_row(created_at=created_at))[:-1])
+    assert row.created_at == datetime(2026, 11, 3, 4, tzinfo=UTC)
+    assert row.created_at.tzinfo is UTC

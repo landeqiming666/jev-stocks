@@ -7,6 +7,7 @@ from collections.abc import Iterator, Sequence
 from concurrent.futures import ThreadPoolExecutor
 from contextlib import contextmanager
 from dataclasses import replace
+from datetime import datetime
 from pathlib import Path
 from typing import Any, cast
 
@@ -540,7 +541,9 @@ def test_corrupt_cached_entity_is_not_returned_as_success(db: RecordingDatabase)
 
 def test_cached_representative_missing_evidence_repaired_for_free(db: RecordingDatabase) -> None:
     with db.write() as tx:
-        insert_decision(tx, make_row(relation="overturn", headline=0.93))
+        insert_decision(
+            tx, make_row(relation="overturn", headline=0.93, p_relevant=0.97, p_contradicts=0.93)
+        )
     e = Engine()
     outcome = run(pipeline(db, e, 0))
     assert not e.pairs and not e.evidence_calls and usage(db) == (0, 0, 0)
@@ -842,3 +845,70 @@ def test_utc_date_budget_reset_ignores_yesterdays_usage(db: RecordingDatabase) -
             [clock.now().date()],
         )
         assert reader.fetchone() == (10, 1)
+
+
+def test_cached_relation_mismatch_is_internal(db: RecordingDatabase) -> None:
+    with db.write() as tx:
+        insert_decision(tx, make_row(relation="overturn"))
+    stored = rows(db, "decision")
+    e = Engine()
+    with pytest.raises(InternalError):
+        run(pipeline(db, e))
+    assert not e.pairs and not e.evidence_calls and usage(db) == (0, 0, 0)
+    assert rows(db, "decision") == stored
+
+
+def test_cached_headline_mismatch_is_internal(db: RecordingDatabase) -> None:
+    with db.write() as tx:
+        insert_decision(tx, make_row(headline=0.93))
+    stored = rows(db, "decision")
+    e = Engine()
+    with pytest.raises(InternalError):
+        run(pipeline(db, e))
+    assert not e.pairs and not e.evidence_calls and usage(db) == (0, 0, 0)
+    assert rows(db, "decision") == stored
+
+
+def test_logical_calls_cross_midnight_charge_start_dates_and_new_day_budget(
+    db: RecordingDatabase,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from datetime import date
+
+    monkeypatch.setenv("SENTINEL_CLOCK", "2026-11-03T23:59:59Z")
+    e = Engine()
+    e.probabilities = OVERTURN
+    raw = estimate_pair_tokens(PairInput(thesis(), passage().as_input()), "jev_direct")
+    budget = reserve_tokens(raw) + 100
+    e.transform = lambda scores: [replace(scores[0], input_tokens=budget)]
+    starts: list[datetime] = []
+
+    def cross_midnight() -> None:
+        starts.append(clock.now())
+        monkeypatch.setenv("SENTINEL_CLOCK", "2026-11-04T00:00:01Z")
+
+    def evidence_started() -> None:
+        starts.append(clock.now())
+
+    e.after_score = cross_midnight
+    e.after_evidence = evidence_started
+    p = pipeline(db, e, budget)
+    first = run(p)
+    assert first.input_tokens == budget + 7 and len(e.evidence_calls) == 1
+    assert [dt.isoformat() for dt in starts] == [
+        "2026-11-03T23:59:59+00:00",
+        "2026-11-04T00:00:01+00:00",
+    ]
+    with db.read() as reader:
+        reader.execute(
+            "SELECT usage_date, input_tokens, requests FROM usage_daily ORDER BY usage_date"
+        )
+        assert reader.fetchall() == [(date(2026, 11, 3), budget, 1), (date(2026, 11, 4), 7, 1)]
+    e.transform = e.after_score = e.after_evidence = None
+    second = run(p, passages=[passage(2)])
+    assert second.new_decisions == 1 and second.input_tokens == 17
+    with db.read() as reader:
+        reader.execute(
+            "SELECT usage_date, input_tokens, requests FROM usage_daily ORDER BY usage_date"
+        )
+        assert reader.fetchall() == [(date(2026, 11, 3), budget, 1), (date(2026, 11, 4), 24, 3)]

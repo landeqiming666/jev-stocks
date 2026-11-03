@@ -4,7 +4,7 @@ import hashlib
 import unicodedata
 from collections.abc import Sequence
 from dataclasses import astuple, dataclass, fields
-from datetime import date, datetime
+from datetime import UTC, date, datetime
 from typing import cast
 
 from sentinel.domain.classify import Relation
@@ -108,7 +108,17 @@ _SELECT = ", ".join(_COLUMNS)
 
 
 def _row(values: tuple[object, ...]) -> DecisionRow:
-    return DecisionRow(**dict(zip(_COLUMNS, values, strict=True)))  # type: ignore[arg-type]
+    data = dict(zip(_COLUMNS, values, strict=True))
+    created_at = data["created_at"]
+    if not isinstance(created_at, datetime):
+        raise InternalError(detail="invalid cached decision timestamp")
+    # DuckDB TIMESTAMP 保存 UTC 墙钟值；不能让无时区值进入业务实体。
+    data["created_at"] = (
+        created_at.replace(tzinfo=UTC)
+        if created_at.utcoffset() is None
+        else created_at.astimezone(UTC)
+    )
+    return DecisionRow(**data)  # type: ignore[arg-type]
 
 
 def find_decisions(executor: SqlExecutor, keys: Sequence[str]) -> dict[str, DecisionRow]:

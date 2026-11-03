@@ -261,10 +261,12 @@ class DecisionPipeline:
         if row.relation not in ("none", "support", "weaken", "overturn", "uncertain"):
             raise InternalError(detail="invalid cached decision relation")
         try:
-            Probabilities(
+            probabilities = Probabilities(
                 row.p_relevant, row.p_against, row.p_contradicts, row.p_kill_met, row.p_supports
             )
             validate_probability(row.headline)
+            if row.relation != classify(probabilities) or row.headline != headline(probabilities):
+                raise ValueError("cached relation or headline differs from probabilities")
             if (
                 type(row.tokens_estimated) is not bool
                 or row.tokens_estimated != (self.engine.name == "jevdb")
@@ -361,9 +363,10 @@ class DecisionPipeline:
         inserted_keys: set[str] = set()
         scoring_usage = _Usage()
         if missing:
-            today = clock.now().date()
+            # 按 logical 调用开始日检查预算并归属费用，响应跨午夜也不改记账日。
+            score_date = clock.now().date()
             raw = sum(estimate_pair_tokens(p, self.engine.name) for p in missing)
-            if not self._budget_allowed(raw, today):
+            if not self._budget_allowed(raw, score_date):
                 raise EngineError("BUDGET_EXCEEDED")
             cancel.raise_if_cancelled()
             scores = self.engine.score_pairs(ctx.company, missing, cancel)
@@ -392,7 +395,7 @@ class DecisionPipeline:
                         inserted_keys.add(row.cache_key)
                 add_usage(
                     tx,
-                    today,
+                    score_date,
                     self.engine.name,
                     self.model_id,
                     scoring_usage.input_tokens,
@@ -513,9 +516,10 @@ class DecisionPipeline:
                 len(q.instructions) + len(q.true_text) + len(q.false_text)
                 for q in questions.values()
             )
-            today = clock.now().date()
-            pending = usages.get(today, _Usage()).total
-            if not self._budget_allowed(estimate_tokens(chars), today, pending):
+            # 每次证据调用独立取开始日，不沿用评分日或其他证据请求的日期。
+            evidence_date = clock.now().date()
+            pending = usages.get(evidence_date, _Usage()).total
+            if not self._budget_allowed(estimate_tokens(chars), evidence_date, pending):
                 self._log(ctx, "EVIDENCE_BUDGET_EXCEEDED")
                 plans.append((row, replace(fallback, warn="EVIDENCE_BUDGET_EXCEEDED")))
                 continue
@@ -528,7 +532,7 @@ class DecisionPipeline:
                 if not isinstance(score, EvidenceScore):
                     raise EngineError("MODEL_ERROR", detail="INVALID_EVIDENCE_RESPONSE")
                 score.__post_init__()
-                usages.setdefault(today, _Usage()).add(
+                usages.setdefault(evidence_date, _Usage()).add(
                     score.input_tokens, self.engine.name == "jevdb"
                 )
                 if score.model_id != self.model_id or score.tokens_estimated != (
