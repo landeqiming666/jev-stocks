@@ -30,7 +30,7 @@ stubs: []
 1. 按 `SENTINEL_CORE_CMD` 启动核心进程；默认命令为 `uv run --project core python -m sentinel`（C-07 的入口）。
 2. 注入 `--data-dir`、`--parent-pid`、`--resource-dir`、`--log-level`，设置 UTF-8 环境变量。
 3. 读取 stdout/stderr；stdout 每行发 `core://message`，以 `rs-` 开头的响应只交给桥接内部。
-4. 提供 `rpc_send` 和 `open_external` 两个 Tauri 命令。
+4. 提供 `rpc_send`、`open_external` 和只读 `core_status` 三个 Tauri 命令（N10-01）。
 5. 心跳、崩溃重启、退出时杀进程树；状态发 `core://status`。
 6. 提供最终 CSP 常量，禁止远程脚本、远程字体、`eval` 和非同源连接。
 
@@ -99,6 +99,8 @@ pub async fn rpc_send(line: String, state: tauri::State<'_, BridgeState>)
     -> Result<(), String>;
 #[tauri::command]
 pub async fn open_external(url: String, app: tauri::AppHandle) -> Result<(), String>;
+pub fn core_status(state: tauri::State<'_, BridgeState>) -> CoreStatus;
+pub fn core_status_snapshot(state: &BridgeState) -> CoreStatus;
 ```
 
 `install` 只安装 state、命令和事件 handler，不创建业务窗口；`send_line` 在 `CoreState::Ready` 之外返回 `NotReady`；`open_external` 只接受 `https://` 且主机名非空的 URL。所有公开函数不 panic，错误通过 `BridgeError` 或 Tauri 的 `Result` 返回。

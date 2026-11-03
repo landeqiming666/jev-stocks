@@ -32,3 +32,15 @@ G0-JEV 第 11 节已经允许保留全 mock 开发；S-02/S-03 在闸门未过�
 ## 5. 脚本测试使用已有锁定运行时
 
 G0 探针使用已锁定的 `httpx` 与核心公共模块，且规定测试含 pytest 函数；宿主 Python 的 unittest discover 既可能缺少依赖，也不会收集 pytest 函数。主 agent 在 `scripts/check.py` 将 scripts-test 改为 `uv run --project core python -m pytest -q scripts/tests`，继续收集所有既有 unittest 与新增 pytest，不跳过任何探针测试，不增加依赖。先失败证据保存在 `/tmp/jev-next10-runner-red.log`；对应回归由主 agent 追加于原 `test_check_runner.py`。
+
+## 6. 晚注册前端的核心就绪竞态
+
+Rust 的 `core://status` 事件不缓存，核心就绪事件可能早于前端监听。主 agent 为 C-02 增加只读本地 Tauri 命令 `core_status`，返回当前 `{state,attempt}`；它不是业务 JSON-RPC 方法，不改变 40 个方法、协议版本或外联权限。C-05 在两个监听建立后只查询一次，用状态事件继续更新；查询期间收到更新事件时不得用旧快照覆盖它。不轮询、不允许未就绪业务调用。
+
+对应主审 Rust helper `core_status_snapshot(&BridgeState)` 与真实子进程回归验证晚读取仍得 Ready、状态字段不含请求或配置。I-01 的仅测试 IPC 桥增加这个只读命令的映射。
+
+## 7. UI 所有权与接口补全
+
+U-00 补全 `styles/tokens.test.ts` 所有权，状态目录下的两张规定截图可随状态报告交付。原型没有 IBM Plex 字体文件时，本批 React 与原型使用同一系统回退；不偷偷下载字体、修改其他包的资产或许可证文件。U-00 的 common 文案包含 U-01 所需的标签、引擎、市场、关闭提示和 `chartInvalid`，U-01 不反向修改其 i18n。
+
+U-01 的 Menu 必须提供 `onClose`；React 19 触发按钮 ref 允许 null。补全 Modal 和非有限条形值两项测试，使文档规定的 12 项有对应清单。组件 CSS 与仅开发用的陈列入口可位于 U-01 自有 `components/ui/`；不得修改原型来凑像素结果。主 agent 独立检查键盘、两种抽屉模式、图表和两个规定视口。

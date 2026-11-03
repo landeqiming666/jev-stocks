@@ -90,7 +90,7 @@ class CoreHarness:
 ### 5.2 IPC 模拟字段
 | 字段/函数 | 类型 | 必填 | 约束 | 含义 |
 |---|---|---|---|---|
-| `window.__TAURI_INTERNALS__.invoke` | function | 是 | 只接受 `rpc_send`、`plugin:event|listen/unlisten` | 模拟 Tauri 命令 |
+| `window.__TAURI_INTERNALS__.invoke` | function | 是 | 只接受 `rpc_send`、只读 `core_status`、`plugin:event|listen/unlisten` | 模拟 Tauri 命令；状态快照返回真实 harness 当前状态 |
 | `window.__SENTINEL_TEST_EMIT__` | function | 是 | 参数 `{event,payload}` | Node 向页面派发核心行 |
 | `window.__sentinelSend` | function | 是 | 返回 Promise<void> | 页面把一行写给 Python |
 | `core://message.payload` | string | 是 | 一行 JSON，≤ 1 MB | 核心响应或通知 |

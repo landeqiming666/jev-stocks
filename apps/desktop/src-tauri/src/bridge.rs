@@ -245,6 +245,7 @@ pub fn install<R: tauri::Runtime>(builder: tauri::Builder<R>) -> tauri::Builder<
     builder
         .invoke_handler(tauri::generate_handler![
             commands::rpc_send,
+            commands::core_status,
             commands::open_external
         ])
         .plugin(plugin)

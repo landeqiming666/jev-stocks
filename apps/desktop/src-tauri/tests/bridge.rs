@@ -1,4 +1,4 @@
-use sentinel_lib::bridge::commands::{open_external_with, ExternalOpenError};
+use sentinel_lib::bridge::commands::{core_status_snapshot, open_external_with, ExternalOpenError};
 use sentinel_lib::bridge::{process::*, security::*, *};
 use std::{path::PathBuf, sync::mpsc, time::Duration};
 
@@ -155,6 +155,16 @@ fn test_rpc_send_rejects_before_ready() {
         send_line(&BridgeState::default(), "{}").unwrap_err().code,
         BridgeErrorCode::NotReady
     );
+}
+#[test]
+fn test_late_frontend_can_read_ready_snapshot_without_replayed_status_event() {
+    let (state, rx) = start("healthy");
+    ready(&rx);
+    let snapshot = serde_json::to_value(core_status_snapshot(&state)).unwrap();
+    assert_eq!(snapshot["state"], "ready");
+    assert_eq!(snapshot["attempt"], 0);
+    assert_eq!(snapshot.as_object().unwrap().len(), 2);
+    shutdown(&state).unwrap();
 }
 #[test]
 fn test_rs_response_is_not_forwarded() {

@@ -1,4 +1,4 @@
-use super::{security, BridgeState};
+use super::{security, BridgeState, CoreStatus};
 pub use crate::platform::ExternalOpenError;
 use crate::platform::Platform;
 
@@ -8,6 +8,15 @@ pub fn open_external_with(
 ) -> Result<(), String> {
     security::validate_url(url).map_err(|error| error.message)?;
     opener(url).map_err(|error| error.to_string())
+}
+
+pub fn core_status_snapshot(state: &BridgeState) -> CoreStatus {
+    super::status(state)
+}
+
+#[tauri::command]
+pub fn core_status(state: tauri::State<'_, BridgeState>) -> CoreStatus {
+    core_status_snapshot(&state)
 }
 
 #[tauri::command]

@@ -101,7 +101,7 @@ interface BannerProps { tone: "info"|"warn"|"danger"; text: string; action?: Rea
 interface ToastProps { tone: "success"|"error"; text: string; onClose: () => void; }
 interface EmptyStateProps { title:string; text?:string; action?:React.ReactNode; display?:boolean; }
 interface ProgressProps { value:number; max:number; label:string; }
-interface CardProps { children: React.ReactNode; } interface TableProps { children: React.ReactNode; label: string; } interface MenuProps { items: {id:string;label:string;icon?:IconName;danger?:boolean;disabled?:boolean}[]; onSelect:(id:string)=>void; triggerRef: React.RefObject<HTMLButtonElement>; } type SearchInputProps = InputProps & { expanded?: boolean }; type RadioProps = {name:string;value:string;checked:boolean;label:string;hint?:string;onChange:(v:string)=>void}; type TextareaProps = React.TextareaHTMLAttributes<HTMLTextAreaElement> & {invalid?:boolean}; interface SkeletonProps { rows?: number; }
+interface CardProps { children: React.ReactNode; } interface TableProps { children: React.ReactNode; label: string; } interface MenuProps { items: {id:string;label:string;icon?:IconName;danger?:boolean;disabled?:boolean}[]; onSelect:(id:string)=>void; onClose:()=>void; triggerRef: React.RefObject<HTMLButtonElement | null>; } type SearchInputProps = InputProps & { expanded?: boolean }; type RadioProps = {name:string;value:string;checked:boolean;label:string;hint?:string;onChange:(v:string)=>void}; type TextareaProps = React.TextareaHTMLAttributes<HTMLTextAreaElement> & {invalid?:boolean}; interface SkeletonProps { rows?: number; }
 interface DrawerProps { open: boolean; titleId: string; overlay: boolean; onClose: () => void; children: React.ReactNode; }
 interface ModalProps { open: boolean; titleId: string; onClose: () => void; children: React.ReactNode; }
 interface HeatmapProps { symbols: string[]; matrix: (number|null)[][]; label: string; }
@@ -166,6 +166,8 @@ interface BarListProps { items: {label:string;value:number}[]; label: string; }
 | `drawer_push_does_not_trap` | 同上 | `overlay=false` | `aria-modal=false`，Tab 可离开 |
 | `menu_escape_closes_and_restores_focus` | `Menu.test.tsx` | 打开后按 Esc | `onClose` 调用，触发按钮聚焦 |
 | `heatmap_uses_max_70_percent_mix` | `Heatmap.test.tsx` | `rho=1` | 单元格样式含 `70%` |
+| `modal_escape_and_overlay_close` | `Modal.test.tsx` | 打开后按 Esc 或点遮罩 | 每次调用 onClose；关闭后焦点回到触发元素 |
+| `bar_list_nonfinite_value_is_safe` | `BarList.test.tsx` | value 为 NaN | 该行显示 `0%`，没有 NaN 样式或未捕获异常 |
 
 ### 8.2 Fixture
 无新增 fixture；所有数据在测试内构造，图标快照以 `icons.js` 为准。
