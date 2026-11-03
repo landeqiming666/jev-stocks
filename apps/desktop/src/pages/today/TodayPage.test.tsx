@@ -134,3 +134,11 @@ test("today_only_first_five_cards_visible_and_remaining_group_expands", async ()
   group.open = true; fireEvent(group, new Event("toggle"));
   await waitFor(() => expect(screen.getAllByRole("article")).toHaveLength(7));
 });
+test("today_offline_cache_is_readable_without_a_second_global_banner", async () => {
+  mount(example<Inbox>("inbox.list", "offline"));
+  await screen.findByRole("heading", { name: "今天有 3 件事需要你看一眼" });
+  expect(document.querySelectorAll(".p-today .c-banner--warn")).toHaveLength(0);
+  expect(screen.getAllByRole("article")).toHaveLength(3);
+  expect((screen.getByRole("button", { name: "立即扫描" }) as HTMLButtonElement).disabled).toBe(true);
+  expect((screen.getAllByRole("button", { name: "仍然成立" })[0] as HTMLButtonElement).disabled).toBe(false);
+});

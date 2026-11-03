@@ -134,3 +134,31 @@ test("inbox_action_does_not_overwrite_newer_budget_notification", async () => {
   await act(() => hook.result.current.act(pendingInbox().items[0]!.decisionId, "ignore"));
   expect(useAppStore.getState().budget).toEqual(budget);
 });
+test.each(["items", "uncertain"] as const)("inbox_mixed_%s_action_and_reopen_count_all_unresolved", async group => {
+  const initial = pendingInbox(); initial.summary.pendingCount = initial.items.length + initial.uncertain.length;
+  const fake = testClient(initial), item = initial[group][0]!;
+  const hook = renderHook(() => useInbox(fake.client));
+  await waitFor(() => expect(hook.result.current.state).toBe("ready"));
+  expect(hook.result.current.inbox!.summary.pendingCount).toBe(5);
+  await act(() => hook.result.current.act(item.decisionId, "ignore"));
+  expect(hook.result.current.inbox!.summary).toEqual({ pendingCount: 4,
+    overturnCount: group === "items" ? 1 : 2, weakenCount: 1,
+    uncertainCount: group === "uncertain" ? 1 : 2, processedCount: 2 });
+  await act(() => hook.result.current.reopen(item.decisionId));
+  expect(hook.result.current.inbox!.summary).toEqual({ pendingCount: 5, overturnCount: 2, weakenCount: 1, uncertainCount: 2, processedCount: 1 });
+});
+test.each(["items", "uncertain"] as const)("inbox_mixed_%s_failed_action_restores_total_and_original", async group => {
+  const initial = pendingInbox(); initial.summary.pendingCount = initial.items.length + initial.uncertain.length;
+  const fake = testClient(initial), pending = deferred<DecisionSummary>();
+  const hook = renderHook(() => useInbox(fake.client));
+  await waitFor(() => expect(hook.result.current.state).toBe("ready"));
+  const original = hook.result.current.inbox![group][0]!;
+  fake.call.mockImplementationOnce(() => pending.promise);
+  let request!: Promise<void>;
+  act(() => { request = hook.result.current.act(original.decisionId, "ignore").catch(() => {}); });
+  expect(hook.result.current.inbox!.summary.pendingCount).toBe(4);
+  pending.reject(new RpcError("INTERNAL", "synthetic rollback"));
+  await act(() => request);
+  expect(hook.result.current.inbox!.summary).toEqual({ pendingCount: 5, overturnCount: 2, weakenCount: 1, uncertainCount: 2, processedCount: 1 });
+  expect(hook.result.current.inbox![group].find(item => item.decisionId === original.decisionId)).toBe(original);
+});

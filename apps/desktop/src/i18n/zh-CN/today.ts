@@ -15,6 +15,7 @@ export const today = {
   refresh: "刷新", retry: "重试", goSettings: "去设置", goHoldings: "去持仓",
   configRequired: "请先填写 Jev 密钥和 SEC 联系邮箱。",
   offline: "当前离线，显示的是上次的结果。", offlineScan: "当前离线，无法开始扫描。",
+  cachedResults: "当前显示上次扫描保存的结果。",
   engineFallback: "引擎已降级为 Jev 直连。", loadFailed: "清单加载失败，请重试。",
   actionFailed: "处理失败，请重试。", decisionLoadFailed: "证据加载失败，请重试。",
   decisionNotFound: "没有找到这条判定", evidence: "证据", evidenceLabel: "证据：", thesisLabel: "你写过：",

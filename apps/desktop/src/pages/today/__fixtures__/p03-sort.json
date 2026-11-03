@@ -1,0 +1,40 @@
+{
+  "source": "P-03 24176eaba1e82636546307e0f7f090bb7e5db6ad core/tests/unit/scan/test_pending.py::test_sort_severity_headline_published_then_id; seed/NOW/uid; synthetic backend test values copied unchanged",
+  "rows": [
+    {
+      "decisionId": "0000000001000000000000000A",
+      "relation": "weaken",
+      "headline": 0.9,
+      "createdAt": "2026-11-02T00:35:00Z",
+      "publishedAt": "2026-11-02T00:35:00Z"
+    },
+    {
+      "decisionId": "0000000001000000000000000B",
+      "relation": "overturn",
+      "headline": 0.7,
+      "createdAt": "2026-11-02T00:35:00Z",
+      "publishedAt": "2026-11-02T00:35:00Z"
+    },
+    {
+      "decisionId": "0000000001000000000000000C",
+      "relation": "weaken",
+      "headline": 0.95,
+      "createdAt": "2026-11-02T00:35:00Z",
+      "publishedAt": "2026-11-02T00:35:00Z"
+    },
+    {
+      "decisionId": "0000000001000000000000000D",
+      "relation": "weaken",
+      "headline": 0.9,
+      "createdAt": "2026-11-02T00:35:00Z",
+      "publishedAt": "2026-11-02T00:35:01Z"
+    },
+    {
+      "decisionId": "0000000001000000000000000E",
+      "relation": "weaken",
+      "headline": 0.9,
+      "createdAt": "2026-11-02T00:35:00Z",
+      "publishedAt": "2026-11-02T00:35:00Z"
+    }
+  ]
+}

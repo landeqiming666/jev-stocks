@@ -12,11 +12,18 @@ export function deriveTodayState(inbox: Inbox | null, boot: Bootstrap): TodaySta
   return inbox?.items.length ? "pending" : "empty";
 }
 const severity = { overturn: 0, weaken: 1, uncertain: 2, support: 3, none: 4 };
+const compareText = (a: string, b: string) => a === b ? 0 : a < b ? -1 : 1;
+function compareUtc(a: string, b: string) {
+  const [timeA = "", fractionA = ""] = a.slice(0, -1).split("."), [timeB = "", fractionB = ""] = b.slice(0, -1).split(".");
+  const digits = Math.max(fractionA.length, fractionB.length);
+  return compareText(timeA, timeB) || compareText(fractionA.padEnd(digits, "0"), fractionB.padEnd(digits, "0"));
+}
 export function sortDecisions(items: DecisionSummary[]) {
-  return [...items].sort((a, b) => severity[a.relation] - severity[b.relation] || b.headline - a.headline || b.createdAt.localeCompare(a.createdAt));
+  return [...items].sort((a, b) => severity[a.relation] - severity[b.relation] || b.headline - a.headline ||
+    compareUtc(b.event.publishedAt, a.event.publishedAt) || compareText(a.decisionId, b.decisionId));
 }
 export function recount(inbox: Inbox): Inbox {
-  return { ...inbox, summary: { pendingCount: inbox.items.length,
+  return { ...inbox, summary: { pendingCount: inbox.items.length + inbox.uncertain.length,
     overturnCount: inbox.items.filter(d => d.relation === "overturn").length,
     weakenCount: inbox.items.filter(d => d.relation === "weaken").length,
     uncertainCount: inbox.uncertain.length, processedCount: inbox.processed.length } };
@@ -26,6 +33,8 @@ export function placeDecision(inbox: Inbox, item: DecisionSummary, group?: "item
     uncertain: inbox.uncertain.filter(d => d.decisionId !== item.decisionId), processed: inbox.processed.filter(d => d.decisionId !== item.decisionId) };
   const target = group ?? (item.action && item.action.action !== "reopen" ? "processed" : item.relation === "uncertain" ? "uncertain" : "items");
   next[target].splice(index, 0, item);
+  next.items = sortDecisions(next.items);
+  next.uncertain = sortDecisions(next.uncertain);
   return recount(next);
 }
 function object(value: unknown): value is Record<string, unknown> { return typeof value === "object" && value !== null && !Array.isArray(value); }

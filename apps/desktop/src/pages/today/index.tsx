@@ -147,7 +147,7 @@ function TodayContent({ client, boot, previewState, previewDecision }: {
       {loading ? <Skeleton rows={3} /> : <>
         {inbox.error && <Banner tone="danger" text={today.loadFailed} action={<Button onClick={() => { void inbox.refresh(); }}>{today.retry}</Button>} />}
         {state === "unconfigured" && <Banner tone="info" text={today.configRequired} action={<Button onClick={() => navigate("settings")}>{today.goSettings}</Button>} />}
-        {(boot.offline || data?.dataStatus.offline) && <Banner tone="warn" text={today.offline} />}
+        {(boot.offline || data?.dataStatus.offline) && <p className="c-note">{today.cachedResults}</p>}
         {previewState === "engine_fallback" && <Banner tone="info" text={today.engineFallback} />}
         {scan.progress && <div className="p-today__scan"><Card><strong>{today.scanning}</strong><p className="c-note">{scan.progress.message}</p><Progress value={scan.progress.done} max={scan.progress.total} label={today.progress} /></Card></div>}
         {data && <>

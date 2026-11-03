@@ -24,7 +24,7 @@ function fixtureClient() {
       configured: { jevKey: false, secEmail: false } } as typeof result;
     if (method === "inbox.list") {
       cached ??= result as Inbox;
-      if (demoUnconfigured()) cached = { ...cached, uncertain: cached.uncertain.slice(0, 1), summary: { ...cached.summary, uncertainCount: 1 } };
+      if (demoUnconfigured()) cached = { ...cached, uncertain: cached.uncertain.slice(0, 1), summary: { ...cached.summary, pendingCount: cached.items.length + Math.min(1, cached.uncertain.length), uncertainCount: Math.min(1, cached.uncertain.length) } };
       return cached as typeof result;
     }
     if (method === "decision.act" || method === "decision.reopen") {
