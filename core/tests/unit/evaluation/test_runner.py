@@ -5,6 +5,7 @@ from decimal import Decimal
 from pathlib import Path
 
 import pytest
+
 from sentinel.errors import EngineError, ErrorCode, SentinelError
 from sentinel.evaluation import EvalConfig, EvaluationRunner, evaluate
 from sentinel.evaluation.dataset import load_dataset

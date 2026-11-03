@@ -4,6 +4,7 @@ from collections import Counter
 from pathlib import Path
 
 import pytest
+
 from sentinel.evaluation.dataset import load_dataset
 
 FIXTURES = Path(__file__).resolve().parents[2] / "fixtures" / "eval"

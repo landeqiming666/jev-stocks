@@ -4,6 +4,7 @@ from pathlib import Path
 
 import httpx
 import pytest
+
 from sentinel.evaluation.baselines import BaselineConfig, _price, run_baseline
 from sentinel.evaluation.dataset import load_dataset
 

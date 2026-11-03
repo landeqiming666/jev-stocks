@@ -3,6 +3,7 @@ from decimal import ROUND_DOWN, Decimal, Inexact, Rounded, localcontext
 
 import numpy as np
 import pytest
+
 from sentinel.evaluation.metrics import bootstrap_f1, compute_metrics, total_usage, wilson
 from sentinel.evaluation.models import PredictionRow, Usage
 
