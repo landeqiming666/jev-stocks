@@ -39,6 +39,7 @@ def success(request):
 
 
 def run(handler=success, **options):
+    options.setdefault("live", True)
     sleeps = []
     ticks = iter(NOW + timedelta(milliseconds=i * 10) for i in range(10000))
     with httpx.Client(transport=httpx.MockTransport(handler)) as client:
@@ -53,6 +54,87 @@ def run(handler=success, **options):
 
 def check(report, name):
     return next(c for c in report.checks if c["name"] == name)
+
+
+def test_run_probe_not_live_never_calls_transport(tmp_path, monkeypatch):
+    monkeypatch.delenv("SENTINEL_OFFLINE", raising=False)
+    calls = []
+
+    def forbidden(request):
+        calls.append(request)
+        raise AssertionError("transport must not be called")
+
+    with httpx.Client(transport=httpx.MockTransport(forbidden)) as client:
+        report = p.run_probe(
+            p.ProbeConfig(
+                "https://example.com/v1/systemone",
+                KEY,
+                live=False,
+                fixture_dir=tmp_path / "recordings",
+            ),
+            client=client,
+            clock=lambda: NOW,
+        )
+    assert calls == []
+    assert (report.status, report.reason, report.exit_code) == ("BLOCKED", "NOT_LIVE", 1)
+    assert report.attempts == [] and report.fixtures_written == []
+    assert all(c["detail"]["state"] == "NOT_RUN" for c in report.checks)
+    assert not (tmp_path / "recordings").exists()
+
+
+@pytest.mark.parametrize("live", [False, True])
+def test_run_probe_offline_never_calls_transport(live, tmp_path, monkeypatch):
+    monkeypatch.setenv("SENTINEL_OFFLINE", "1")
+    calls = []
+
+    def forbidden(request):
+        calls.append(request)
+        raise AssertionError("transport must not be called")
+
+    with httpx.Client(transport=httpx.MockTransport(forbidden)) as client:
+        report = p.run_probe(
+            p.ProbeConfig(
+                "https://example.com/v1/systemone",
+                KEY,
+                live=live,
+                fixture_dir=tmp_path / "recordings",
+            ),
+            client=client,
+            clock=lambda: NOW,
+        )
+    assert calls == []
+    assert (report.status, report.reason, report.exit_code) == ("BLOCKED", "OFFLINE", 1)
+    assert report.attempts == [] and report.fixtures_written == []
+    assert all(c["detail"]["state"] == "NOT_RUN" for c in report.checks)
+    assert not (tmp_path / "recordings").exists()
+
+
+@pytest.mark.parametrize(
+    "timeout", [True, False, None, "30", [], {}, 0, -1, float("nan"), float("inf"), 10**400]
+)
+def test_timeout_rejects_bool_and_invalid_values(timeout):
+    with pytest.raises(ValueError):
+        p.validate_config(
+            p.ProbeConfig("https://example.com/v1/systemone", KEY, timeout_sec=timeout)
+        )
+
+
+@pytest.mark.parametrize("stop_after", [1, 67])
+def test_offline_enabled_during_run_stops_before_next_http_or_sdk(stop_after, monkeypatch):
+    monkeypatch.delenv("SENTINEL_OFFLINE", raising=False)
+    calls = []
+
+    def handler(request):
+        calls.append(request)
+        if len(calls) == stop_after:
+            monkeypatch.setenv("SENTINEL_OFFLINE", "1")
+        return success(request)
+
+    report, _ = run(handler)
+    assert len(calls) == stop_after
+    assert report.status == "BLOCKED" and report.reason == "OFFLINE"
+    assert report.fixtures_written == []
+    assert all(not r.headers.get("user-agent", "").startswith("typesafe") for r in calls)
 
 
 def test_probe_401_is_blocked_and_not_recorded(tmp_path):
@@ -166,6 +248,10 @@ def test_synthetic_success_cannot_pass_or_record_even_with_live(tmp_path):
 
 def test_full_suite_has_twenty_latency_five_zh_ten_evidence_and_ten_pack():
     report, _ = run()
+    assert report.timeout_semantics == "per_operation"
+    assert report.operation_timeout_sec == 30.0
+    assert report.total_request_timeout_verified is False
+    assert report.response_size_limit_bytes is None
     assert {c["name"] for c in report.checks} >= {
         "models",
         "call",

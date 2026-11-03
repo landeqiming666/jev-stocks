@@ -124,6 +124,10 @@ class ProbeReport:
     question_set_version: str = QUESTION_SET_VERSION
     sdk_version: str = sdk.__version__
     code_verified: bool = False
+    timeout_semantics: str = "per_operation"
+    operation_timeout_sec: float | None = None
+    total_request_timeout_verified: bool = False
+    response_size_limit_bytes: int | None = None
 
 
 @dataclass(frozen=True)
@@ -405,13 +409,16 @@ def validate_config(config: ProbeConfig) -> None:
         raise ValueError("endpoint must be an HTTPS /v1/systemone URL without credentials or query")
     if not re.fullmatch(r"jev-\d+\.\d+\.\d+", config.model):
         raise ValueError("model must be a fixed Jev version")
-    if (
-        not math.isfinite(config.timeout_sec)
-        or config.timeout_sec <= 0
-        or type(config.sample_size) is not int
-        or not 1 <= config.sample_size <= 20
-    ):
-        raise ValueError("invalid timeout or sample size (1..20)")
+    if type(config.timeout_sec) not in (int, float):
+        raise ValueError("timeout_sec must be a positive finite int or float")
+    try:
+        valid_timeout = math.isfinite(config.timeout_sec) and config.timeout_sec > 0
+    except OverflowError:
+        valid_timeout = False
+    if not valid_timeout:
+        raise ValueError("timeout_sec must be a positive finite int or float")
+    if type(config.sample_size) is not int or not 1 <= config.sample_size <= 20:
+        raise ValueError("invalid sample size (1..20)")
     if not re.fullmatch(r"[!-~]+", config.api_key):
         raise ValueError("invalid key format")
 
@@ -581,8 +588,16 @@ def run_probe(
             {"name": name, "ok": ok, "detail": sanitize(detail, secret=config.api_key)}
         )
 
+    def require_network() -> None:
+        if os.environ.get("SENTINEL_OFFLINE") == "1":
+            raise ProbeFailure("OFFLINE")
+        if config.live is not True:
+            raise ProbeFailure("NOT_LIVE")
+
     def perform(request: dict[str, Any] | None, *, via_sdk: bool = False) -> dict[str, Any]:
         for attempt in range(2):
+            # 函数入口及每次尝试都检查，运行中进入离线也不得继续发送或构造 SDK。
+            require_network()
             begin = clock()
             response: httpx.Response | httpx2.Response
             if via_sdk:
@@ -710,11 +725,11 @@ def run_probe(
         raise ProbeFailure("RATE_LIMITED")
 
     try:
+        require_network()
         if not config.api_key.strip():
             raise ProbeFailure("AUTH_INVALID")
-        if os.environ.get("SENTINEL_OFFLINE") == "1" and config.live:
-            raise ProbeFailure("OFFLINE")
         validate_config(config)
+        report.operation_timeout_sec = float(config.timeout_sec)
         origin = config.endpoint.removesuffix("/v1/systemone")
         models = perform(None)
         add("models", True, {"state": "SKIP" if models.get("skipped") else "COMPLETE", **models})
@@ -894,16 +909,21 @@ def run_probe(
         report.reason = error.reason
         report.status = (
             "BLOCKED"
-            if error.reason in ("AUTH_INVALID", "AUTH_FORBIDDEN", "RATE_LIMITED")
+            if error.reason
+            in ("AUTH_INVALID", "AUTH_FORBIDDEN", "RATE_LIMITED", "NOT_LIVE", "OFFLINE")
             else "FAILED"
         )
-        report.exit_code = {"AUTH_INVALID": 2, "AUTH_FORBIDDEN": 2, "RATE_LIMITED": 3}.get(
-            error.reason, 4
-        )
+        report.exit_code = {
+            "AUTH_INVALID": 2,
+            "AUTH_FORBIDDEN": 2,
+            "RATE_LIMITED": 3,
+            "NOT_LIVE": 1,
+            "OFFLINE": 1,
+        }.get(error.reason, 4)
         if active == "latency":
             add("latency", False, {"state": "INCOMPLETE", "samples": latency})
             add("tokens", False, {"state": "INCOMPLETE", "samples": latency})
-        else:
+        elif report.attempts or error.reason not in ("NOT_LIVE", "OFFLINE"):
             add(active, False, {"state": "INCOMPLETE", "reason": error.reason})
     except Exception:
         # 不暴露未知异常的正文或请求属性，保留已经完成的检查。
