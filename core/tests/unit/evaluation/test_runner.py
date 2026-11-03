@@ -1,13 +1,15 @@
 import json
 import threading
 import time
+from decimal import Decimal
 from pathlib import Path
 
 import pytest
-from sentinel.errors import EngineError, ErrorCode
+from sentinel.errors import EngineError, ErrorCode, SentinelError
 from sentinel.evaluation import EvalConfig, EvaluationRunner, evaluate
 from sentinel.evaluation.dataset import load_dataset
-from sentinel.evaluation.replay import ReplayEngine
+from sentinel.evaluation.replay import MissingCassette, ReplayEngine
+from sentinel.semantic.base import EvidenceScore
 from sentinel.semantic.engines.jev_direct import JevDirectEngine, SystemOneResponse
 
 FIXTURES = Path(__file__).resolve().parents[2] / "fixtures" / "eval"
@@ -320,3 +322,73 @@ raise SystemExit(report.exit_code)
 def test_eval_timeout_rejects_bool(timeout):
     with pytest.raises(ValueError, match="timeout"):
         setup(timeout_sec=timeout)
+
+
+@pytest.mark.parametrize(
+    "error,fallback,stop",
+    [
+        (SentinelError(ErrorCode.MODEL_ERROR), True, False),
+        (SentinelError(ErrorCode.TIMEOUT), True, False),
+        (SentinelError(ErrorCode.RATE_LIMITED), True, False),
+        (SentinelError(ErrorCode.INTERNAL), False, False),
+        (SentinelError(ErrorCode.INVALID_ARGUMENT), False, False),
+        (SentinelError(ErrorCode.CONFIG_REQUIRED), False, True),
+        (SentinelError(ErrorCode.UNAUTHENTICATED), False, True),
+        (SentinelError(ErrorCode.CANCELLED), False, True),
+        (ValueError("bad evidence"), False, False),
+        (MissingCassette(), False, True),
+    ],
+)
+def test_evidence_policy_matches_reviewed_product(error, fallback, stop):
+    config, engine = setup()
+    locate = engine.locate_evidence
+
+    def fail(thesis, relation, sentences, cancel):
+        if thesis.thesis_id == "p-0031":
+            raise error
+        return locate(thesis, relation, sentences, cancel)
+
+    engine.locate_evidence = fail
+    report = evaluate(config, engine)
+    first = report.rows[0]
+    assert first.status == ("ok" if fallback else "failed")
+    assert first.relation == ("overturn" if fallback else None)
+    assert first.probabilities["kill_met"] == 0.9
+    assert first.usage.input_tokens == 130 and first.usage.cost_usd == Decimal(".000005")
+    assert first.usage.calls == 2 and not first.usage.complete and not report.usage.complete
+    assert first.evidence_kind == "passage"
+    assert report.completed == (0 if stop else 30 if fallback else 29)
+    assert report.exit_code == (0 if fallback else 4)
+    if fallback:
+        assert first.evidence_error == error.code.value
+    if isinstance(error, MissingCassette):
+        assert first.error == "MISSING_CASSETTE"
+
+
+@pytest.mark.parametrize("shape", ["short", "model"])
+def test_malformed_evidence_response_fails_sample(shape):
+    config, engine = setup()
+    engine.locate_evidence = lambda *args: EvidenceScore(
+        [] if shape == "short" else [0.9, 0.1],
+        config.model_id if shape == "short" else "jev-1.13.0",
+        20,
+        True,
+    )
+    report = evaluate(config, engine)
+    assert report.rows[0].status == "failed" and report.rows[0].relation is None
+    assert report.rows[0].usage.input_tokens == 130 and not report.rows[0].usage.complete
+    assert report.exit_code == 4
+
+
+def test_evidence_timeout_after_global_deadline_still_fails():
+    config, engine = setup()
+
+    def expired(thesis, relation, sentences, cancel):
+        cancel.deadline = 0
+        raise EngineError(ErrorCode.TIMEOUT)
+
+    engine.locate_evidence = expired
+    report = evaluate(config, engine)
+    assert report.rows[0].status == "failed" and report.rows[0].error == "TIMEOUT"
+    assert report.rows[0].usage.input_tokens == 130 and not report.rows[0].usage.complete
+    assert report.exit_code == 4

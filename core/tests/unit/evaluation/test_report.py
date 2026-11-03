@@ -26,6 +26,8 @@ def test_report_never_rewrites_history_and_is_machine_readable(tmp_path, monkeyp
     assert value["datasetHash"] == dataset.manifest.sha256
     assert value["source"] == "synthetic"
     assert value["goldQuality"]["status"] == "NOT_RUN"
+    assert value["nativeEvalStatus"] == "NOT_RUN"
+    assert "MODEL_ERROR/TIMEOUT/RATE_LIMITED" in value["evidencePolicy"]
     assert value["gate"]["passed"] is None
     assert len(first.predictions.read_text().splitlines()) == 30
     assert "NOT_RUN" in first.markdown.read_text()

@@ -44,6 +44,8 @@ def write_report(report: EvalReport, out_dir: Path) -> ReportPaths:
         f"predictions: {report.prediction_source}.",
         f"Gold quality: {report.gold_quality.status}; kappa: {report.gold_quality.kappa}.",
         f"Real model verification: {report.real_model_status}. Baseline: {report.baseline.status}.",
+        f"CLI: only jev_direct/replay; native evaluation: {report.native_eval_status}.",
+        f"Evidence policy: {report.evidence_policy}",
         f"Gate: {report.gate.status}; passed: {report.gate.passed}; "
         f"experiment: {report.gate.experimental_passed}.",
         f"Date: {report.date}; code: {report.code_version}; "

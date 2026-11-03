@@ -163,16 +163,15 @@ class EvaluationRunner:
                     if evidence.sentence_probabilities[index] >= NO:
                         row.evidence_kind, row.evidence_sentence = "sentence", index + 1
                         row.evidence_start, row.evidence_end = spans[index].start, spans[index].end
-                except Exception as exc:
-                    if isinstance(exc, (MissingCassette, SentinelError)) and (
-                        isinstance(exc, MissingCassette)
-                        or exc.code
-                        in (ErrorCode.CANCELLED, ErrorCode.TIMEOUT, ErrorCode.UNAUTHENTICATED)
+                except SentinelError as exc:
+                    if exc.code not in (
+                        ErrorCode.MODEL_ERROR,
+                        ErrorCode.TIMEOUT,
+                        ErrorCode.RATE_LIMITED,
                     ):
                         raise
-                    row.evidence_error = (
-                        exc.code.value if isinstance(exc, SentinelError) else "MODEL_ERROR"
-                    )
+                    row.evidence_error = exc.code.value
+                    row.usage.complete = False
         token.raise_if_cancelled()
         row.status = "ok"
         return row

@@ -199,6 +199,11 @@ class EvalReport(Model):
     baseline: BaselineReport = Field(default_factory=BaselineReport)
     gold_quality: GoldQuality
     real_model_status: Literal["NOT_RUN", "COMPLETED"]
+    native_eval_status: Literal["NOT_RUN"] = "NOT_RUN"
+    evidence_policy: str = (
+        "Reviewed S-05 policy: passage fallback only for MODEL_ERROR/TIMEOUT/RATE_LIMITED; "
+        "other errors and global deadline fail the sample, preserving known score usage."
+    )
     gate: Gate
     exit_code: int
     source: str
