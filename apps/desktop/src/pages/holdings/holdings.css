@@ -1,0 +1,36 @@
+/* Quiet Ledger 原型的持仓构图；仅作用于本页。 */
+.p-holdings { min-width: 0; }
+.p-holdings__head { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--space-4); margin-bottom: var(--space-5); }
+.p-holdings__title { font-size: var(--text-h1-size); line-height: var(--text-h1-lh); font-weight: 600; margin: 0; }
+.p-holdings__sub { font-size: var(--text-small-size); color: var(--muted); }
+.p-holdings__toolbar { display: flex; align-items: center; gap: var(--space-3); margin-bottom: var(--space-4); }
+.p-holdings__toolbar .u-grow { display: flex; align-items: center; gap: var(--space-3); min-width: 0; }
+.p-holdings__combobox { position: relative; max-width: 480px; flex: 1 1 auto; min-width: 180px; }
+.p-holdings__search-list { position: absolute; left: 0; right: 0; top: 36px; z-index: 15; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-input); box-shadow: var(--shadow-float); padding: var(--space-1); max-height: 320px; overflow-y: auto; }
+.p-holdings__option { display: flex; align-items: center; gap: var(--space-3); min-height: 44px; padding: 0 var(--space-3); border-radius: var(--radius-tag); cursor: pointer; }
+.p-holdings__option:hover, .p-holdings__option.is-active { background: var(--surface-2); }
+.p-holdings__option[aria-disabled="true"] { cursor: default; }
+.p-holdings__search-empty { padding: var(--space-3); color: var(--muted); }
+.p-holdings__theses { display: flex; flex-direction: column; gap: var(--space-3); }
+.p-holdings__thesis { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-card); padding: var(--space-4); display: flex; flex-direction: column; gap: var(--space-2); }
+.p-holdings__thesis > p { margin: 0; }
+.p-holdings__kill { color: var(--ink-2); font-size: var(--text-small-size); line-height: var(--text-small-lh); }
+.p-holdings__meta { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2) var(--space-3); font-size: var(--text-small-size); color: var(--muted); }
+.p-holdings__thesis-actions { display: flex; gap: var(--space-1); margin-left: -8px; }
+.p-holdings__editor { background: var(--surface); border: 1px solid var(--line-strong); border-radius: var(--radius-card); padding: var(--space-4); display: flex; flex-direction: column; gap: var(--space-3); margin-bottom: var(--space-3); }
+.p-holdings__actions { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); }
+.p-holdings__note { overflow-wrap: anywhere; }
+.p-holdings__form { display: grid; grid-template-columns: 1fr 1fr 2fr; gap: var(--space-3); }
+.p-holdings__skeleton { height: 44px; background: var(--surface-2); border-bottom: 1px solid var(--line); }
+.p-holdings .c-table { min-width: 900px; }
+.p-holdings .c-table__detail > td { white-space: normal; overflow-wrap: anywhere; }
+.p-holdings__history { max-height: 55vh; overflow: auto; overflow-wrap: anywhere; }
+.p-holdings__history article { border-bottom: 1px solid var(--line); padding: var(--space-3) 0; }
+.p-holdings__latest { border-left: 2px solid var(--warn); padding-left: var(--space-3); }
+.p-holdings__price-status { margin-bottom: var(--space-3); }
+.p-holdings .u-up { color: var(--up); }
+.p-holdings .u-down { color: var(--down); }
+@media (max-width: 1079px) {
+  .p-holdings__form { grid-template-columns: 1fr 1fr; }
+  .p-holdings__form .c-field:last-child { grid-column: 1 / -1; }
+}
