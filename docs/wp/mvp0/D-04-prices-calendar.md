@@ -128,7 +128,7 @@ def market_state(now: datetime) -> MarketState: ...
 1. 注册 tencent 策略（读取 30 秒、总计 30 秒）；请求 `param={symbol},day,,,{limit},qfq`，`limit=min(250, 交易日数+10)`，头 `Referer: https://gu.qq.com/`。
 2. 解析 `data[symbol]`：先 `qfqday` 后 `day`；每行 6 个元素，按 `[日期, 开, 收, 高, 低, 量]` 映射；`qfqday` 设 `adj_close=close`，`day` 设 `None`。
 3. 腾讯代码 `us:` 换 `us`；`BRK.B` 以 G1-US `REPORT.md` 的 `symbolMapping` 为准。纳斯达克用 `assetclass=stocks`、`fromdate`、`limit=250`，日期 `%m/%d/%Y`，价格去 `$` 与逗号。
-4. 主备：先腾讯；抛错或空结果时调纳斯达克；都失败记 `SOURCE_UNAVAILABLE`；成功时写实际来源名。
+4. 主备：先腾讯，先过滤非法和窗口外行；抛错、空结果或有效历史少于本次窗口的期望行数（最多 250）时尝试纳斯达克。选择有效覆盖更完整的来源，不混拼不同口径的 OHLC；两个来源都没有有效行才失败。新上市或两源都只有部分历史时可保存有效行，但必须记录覆盖不足告警，不能把一两行当完整历史。成功时写实际来源名。
 5. 增量范围：有库值时 `start = 最新日期 + 1 天`，否则 `as_of - 1095 天`；`end` 是最近已收盘交易日。
 6. 校验与落库：非法 OHLC、价格 ≤ 0、`NaN`、`inf` 丢行；其余 upsert，单标的一个事务，`fetched_at=clock.now()`。
 7. 日历：校验 `market`、时区、`years`；`04:00–09:30` 为 `pre`，`09:30–close` 为 `open`，`close–20:00` 为 `after`，周末节假日为 `holiday`。

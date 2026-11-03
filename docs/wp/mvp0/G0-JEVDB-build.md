@@ -119,7 +119,7 @@ def main(argv: Sequence[str] | None = None) -> int: ...
 5. 记录 `shasum -a 256`、`cmake --version` 首行、`ninja --version`、`cc --version` 首行、OpenSSL 路径到 `build.lock.json`；文件所有者只读权限 `0o600`。
 6. `probe_jevdb.py` 校验 Python `duckdb.__version__ == 1.4.3`，创建 `duckdb.connect(":memory:", config={"allow_unsigned_extensions": "true"})`。
 7. 执行 `LOAD '<绝对路径>'`。路径用绑定参数不支持 `LOAD`，所以先断言路径不含 `'`、换行和 NUL；以单引号转义后执行。加载失败按 4 退出。
-8. 执行 `CREATE SECRET jev (TYPE jev, PROVIDER env)`，只建临时 secret；依次设置 `jevdb_backend=jev`、`jevdb_model=jev-1.14.0`、`jevdb_threads=4`、`jevdb_max_retries=3`、`jevdb_retry_max_delay=30`、`jevdb_on_error=error`、`jevdb_timeout=60`、`threads=1`。
+8. 仅在隔离子进程应用调用方传入的密钥、离线开关及必要 CA 环境配置，不修改父环境；`CREATE SECRET jev (TYPE jev, PROVIDER env)` 读取该子进程配置。验证同一个完整 HTTPS `JEV_ENDPOINT` 后去掉末尾 `systemone`，通过绑定参数设置 `jevdb_endpoint` 的 `/v1/` 前缀；不把完整路径再拼成 `/systemone/systemone`，拒绝凭据、query、fragment 与非法 host。依次设置 `jevdb_backend=jev`、`jevdb_model=jev-1.14.0`、`jevdb_threads=4`、`jevdb_max_retries=3`、`jevdb_retry_max_delay=30`、`jevdb_on_error=error`、`jevdb_timeout=60`、`threads=1`。
 9. 分别执行概率查询和 `jev_keys_overlap(VARCHAR[], VARCHAR[])` 查询；前者的固定 condition 必须可折叠，用户文本使用参数绑定。未配置 key 时仅允许本地重叠、统计和 NULL 短路核实，真实概率为 BLOCKED；有 key 时概率必须是 `[0,1]` 有限数，401/403 为 BLOCKED，429/5xx 为 FAILED，不能转成 false。
 10. 在 `finally` 中查询 `jevdb_stats()` 写报告，再 `DROP SECRET jev` 并关闭连接；报告不含 key、Authorization、请求正文。
 
