@@ -1,5 +1,7 @@
 from decimal import Decimal
 
+import pytest
+
 
 def test_estimate_tokens_rounds_up_with_3_5_chars():
     from sentinel.semantic.budget import estimate_tokens
@@ -104,3 +106,95 @@ def test_usage_migration_is_verbatim_document_ddl():
     document = (root / "docs/04-数据模型.md").read_text()
     expected = document.split("### 3.9 `009_usage.sql` · S-02\n\n```sql\n", 1)[1].split("```", 1)[0]
     assert (root / "core/sentinel/storage/migrations/009_usage.sql").read_text() == expected
+
+
+@pytest.mark.parametrize(
+    "text",
+    [
+        "",
+        "[models]\n",
+        'models = "bad"',
+        "models = false",
+        "models = []",
+        'models = [{model = "jev-1.14.0"}]',
+        '[models]\n"jev-1.14.0" = false',
+        '[models]\n"jev-1.14.0" = 0.042',
+        '[models]\n"jev-1.14.0" = "0.042"',
+        '[models]\n"jev-1.14.0" = []',
+        '[models."jev-1.14.0"]',
+        '[models."jev-1.14.0"]\neffective_from = "2026-10-14"',
+    ],
+)
+def test_price_loader_rejects_empty_and_invalid_structure(tmp_path, text):
+    from sentinel.semantic.pricing import load_price_table
+
+    path = tmp_path / "pricing.toml"
+    path.write_text(text)
+    with pytest.raises(ValueError):
+        load_price_table(path)
+
+
+@pytest.mark.parametrize(
+    "price",
+    [
+        "false",
+        "true",
+        "0.042",
+        "0",
+        "[]",
+        "{}",
+        '""',
+        '"NaN"',
+        '"sNaN"',
+        '"Infinity"',
+        '"-Infinity"',
+        '"-0.042"',
+        '"free"',
+        '"0.0_42"',
+        '" 0.042 "',
+        '"０.０４２"',
+        '"1e999999999999999999999999999999"',
+    ],
+)
+def test_price_loader_rejects_nondecimal_and_invalid_price_text(tmp_path, price):
+    from sentinel.semantic.pricing import load_price_table
+
+    path = tmp_path / "pricing.toml"
+    path.write_text(f'[models."jev-1.14.0"]\ninput_usd_per_mtok = {price}\n')
+    with pytest.raises(ValueError):
+        load_price_table(path)
+
+
+@pytest.mark.parametrize(
+    "model", ["", "jev-latest", "jev-1.14", "jev-01.14.0", "other", "jev-1.14.0 "]
+)
+def test_price_loader_rejects_unpinned_or_invalid_model_ids(tmp_path, model):
+    from sentinel.semantic.pricing import load_price_table
+
+    path = tmp_path / "pricing.toml"
+    path.write_text(f'[models."{model}"]\ninput_usd_per_mtok = "0.042"\n')
+    with pytest.raises(ValueError):
+        load_price_table(path)
+
+
+def test_price_loader_keeps_decimal_text_exact_and_rejects_whole_invalid_table(tmp_path):
+    from decimal import FloatOperation, localcontext
+
+    from sentinel.semantic.pricing import load_price_table
+
+    path = tmp_path / "pricing.toml"
+    text = (
+        '[models."jev-1.14.0"]\ninput_usd_per_mtok = "0.042"\n'
+        '[models."jev-1.13.0"]\ninput_usd_per_mtok = "0"\n'
+    )
+    path.write_text(text)
+    with localcontext() as ctx:
+        ctx.prec = 2
+        ctx.traps[FloatOperation] = True
+        assert load_price_table(path) == {
+            "jev-1.14.0": Decimal("0.042"),
+            "jev-1.13.0": Decimal("0"),
+        }
+    path.write_text(text.replace('input_usd_per_mtok = "0"', "input_usd_per_mtok = false"))
+    with pytest.raises(ValueError):
+        load_price_table(path)

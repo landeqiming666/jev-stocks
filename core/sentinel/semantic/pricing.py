@@ -1,19 +1,36 @@
+import re
 import tomllib
-from decimal import ROUND_HALF_UP, Context, Decimal, localcontext
+from decimal import ROUND_HALF_UP, Context, Decimal, InvalidOperation, localcontext
 from pathlib import Path
 
 from .base import validate_count
 
 PriceTable = dict[str, Decimal]
 DEFAULT_PRICING_PATH = Path(__file__).resolve().parents[3] / "resources" / "pricing.toml"
+_MODEL_ID = re.compile(r"jev-(?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*)")
+_DECIMAL_TEXT = re.compile(r"[+-]?(?:[0-9]+(?:\.[0-9]*)?|\.[0-9]+)(?:[eE][+-]?[0-9]+)?")
 
 
 def load_price_table(path: Path = DEFAULT_PRICING_PATH) -> PriceTable:
     with path.open("rb") as stream:
-        models = tomllib.load(stream)["models"]
-    table = {model: Decimal(row["input_usd_per_mtok"]) for model, row in models.items()}
-    for price in table.values():
+        models = tomllib.load(stream).get("models")
+    if not isinstance(models, dict) or not models:
+        raise ValueError("pricing models must be a nonempty table")
+    table: PriceTable = {}
+    for model, row in models.items():
+        if not isinstance(model, str) or _MODEL_ID.fullmatch(model) is None:
+            raise ValueError("pricing model ID must be a pinned Jev version")
+        if not isinstance(row, dict):
+            raise ValueError("pricing model row must be a table")
+        text = row.get("input_usd_per_mtok")
+        if not isinstance(text, str) or _DECIMAL_TEXT.fullmatch(text) is None:
+            raise ValueError("price must be Decimal text")
+        try:
+            price = Decimal(text)
+        except InvalidOperation as exc:
+            raise ValueError("invalid Decimal price text") from exc
         _validate_price(price)
+        table[model] = price
     return table
 
 
