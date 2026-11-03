@@ -132,3 +132,7 @@ ui/index 导入的 CSS 不能重新定义 U-00 顶栏的重叠 c-engine/c-tag/c-
 ## 20. D-03 全迁移回归不假定库只有 004
 
 主集成同时含 005 和 009 后，D-03 两项测试仅因固定最高 schema_version=4 失败，实际 DDL/业务测试其余 219 项通过。主 agent 在测试中改为核对 004 注册的 name/checksum、完整迁移重复运行 applied 为空、前后最高版本不变；恶意文字写入测试同样比较写前后版本。保留真实全迁移 fixture，不屏蔽后续包、不改 004 DDL、不删失败测试。
+
+## 21. U-01 焦点层级与推开抽屉共存
+
+主 agent 实际浏览器复现独立 Menu 低于开放 push Drawer，导致 Esc 关错抽屉。修补后的层级为 Drawer=1、独立或 Drawer 内 Menu=1.5、Modal=2、Modal 内 Menu=2.5；同类后开优先。Menu 获得第一项焦点，方向/Home/End 跳过禁用项；Esc 只关闭该菜单并归还其触发，不关闭仍开放的 push Drawer。保留 unit 与真实 PageFrame/browser 回归，不用先关 Drawer 的单独菜单测试代替。Modal 与抽屉 trap、StrictMode 初始来源及嵌套同时卸载的焦点归还回归均保留。
