@@ -82,3 +82,9 @@ G1-US 主审追加安全回归后实际规模约 1600 行（首轮加补丁 1515
 主 agent 另测腾讯 `usAAPL.O` 后缀候选仍为 0 行，不能猜映射；Nasdaq AAPL 的 `limit=250`、`fromdate=2025-01-01` 真实返回 250 行（2025-11-04 至 2026-11-02）。D-04 在过滤无效和超窗口数据后，对不完整的主源尝试备源，选择覆盖更完整者；不足历史必须可见，不引入新行情源。原始完整价格仅保留在临时开发目录，公开仓库仍只用裁剪样本和统计。
 
 G0-JEVDB 主审独立实测静态扩展 LOAD、本地 overlap、NULL 短路、32 个 stats 且请求数 0；原 wheel 未变。探针隔离进程必须应用显式 env，而不是误用父进程另一枚 key。JEVDB 的 endpoint 是 `/v1/` 前缀，会自动拼 systemone；批准消费完整 JEV_ENDPOINT 并使用绑定 SET，主审已经确认 SET 参数可绑定。该补充不增加外部权限或泄露 URL 中的凭据。
+
+## 13. S-02 的集中降级文案与规模
+
+已批准 S-02 规模 L，约 1300 行实现、typed fake 与测试，SQL/TOML 另列；保留 85 项首轮回归。主 agent 在既有 `messages/app.py` 注册精确 `engine.changed` 文案，独立测试真实公共目录，不让单测临时注入掩盖生产缺键。
+
+semantic 的模型适配层可以静态调用 security.redact 注册和清理密钥，禁止 raw SDK 响应、异常或 request ID 回显秘密；domain 层仍不依赖 security 或任何 I/O。主 agent 对这两个原先失败的边界追加测试后修正分层与文案，不动态导入绕过检查。真实模型与价格仍保留 G0 未验证标识。

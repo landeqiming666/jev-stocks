@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 MESSAGES: dict[str, str] = {
+    "engine.changed": "未找到 JEVDB 扩展，已改用 Jev 直连（同一模型）",
     "core.starting": "核心服务正在启动。",
     "core.ready": "核心服务已就绪。",
     "core.restarting": "核心服务正在重启。",

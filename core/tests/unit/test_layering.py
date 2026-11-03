@@ -15,7 +15,7 @@ LAYER_RULES: dict[str, set[str]] = {
     "security": {"domain"},
     "platform": {"domain"},
     "markets": {"domain", "storage", "http"},
-    "semantic": {"domain", "storage", "http"},
+    "semantic": {"domain", "storage", "http", "security"},
     "quant": {"domain", "storage", "markets", "rpc"},
     "trading": {"domain", "storage", "markets", "rpc"},
     "portfolio": {"domain", "storage", "markets", "rpc"},
@@ -129,3 +129,9 @@ def test_settings_can_register_handlers_without_moving_business_into_rpc() -> No
     assert violations("from sentinel.settings import SettingsService\n", "sentinel.rpc.server") == {
         "settings"
     }
+
+
+def test_semantic_adapters_can_redact_secrets_without_relaxing_domain_layer() -> None:
+    source = "from sentinel.security.redact import redact_text\n"
+    assert violations(source, "sentinel.semantic.engines.jev_direct") == set()
+    assert violations(source, "sentinel.domain.classify") == {"security"}

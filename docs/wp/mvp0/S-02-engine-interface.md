@@ -5,7 +5,8 @@ phase: mvp0
 platform: shared
 lane: semantic
 deps: [C-00, G0-JEV]
-size: M
+size: L
+size_approval: cr/N10-01-execution-clarifications.md
 owns: [core/sentinel/semantic/base.py, core/sentinel/semantic/engine.py, core/sentinel/semantic/questions.py, core/sentinel/semantic/budget.py, core/sentinel/semantic/pricing.py, core/sentinel/semantic/engines/__init__.py, core/sentinel/domain/classify.py, core/sentinel/storage/migrations/009_usage.sql, resources/pricing.toml, core/tests/fakes/engine.py, core/tests/unit/semantic/test_engine_contract.py, core/tests/unit/semantic/test_budget.py]
 appends: []
 stubs: []

@@ -245,7 +245,7 @@ graph LR
 | [D-01](mvp0/D-01-http.md) | HTTP 基础设施：重试、熔断、限速、缓存 | 数据 | 共享 | M | 2 | C-00 | 已写 | 待派发 |
 | [P-04](mvp0/P-04-trading-rules.md) | 模拟交易规则：校验、费用、撮合 | 数据 | 共享 | S | 2 | C-00 | 已写 | 待派发 |
 | [S-01](mvp0/S-01-segment.md) | 分句与分段 | 语义 | 共享 | S | 2 | C-00 | 已写 | 待派发 |
-| [S-02](mvp0/S-02-engine-interface.md) | 引擎接口、问题集、classify、定价与预算 | 语义 | 共享 | M | 2 | C-00, G0-JEV | 已写 | 待派发 |
+| [S-02](mvp0/S-02-engine-interface.md) | 引擎接口、问题集、classify、定价与预算 | 语义 | 共享 | L | 2 | C-00, G0-JEV | 已写 | 待派发 |
 | [W-01](mvp0/W-01-windows-platform-layer.md) | Windows 平台层实现 | Windows | Windows | M | 2 | WP-00, W-00 | 已写 | 待派发 |
 | [C-02](mvp0/C-02-tauri-bridge.md) | Rust 桥接：核心进程监督与消息转发 | 核心 | 共享 | L | 3 | C-01 | 已写 | 待派发 |
 | [C-04](mvp0/C-04-settings-secrets.md) | 设置与密钥：settings.*、secrets.*、app.bootstrap | 核心 | 共享 | L | 3 | C-01, C-03 | 已写 | 待派发 |
