@@ -28,6 +28,7 @@ from sentinel.scan.pending import (
     register_handlers,
 )
 from sentinel.storage import Database, SqlExecutor
+from sentinel.storage.migrations import DEFAULT_MIGRATIONS_DIR, discover_migrations
 
 ROOT = Path(__file__).resolve().parents[4]
 NOW = datetime(2026, 11, 2, 0, 35, tzinfo=UTC)
@@ -58,6 +59,41 @@ def query(db: Database, sql: str, params: list | None = None) -> list[tuple]:
         return reader.fetchall()
 
 
+SECTION_MIGRATIONS = (
+    ("3.6", "decision", 6, "decision"),
+    ("3.8", "scan_run", 8, "scan"),
+    ("3.10", "paper_account", 10, "paper"),
+)
+
+
+def complete_fixture_sections(database: Database, migrations_dir: Path | None = None) -> None:
+    delivered = {
+        migration.version
+        for migration in discover_migrations(migrations_dir or DEFAULT_MIGRATIONS_DIR)
+    }
+    with database.write() as tx:
+        tx.execute(
+            "SELECT table_name FROM information_schema.tables "
+            "WHERE table_schema=current_schema() AND table_type='BASE TABLE'"
+        )
+        tables = {row[0] for row in tx.fetchall()}
+        for section, table, version, name in SECTION_MIGRATIONS:
+            tx.execute("SELECT name, checksum FROM schema_version WHERE version=?", [version])
+            recorded = tx.fetchone()
+            authoritative = ddl(section)
+            if version in delivered:
+                assert table in tables, f"{table}: applied migration is missing its table"
+                assert recorded == (name, hashlib.sha256(authoritative).hexdigest()), (
+                    f"{table}: existing section must have its authoritative migration checksum"
+                )
+            else:
+                assert recorded is None and table not in tables, (
+                    f"{table}: existing section must have its authoritative migration checksum"
+                )
+                # 仅尚未交付的 section 在临时数据库显式补造；不伪造迁移记录。
+                tx.execute(authoritative.decode())
+
+
 @pytest.fixture(autouse=True)
 def isolated(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
     monkeypatch.setenv("SENTINEL_CLOCK", clock.to_iso(NOW))
@@ -68,31 +104,46 @@ def isolated(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
 
 
 @pytest.fixture
-def db(tmp_path: Path) -> Iterator[Database]:
+def db(tmp_path: Path, request: pytest.FixtureRequest) -> Iterator[Database]:
     database = Database(tmp_path / "pending.duckdb")
     database.open()
-    database.migrate()
-    with database.write() as tx:
-        # 尚未交付的 006/008/010 仅在临时数据库用权威字节创建。
-        for section in ("3.6", "3.8", "3.10"):
-            tx.execute(ddl(section).decode())
-        tx.execute(
-            "INSERT INTO instrument VALUES ('us:ZZAR', 'us', 'ZZAR', 'NASDAQ', "
-            "'Zenith Arc Robotics Inc.', NULL, 'USD', NULL, TRUE, 'demo', ?)",
-            [NOW],
-        )
-        tx.execute(
-            "INSERT INTO holding VALUES (?, 'us:ZZAR', 0, NULL, NULL, ?, ?, NULL)",
-            [uid(1), NOW, NOW],
-        )
-        tx.execute(
-            "INSERT INTO thesis VALUES (?, 'us:ZZAR', 'active', 1, ?, ?, NULL)", [uid(2), NOW, NOW]
-        )
-        tx.execute(
-            "INSERT INTO thesis_version VALUES (?, 1, 'Sales will grow', NULL, 'v1', ?)",
-            [uid(2), NOW],
-        )
     try:
+        migrations_dir = None
+        if hasattr(request, "param"):
+            migrations_dir = tmp_path / "pending-migrations"
+            migrations_dir.mkdir()
+            for migration in discover_migrations(DEFAULT_MIGRATIONS_DIR):
+                (migrations_dir / migration.sql_path.name).write_bytes(
+                    migration.sql_path.read_bytes()
+                )
+            for section, _, version, name in SECTION_MIGRATIONS:
+                if section in request.param:
+                    # 未来 008/010 在此只作为权威字节迁移 fixture，走真实执行器。
+                    target = migrations_dir / f"{version:03}_{name}.sql"
+                    if not target.exists():
+                        target.write_bytes(ddl(section))
+                    else:
+                        assert target.read_bytes() == ddl(section)
+        database.migrate(migrations_dir)
+        complete_fixture_sections(database, migrations_dir)
+        with database.write() as tx:
+            tx.execute(
+                "INSERT INTO instrument VALUES ('us:ZZAR', 'us', 'ZZAR', 'NASDAQ', "
+                "'Zenith Arc Robotics Inc.', NULL, 'USD', NULL, TRUE, 'demo', ?)",
+                [NOW],
+            )
+            tx.execute(
+                "INSERT INTO holding VALUES (?, 'us:ZZAR', 0, NULL, NULL, ?, ?, NULL)",
+                [uid(1), NOW, NOW],
+            )
+            tx.execute(
+                "INSERT INTO thesis VALUES (?, 'us:ZZAR', 'active', 1, ?, ?, NULL)",
+                [uid(2), NOW, NOW],
+            )
+            tx.execute(
+                "INSERT INTO thesis_version VALUES (?, 1, 'Sales will grow', NULL, 'v1', ?)",
+                [uid(2), NOW],
+            )
         yield database
     finally:
         database.close()
@@ -973,3 +1024,75 @@ def test_rpc_not_found_uses_own_local_message_and_internal_has_request_id(
     response = call(dispatcher, "decision.get", {"decisionId": selected})
     assert response["error"]["code"] == "INTERNAL"
     assert response["error"]["data"]["requestId"] == "r-p03"
+
+
+@pytest.mark.parametrize("db", [(), ("3.8",), ("3.10",), ("3.8", "3.10")], indirect=True)
+def test_fixture_coexists_with_all_discovered_migrations(
+    db: Database,
+    service: InboxService,
+    tmp_path: Path,
+) -> None:
+    migrations_dir = tmp_path / "pending-migrations"
+    discovered = discover_migrations(migrations_dir)
+    actual_migrations = discover_migrations(DEFAULT_MIGRATIONS_DIR)
+    for migration in actual_migrations:
+        assert (
+            migrations_dir / migration.sql_path.name
+        ).read_bytes() == migration.sql_path.read_bytes()
+    actual = {migration.version for migration in actual_migrations}
+    recorded = {row[0] for row in query(db, "SELECT version FROM schema_version")}
+    assert recorded == {migration.version for migration in discovered}
+    assert actual <= recorded
+    for section, table, version, name in SECTION_MIGRATIONS:
+        assert query(
+            db, "SELECT COUNT(*) FROM information_schema.tables WHERE table_name=?", [table]
+        ) == [(1,)]
+        if version in recorded:
+            assert query(
+                db, "SELECT name, checksum FROM schema_version WHERE version=?", [version]
+            ) == [(name, hashlib.sha256(ddl(section)).hexdigest())]
+    assert db.migrate(migrations_dir).applied == ()
+    selected = seed(db)
+    assert service.list_inbox().items[0].decision_id == selected
+    assert service.act(selected, "ignore", "migrations coexist").action.note == "migrations coexist"
+    assert service.get_decision(selected).actions[0].action == "ignore"
+
+
+@pytest.mark.parametrize("damage", ["checksum", "unrecorded", "missing_table"])
+def test_fixture_does_not_hide_existing_section_damage(db: Database, damage: str) -> None:
+    version = query(db, "SELECT name, checksum FROM schema_version WHERE version=6")
+    assert version == [("decision", hashlib.sha256(ddl("3.6")).hexdigest())]
+    with db.write() as tx:
+        if damage == "checksum":
+            tx.execute("UPDATE schema_version SET checksum='corrupt' WHERE version=6")
+        elif damage == "unrecorded":
+            tx.execute("DELETE FROM schema_version WHERE version=6")
+        else:
+            tx.execute("DROP TABLE decision")
+    with pytest.raises(AssertionError, match="authoritative migration checksum|missing its table"):
+        complete_fixture_sections(db)
+    assert query(db, "SELECT COUNT(*) FROM schema_version WHERE version=6") == [
+        (0 if damage == "unrecorded" else 1,)
+    ]
+    assert query(
+        db, "SELECT COUNT(*) FROM information_schema.tables WHERE table_name='decision'"
+    ) == [(0 if damage == "missing_table" else 1,)]
+
+
+def test_fixture_does_not_recreate_delivered_section_after_table_and_record_loss(
+    tmp_path: Path,
+) -> None:
+    database = Database(tmp_path / "missing-delivered.duckdb")
+    database.open()
+    try:
+        database.migrate()
+        with database.write() as tx:
+            tx.execute("DROP TABLE decision")
+            tx.execute("DELETE FROM schema_version WHERE version=6")
+        with pytest.raises(AssertionError, match="missing its table"):
+            complete_fixture_sections(database)
+        assert query(
+            database, "SELECT COUNT(*) FROM information_schema.tables WHERE table_name='decision'"
+        ) == [(0,)]
+    finally:
+        database.close()
