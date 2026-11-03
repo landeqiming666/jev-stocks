@@ -15,6 +15,7 @@ import duckdb
 import pytest
 from duckdb.func import FunctionNullHandling
 from duckdb.sqltypes import DOUBLE, VARCHAR
+
 from sentinel.errors import (
     CancelledError,
     EngineError,
