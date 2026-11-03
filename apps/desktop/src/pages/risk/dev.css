@@ -1,0 +1,11 @@
+.p-risk-dev__mark {
+  position: fixed;
+  right: 24px;
+  bottom: 32px;
+  z-index: var(--z-toast);
+  background: var(--warn-bg);
+  color: var(--warn);
+  padding: 4px 8px;
+  font-size: 11px;
+  border-radius: var(--radius-input);
+}
