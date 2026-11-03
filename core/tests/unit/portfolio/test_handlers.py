@@ -166,12 +166,17 @@ def test_wire_amount_accepts_full_decimal_range(dispatcher: Dispatcher, value: s
 
 
 @pytest.mark.parametrize("field", ["quantity", "avgCost"])
-def test_wire_decimal_string_rejects_trailing_newline(dispatcher: Dispatcher, field: str) -> None:
+def test_wire_decimal_string_rejects_trailing_newline(
+    dispatcher: Dispatcher, db: Database, field: str
+) -> None:
     params = {"instrumentId": "us:ZZAR", "quantity": "1", field: "1\n"}
+    contract = Contract("holdings.upsert")
+    assert not contract.params.is_valid(params)
     response = call(dispatcher, "holdings.upsert", params)
-    Contract("holdings.upsert").response(response)
+    contract.response(response)
     assert response["error"]["code"] == "INVALID_ARGUMENT"
     assert response["error"]["data"]["field"] == field
+    assert query(db, "SELECT count(*) FROM holding") == [(0,)]
 
 
 @pytest.mark.parametrize(
