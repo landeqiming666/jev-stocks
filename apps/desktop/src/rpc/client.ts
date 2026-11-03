@@ -106,16 +106,12 @@ export function createRpcClient(options: RpcClientOptions = {}): RpcClient {
     if (item.sent) void send("rpc_send", { line: JSON.stringify({ jsonrpc: "2.0", method: "$/cancel", params: { id } }) })
       .catch(() => warn("cancel send failed"));
   }
-  function timeout(method: string, provided?: number) {
-    return provided ?? (method === "settings.testConnection" ? CONNECTION_TIMEOUT_MS :
-      method.toLowerCase().includes("export") ? EXPORT_TIMEOUT_MS : DEFAULT_TIMEOUT_MS);
-  }
   return {
     status: () => state,
     call<M extends MethodName>(method: M, params: ParamsOf<M>, callOptions: CallOptions = {}): Promise<ResultOf<M>> {
       if (!Object.hasOwn(METHOD_TIMEOUTS, method)) return Promise.reject(new RpcError("INVALID_ARGUMENT", RPC_MESSAGES.invalid, false, { reason: "UNKNOWN_METHOD" }));
       if (callOptions.signal?.aborted) return Promise.reject(new RpcError("CANCELLED", RPC_MESSAGES.cancelled));
-      const ms = timeout(method, callOptions.timeoutMs);
+      const ms = callOptions.timeoutMs ?? METHOD_TIMEOUTS[method];
       if (!Number.isFinite(ms) || ms < 0) return Promise.reject(new RpcError("INVALID_ARGUMENT", RPC_MESSAGES.invalid));
       const hex = [...crypto.getRandomValues(new Uint8Array(4))].map(n => n.toString(16).padStart(2, "0")).join("");
       const id = ID_PREFIX + ++counter + "-" + hex;

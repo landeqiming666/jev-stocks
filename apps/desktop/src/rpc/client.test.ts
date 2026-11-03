@@ -278,7 +278,7 @@ test("retry_preserves_frozen_params_and_idempotency_key", async () => {
   expect(params.idempotencyKey).toBe("caller-owned-key"); client.dispose();
 });
 
-test.each(["app.ping", "scan.start", "settings.testConnection"] as const)("default_timeout_for_%s", async method => {
+test.each(["holdings.list", "scan.start", "settings.testConnection"] as const)("default_timeout_for_%s", async method => {
   vi.useFakeTimers();
   const { client, transport } = await setup();
   const result = client.call(method, method === "scan.start" ? { market: "us" } : {});
@@ -287,6 +287,54 @@ test.each(["app.ping", "scan.start", "settings.testConnection"] as const)("defau
   await vi.advanceTimersByTimeAsync(ms - 1); expect(transport.lines).toHaveLength(1);
   await vi.advanceTimersByTimeAsync(1); await assertion;
   expect(transport.lines).toHaveLength(2); client.dispose();
+});
+
+test.each([
+  { method: "app.ping", ms: 2_000 },
+  { method: "app.shutdown", ms: 5_000 },
+  { method: "scan.retryBatch", ms: 60_000 },
+  { method: "settings.testConnection", ms: 20_000 },
+] as const)("contract_timeout_for_$method", async ({ method, ms }) => {
+  vi.useFakeTimers();
+  const { client, transport } = await setup();
+  const outcome = client.call(method, method === "scan.retryBatch" ? { batchId: "batch-1" } : {}).catch(error => error);
+  try {
+    await vi.advanceTimersByTimeAsync(ms - 1);
+    expect(transport.lines).toHaveLength(1);
+    await vi.advanceTimersByTimeAsync(1);
+    expect(transport.lines).toHaveLength(2);
+    expect(transport.lines[1]?.method).toBe("$/cancel");
+    await expect(outcome).resolves.toMatchObject({ code: "TIMEOUT" });
+  } finally { client.dispose(); }
+});
+
+test.each([
+  { method: "app.ping", ms: 5_000 },
+  { method: "scan.retryBatch", ms: 10_000 },
+] as const)("explicit_timeout_overrides_contract_for_$method", async ({ method, ms }) => {
+  vi.useFakeTimers();
+  const { client, transport } = await setup();
+  const outcome = client.call(method, method === "scan.retryBatch" ? { batchId: "batch-1" } : {}, { timeoutMs: ms }).catch(error => error);
+  try {
+    await vi.advanceTimersByTimeAsync(ms - 1);
+    expect(transport.lines).toHaveLength(1);
+    await vi.advanceTimersByTimeAsync(1);
+    expect(transport.lines).toHaveLength(2);
+    await expect(outcome).resolves.toMatchObject({ code: "TIMEOUT" });
+  } finally { client.dispose(); }
+});
+
+test("when_ready_default_timeout_remains_thirty_seconds", async () => {
+  vi.useFakeTimers();
+  const { createRpcClient } = await import("./client");
+  const transport = new FakeTransport(), client = createRpcClient({ transport }), settled = vi.fn();
+  const outcome = client.whenReady().catch(error => { settled(error); return error; });
+  await vi.advanceTimersByTimeAsync(29_999);
+  expect(settled).not.toHaveBeenCalled();
+  await vi.advanceTimersByTimeAsync(1);
+  await expect(outcome).resolves.toMatchObject({ code: "TIMEOUT" });
+  expect(transport.lines).toHaveLength(0);
+  client.dispose();
 });
 
 test.each(["abort", "timeout", "failed", "dispose"] as const)("when_ready_%s_cleans_waiter", async kind => {

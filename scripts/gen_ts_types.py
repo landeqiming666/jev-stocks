@@ -279,8 +279,46 @@ class SchemaTypes:
         return parts[0] if len(parts) == 1 else "(" + " & ".join(parts) + ")"
 
 
+def metadata(contracts):
+    index = load(contracts / "index.json")
+    require(isinstance(index, dict), "index.json", "expected object")
+    for field in ("methods", "notifications"):
+        path = "index.json." + field
+        names = index.get(field)
+        require(
+            isinstance(names, list) and bool(names), path, "expected nonempty array"
+        )
+        require(
+            all(
+                isinstance(name, str)
+                and re.fullmatch(r"[a-zA-Z]+(?:\.[a-zA-Z]+)+", name)
+                for name in names
+            ),
+            path,
+            "invalid RPC name",
+        )
+        require(len(names) == len(set(names)), path, "duplicate RPC names")
+    errors = load(contracts / "errors.json")
+    require(isinstance(errors, dict), "errors.json", "expected object")
+    codes = errors.get("codes")
+    require(
+        isinstance(codes, dict) and bool(codes),
+        "errors.json.codes",
+        "expected nonempty object",
+    )
+    for code, item in codes.items():
+        path = "errors.json.codes." + code
+        require(re.fullmatch(r"[A-Z][A-Z0-9_]*", code), path, "invalid error code")
+        require(isinstance(item, dict), path, "expected object")
+        require(
+            type(item.get("retryable")) is bool, path + ".retryable", "expected boolean"
+        )
+    return index, codes
+
+
 def generate(contracts):
-    index, types = load(contracts / "index.json"), load(contracts / "types.schema.json")
+    index, codes = metadata(contracts)
+    types = load(contracts / "types.schema.json")
     require(
         isinstance(types, dict) and isinstance(types.get("$defs"), dict),
         "types.schema.json",
@@ -309,17 +347,11 @@ def generate(contracts):
             declarations.append(f"export interface {name} {value}")
         else:
             declarations.append(f"export type {name} = {value};")
-    codes = load(contracts / "errors.json")["codes"]
     declarations.append(
         "export type ErrorCode = " + " | ".join(js(c) for c in codes) + ";"
     )
     methods, examples, timeouts = [], {}, {}
     for name in index["methods"]:
-        require(
-            isinstance(name, str) and re.fullmatch(r"[a-zA-Z]+(?:\.[a-zA-Z]+)+", name),
-            "index.methods",
-            "invalid method name",
-        )
         item = load(contracts / "methods" / (name + ".json"))
         require(item["method"] == name, name, "method mismatch")
         params = external.render(item["params"], name + ".params")

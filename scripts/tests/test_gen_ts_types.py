@@ -72,6 +72,27 @@ class GeneratorTests(unittest.TestCase):
         self.assertIn("types.ts", result.stdout)
         self.assertEqual(self.outputs(), before)
 
+    def test_check_detects_mixed_outputs_after_interrupted_publish(self):
+        self.assertEqual(self.run_gen().returncode, 0)
+        types_path = self.contracts / "types.schema.json"
+        types = json.loads(types_path.read_text())
+        types["$defs"]["NewType"] = {"type": "string"}
+        types_path.write_text(json.dumps(types))
+        method_path = self.contracts / "methods/app.ping.json"
+        method = json.loads(method_path.read_text())
+        method["timeoutMs"] = 3_000
+        method["examples"][0]["result"]["uptimeMs"] = 42
+        method_path.write_text(json.dumps(method))
+        module, _ = self.renderer()
+        expected = module.generate(self.contracts)
+        (self.out / "types.ts").write_bytes(expected["types.ts"])
+        before = self.outputs()
+        result = self.run_gen("--check")
+        self.assertEqual(result.returncode, 1)
+        self.assertIn("methods.ts", result.stdout)
+        self.assertIn("mock-data.ts", result.stdout)
+        self.assertEqual(self.outputs(), before)
+
     def test_late_invalid_schema_does_not_overwrite_any_output(self):
         self.assertEqual(self.run_gen().returncode, 0)
         before = self.outputs()
@@ -234,6 +255,72 @@ class GeneratorTests(unittest.TestCase):
         text = (self.out / "types.ts").read_text()
         self.assertIn("export type Combined = ", text)
         self.assertNotIn("export interface Combined", text)
+
+    def assert_invalid_metadata_preserves_outputs(self, filename, field, values):
+        self.assertEqual(self.run_gen().returncode, 0)
+        before = self.outputs()
+        path = self.contracts / filename
+        original = json.loads(path.read_text())
+        for value in values:
+            item = dict(original)
+            item[field] = value
+            path.write_text(json.dumps(item))
+            for args in [(), ("--check",)]:
+                with self.subTest(
+                    filename=filename, field=field, value=value, args=args
+                ):
+                    result = self.run_gen(*args)
+                    self.assertEqual(result.returncode, 2, result.stderr)
+                    self.assertIn(field, result.stderr)
+                    self.assertEqual(self.outputs(), before)
+        path.write_text(json.dumps(original))
+
+    def test_invalid_method_index_preserves_all_outputs(self):
+        index = json.loads((self.contracts / "index.json").read_text())
+        self.assert_invalid_metadata_preserves_outputs(
+            "index.json",
+            "methods",
+            [
+                [],
+                None,
+                "app.ping",
+                index["methods"] + [index["methods"][0]],
+                [""],
+                [1],
+                [{}],
+            ],
+        )
+
+    def test_invalid_notification_index_preserves_all_outputs(self):
+        index = json.loads((self.contracts / "index.json").read_text())
+        self.assert_invalid_metadata_preserves_outputs(
+            "index.json",
+            "notifications",
+            [
+                [],
+                None,
+                "app.ready",
+                index["notifications"] + [index["notifications"][0]],
+                [""],
+                [1],
+                [{}],
+            ],
+        )
+
+    def test_invalid_error_codes_preserve_all_outputs(self):
+        self.assert_invalid_metadata_preserves_outputs(
+            "errors.json",
+            "codes",
+            [{}, [], None, {"": {"retryable": False}}],
+        )
+
+    def test_invalid_retryable_preserves_all_outputs(self):
+        codes = json.loads((self.contracts / "errors.json").read_text())["codes"]
+        values = []
+        for invalid in [None, "false", 0, 1, {}, []]:
+            values.append({**codes, "INTERNAL": {"retryable": invalid}})
+        values.extend([{**codes, "INTERNAL": {}}, {**codes, "INTERNAL": None}])
+        self.assert_invalid_metadata_preserves_outputs("errors.json", "codes", values)
 
 
 if __name__ == "__main__":
