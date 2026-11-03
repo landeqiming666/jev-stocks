@@ -43,6 +43,7 @@ impl Default for Timings {
 }
 pub struct CoreConfig {
     pub argv: Vec<String>,
+    pub working_dir: PathBuf,
     pub data_dir: PathBuf,
     pub resource_dir: PathBuf,
     pub parent_pid: u32,
@@ -51,23 +52,44 @@ pub struct CoreConfig {
 impl CoreConfig {
     pub fn from_app<R: tauri::Runtime>(app: &tauri::AppHandle<R>) -> Result<Self, BridgeError> {
         let cmd = std::env::var("SENTINEL_CORE_CMD").unwrap_or_else(|_| DEFAULT_CORE_CMD.into());
+        let development_root = if cfg!(debug_assertions) {
+            Some(development_repository_root()?)
+        } else {
+            None
+        };
         let data_dir = std::env::var_os("SENTINEL_DATA_DIR")
             .map(PathBuf::from)
             .map(Ok)
             .unwrap_or_else(|| app.path().app_data_dir())
             .map_err(|_| BridgeError::new(BridgeErrorCode::SpawnFailed))?;
-        let resource_dir = app
-            .path()
-            .resource_dir()
-            .map_err(|_| BridgeError::new(BridgeErrorCode::SpawnFailed))?;
+        let resource_dir = match development_root.as_ref() {
+            Some(root) => root.join("resources"),
+            None => app
+                .path()
+                .resource_dir()
+                .map_err(|_| BridgeError::new(BridgeErrorCode::SpawnFailed))?,
+        };
+        let working_dir = development_root.unwrap_or_else(|| resource_dir.clone());
         Ok(Self {
             argv: parse_core_command(&cmd)?,
+            working_dir,
             data_dir,
             resource_dir,
             parent_pid: std::process::id(),
             log_level: std::env::var("SENTINEL_LOG_LEVEL").unwrap_or_else(|_| "info".into()),
         })
     }
+}
+
+pub fn development_repository_root() -> Result<PathBuf, BridgeError> {
+    let root = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+        .join("../../..")
+        .canonicalize()
+        .map_err(|_| BridgeError::new(BridgeErrorCode::SpawnFailed))?;
+    if !root.join("core/pyproject.toml").is_file() {
+        return Err(BridgeError::new(BridgeErrorCode::SpawnFailed));
+    }
+    Ok(root)
 }
 pub fn parse_core_command(cmd: &str) -> Result<Vec<String>, BridgeError> {
     let argv: Vec<String> = cmd.split_ascii_whitespace().map(str::to_owned).collect();
@@ -84,6 +106,7 @@ pub fn build_command(config: &CoreConfig) -> Result<Command, BridgeError> {
         .ok_or_else(|| BridgeError::new(BridgeErrorCode::SpawnFailed))?;
     let mut cmd = Command::new(executable);
     cmd.args(&config.argv[1..])
+        .current_dir(&config.working_dir)
         .arg("--data-dir")
         .arg(&config.data_dir)
         .arg("--parent-pid")

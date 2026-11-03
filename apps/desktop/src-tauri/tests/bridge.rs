@@ -12,11 +12,22 @@ fn config(mode: &str) -> CoreConfig {
             FAKE.into(),
             mode.into(),
         ],
+        working_dir: root.clone(),
         data_dir: std::env::temp_dir().join("sentinel bridge data"),
         resource_dir: root.join("resources"),
         parent_pid: std::process::id(),
         log_level: "debug".into(),
     }
+}
+
+#[test]
+fn test_development_repository_root_is_resolved_from_manifest_not_process_cwd() {
+    let root = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+        .join("../../..")
+        .canonicalize()
+        .unwrap();
+    assert!(root.join("core/pyproject.toml").is_file());
+    assert_eq!(development_repository_root().unwrap(), root);
 }
 const FAKE: &str = r#"
 import sys, json, os, time, subprocess
@@ -120,6 +131,14 @@ fn test_build_args_contains_data_and_parent() {
         .collect();
     assert!(args.windows(2).any(|a| a == ["--data-dir", "/tmp/a b"]));
     assert!(args.windows(2).any(|a| a == ["--parent-pid", "42"]));
+}
+
+#[test]
+fn test_build_command_uses_explicit_working_directory() {
+    let mut c = config("healthy");
+    c.working_dir = std::env::temp_dir().join("sentinel repository root with spaces");
+    let cmd = build_command(&c).unwrap();
+    assert_eq!(cmd.get_current_dir(), Some(c.working_dir.as_path()));
 }
 #[test]
 fn test_rpc_send_rejects_over_one_mib() {
