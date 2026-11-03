@@ -16,7 +16,7 @@ from sentinel.semantic.segment import TextSpan
 
 
 def test_representative_prefers_overturn_then_headline_then_seq() -> None:
-    from test_pipeline import make_row
+    from tests.unit.semantic.test_pipeline import make_row
 
     base = make_row(relation="overturn", headline=0.93, seq=1)
     rows = [

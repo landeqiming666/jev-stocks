@@ -149,3 +149,11 @@ U-00 placeholder 与生命周期 fixture 不随业务页面交付而改变输入
 不得以非 US 或未来 D+2 数据伪造可用。空账户不能永久无法前进（P-05 主审新增回归）。
 所有业务页面可在已有 U-00/U-01 和契约基础上并行，U-02 额外公共 hook 在它主审后复用，
 不复制未交付代码；真正共享通知和事件订阅的组合回归由主 agent 统一补齐。
+
+## 12. 全量测试加载
+
+S-05 与 D-01 均拥有不同目录的 test_cache.py；默认 pytest prepend 模式将其作为同名
+顶层模块导入而发生 collection mismatch。主审将 core 的 addopts 改为 importlib 模式，
+保留全部文件、testpaths、测试名与回归数量，不删缓存或排除测试来制造通过。
+相应跨测试引用改为 tests.unit.* 包限定导入。D-03 的 decision 两列测试占位在真实
+006 到来后移除，以实际判定 DDL 插入显式 synthetic 引用保护行，不改生产抓取逻辑。

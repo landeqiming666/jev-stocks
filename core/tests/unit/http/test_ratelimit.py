@@ -1,8 +1,8 @@
 import pytest
-from conftest import FakeClock
 
 from sentinel.errors import SourceError
 from sentinel.http.ratelimit import TokenBucket
+from tests.unit.http.conftest import FakeClock
 
 
 def test_token_bucket_limits_and_times_out(clock: FakeClock) -> None:

@@ -43,7 +43,7 @@ ignore_missing_imports = true
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 timeout = 30
-addopts = "-ra"
+addopts = "--import-mode=importlib -ra"
 markers = [
   "macos: 只在 macOS 上运行",
   "windows: 只在 Windows 上运行",

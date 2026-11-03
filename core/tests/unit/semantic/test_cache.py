@@ -113,7 +113,7 @@ def test_migration_matches_authoritative_ddl_and_all_migrations(tmp_path: Path) 
 
 
 def test_insert_conflict_reads_own_tx_and_preserves_identity(tmp_path: Path) -> None:
-    from test_pipeline import make_row
+    from tests.unit.semantic.test_pipeline import make_row
 
     db = Database(tmp_path / "db.duckdb")
     db.open()
@@ -138,7 +138,7 @@ def test_insert_conflict_reads_own_tx_and_preserves_identity(tmp_path: Path) -> 
     [datetime(2026, 11, 3, 4), datetime(2026, 11, 3, 12, tzinfo=timezone(timedelta(hours=8)))],
 )
 def test_decision_row_restores_utc_timestamp(created_at: datetime) -> None:
-    from test_pipeline import make_row
+    from tests.unit.semantic.test_pipeline import make_row
 
     row = _row(astuple(make_row(created_at=created_at))[:-1])
     assert row.created_at == datetime(2026, 11, 3, 4, tzinfo=UTC)

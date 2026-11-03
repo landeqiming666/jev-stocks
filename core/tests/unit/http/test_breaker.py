@@ -1,6 +1,5 @@
-from conftest import FakeClock
-
 from sentinel.http.breaker import CircuitBreaker
+from tests.unit.http.conftest import FakeClock
 
 
 def test_breaker_opens_after_five_failures(clock: FakeClock) -> None:
