@@ -22,6 +22,8 @@ Pydantic 模型为 Python 内部调用允许 snake_case，但 Dispatcher 验证�
 
 `settings/rpc.py` 可以依赖 RPC 注册接口，反向依赖仍禁止。C-00 文案所有权缩小到公共三文件，`messages/settings.py` 归 C-04，`messages/trading.py` 归 P-04；公共初始化器由主 agent 集成，不让 worker 争用。清除密钥不清空进程内脱敏登记，避免仍在运行的旧请求泄漏；从钥匙串读取旧密钥也登记脱敏。
 
+公共初始化器必须同时注册 settings 和 trading 的模板。验收使用真实 Dispatcher 错误响应检查邮箱、密钥、钥匙串不可用和设置损坏的文案，不只在模块内对模板调用 format；这些已知错误不得退回缺失文案兜底。
+
 锁定 keyring 的 Mac provider 确实先 delete 后 add，异常补偿不能保证旧值安全。批准主 agent 单独实现 C-04 所属平台文件 `keyring_store.py` / `macos_keychain.py` 及其两个平台测试，worker 仅接协议和业务层，不并行编辑这些文件。默认 Mac provider 使用原子 `SecItemUpdate` / 缺失时 add；原子失败标记不得触发补偿重写。CFData、查询、属性引用全部显式释放；不使用带密钥的 CLI argv，不写用户真实钥匙串做测试。W-01 的测试所有权缩小到其两个实际 Windows 文件。
 
 ## C-03

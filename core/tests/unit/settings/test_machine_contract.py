@@ -9,6 +9,7 @@ from referencing import Registry, Resource
 from referencing.jsonschema import DRAFT202012
 
 from sentinel.domain.contact import is_valid_sec_email
+from sentinel.messages import render
 from sentinel.rpc import CancelToken, Dispatcher
 from sentinel.rpc.dispatcher import RequestContext
 from sentinel.secrets import SecretsService
@@ -197,3 +198,37 @@ def test_wire_params_reject_python_field_names_without_writing(
     assert response["error"]["code"] == "INVALID_ARGUMENT"
     assert response["error"]["data"]["field"] == alias
     assert settings.get().model_dump(mode="json") == before
+
+
+@pytest.mark.parametrize(
+    "method,params,message_key",
+    [
+        ("settings.update", {"secContactEmail": "invalid"}, "settings.email_invalid"),
+        ("secrets.set", {"name": "jevKey", "value": " "}, "settings.secret_invalid"),
+        ("secrets.status", {}, "settings.keyring_unavailable"),
+        ("settings.get", {}, "settings.data_corrupt"),
+    ],
+)
+def test_actual_error_responses_use_registered_settings_messages(
+    dispatcher: Dispatcher,
+    secrets: SecretsService,
+    db: Database,
+    monkeypatch: pytest.MonkeyPatch,
+    method: str,
+    params: dict,
+    message_key: str,
+) -> None:
+    if method == "secrets.status":
+
+        def failed_read(account: str) -> None:
+            raise OSError("private provider error")
+
+        monkeypatch.setattr(secrets._store, "get", failed_read)
+    elif method == "settings.get":
+        with db.write() as tx:
+            tx.execute("INSERT INTO setting VALUES ('engine', '{', ?)", [NOW])
+    response = call(dispatcher, method, params)
+    MachineContract(method).response(response)
+    assert response["error"]["message"] == render(message_key)
+    assert "missing message" not in response["error"]["data"].get("detail", "")
+    assert "private provider error" not in str(response)
