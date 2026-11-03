@@ -181,6 +181,76 @@ def test_close_is_idempotent_and_context_lifecycle_is_guarded(db: Database) -> N
             pass
 
 
+def test_exclusive_composes_backup_and_write_without_exposing_executor(db: Database) -> None:
+    with db.write() as tx:
+        tx.execute(
+            "CREATE TABLE exclusive_sample (value INTEGER); INSERT INTO exclusive_sample VALUES (1)"
+        )
+    with db.exclusive() as protected:
+        assert protected is None
+        backup = db.backup("exclusive")
+        with db.read() as reader:
+            assert reader.execute("SELECT * FROM exclusive_sample").fetchall() == [(1,)]
+        with db.write() as tx:
+            tx.execute("DELETE FROM exclusive_sample")
+    with duckdb.connect(str(backup), read_only=True) as restored:
+        assert restored.execute("SELECT * FROM exclusive_sample").fetchall() == [(1,)]
+
+
+def test_exclusive_blocks_other_handle_until_entire_sequence_finishes(db: Database) -> None:
+    other = Database(db.path)
+    other.open()
+    attempted, entered = Event(), Event()
+    with db.write() as tx:
+        tx.execute(
+            "CREATE TABLE exclusive_sample (value INTEGER); INSERT INTO exclusive_sample VALUES (1)"
+        )
+
+    def writer() -> None:
+        attempted.set()
+        with other.write() as tx:
+            entered.set()
+            tx.execute("INSERT INTO exclusive_sample VALUES (2)")
+
+    try:
+        with ThreadPoolExecutor(1) as pool:
+            with db.exclusive():
+                backup = db.backup("exclusive")
+                task = pool.submit(writer)
+                assert attempted.wait(2)
+                assert not entered.wait(0.05)
+                with db.write() as tx:
+                    tx.execute("DELETE FROM exclusive_sample")
+                assert not entered.is_set()
+            task.result(timeout=3)
+        with db.read() as reader:
+            assert reader.execute("SELECT * FROM exclusive_sample").fetchall() == [(2,)]
+        with duckdb.connect(str(backup), read_only=True) as restored:
+            assert restored.execute("SELECT * FROM exclusive_sample").fetchall() == [(1,)]
+    finally:
+        other.close()
+
+
+def test_exclusive_releases_lock_on_failure(db: Database) -> None:
+    with pytest.raises(ValueError), db.exclusive():
+        raise ValueError("synthetic failure")
+    with ThreadPoolExecutor(1) as pool:
+        assert pool.submit(lambda: db.schema_version).result(timeout=3) == 0
+
+
+def test_exclusive_rejects_transaction_and_read_nesting(db: Database) -> None:
+    with db.read(), pytest.raises(RuntimeError), db.exclusive():
+        pass
+    with db.write(), pytest.raises(RuntimeError), db.exclusive():
+        pass
+
+
+def test_exclusive_requires_open_database(db: Database) -> None:
+    db.close()
+    with pytest.raises(RuntimeError), db.exclusive():
+        pass
+
+
 def test_real_duckdb_cursor_transaction_is_independent() -> None:
     with duckdb.connect() as connection:
         connection.execute("CREATE TABLE sample (id INTEGER)")
