@@ -120,12 +120,12 @@ def register_handlers(registrar: HandlerRegistrar, service: ScanService) -> None
 | `DEFAULT_HISTORY_LIMIT` / `MAX_HISTORY_LIMIT` | `50` / `200` | `orchestrator.py` | 历史分页 |
 
 ## 6. 实现步骤
-1. **窗口**：`end = now`；硬下限 `floor = end - 30 days`。有显式 `from` 时 `start = max(from, floor)`。无显式值时，`base = watermark`；没有水位线用 `end - first_lookback_days`。`start = max(base, end - 72 hours)`，并令 `used_startup_catch_up = watermark is not None and start > watermark`。
-2. **水位线推进**：`advance_watermark` 写 `max(旧值, covered_until)`，禁止回退；只在 D-03 完整返回窗口列表后调用。披露抓取失败时水位线不变。
-3. **启动恢复**：`recover_on_startup` 在一个事务内把全部 `running` 改为 `interrupted`、设置 `finished_at = clock.now()`，返回修改行数。MVP-0 不自动调用模型；用户下一次点扫描时由第 1 步补跑 72 小时窗口。
+1. **窗口**：`end = now`；硬下限 `floor = end - 30 days`。显式 `from` 早于 floor 或晚于 end 则 INVALID_ARGUMENT。无水位线用完整 `end - first_lookback_days`；已有水位线用 `max(watermark, end - 72 hours)`，仅此时可标 used_startup_catch_up（F18-01）。
+2. **水位线推进**：`advance_watermark` 写 `max(旧值, covered_until)`，禁止回退；只在所有可扫描标的的 D-03 窗口披露列表均完整获取后调用。任一列表失败时水位线不变，既存已提交批保留。
+3. **启动恢复**：`recover_on_startup` 在一个事务内把全部 `queued/running` 改为 `interrupted`、设置 `finished_at = clock.now()`，返回修改行数。MVP-0 不自动调用模型；用户下一次点扫描时由第 1 步补跑 72 小时窗口。
 4. **开始运行**：事务内检查同市场是否存在 `queued/running`；存在则 `CONFLICT`。读取设置，缺 Jev 密钥或 SEC 邮箱则 `CONFIG_REQUIRED`。插入运行，字段引擎、模型和问题集来自 S-05/C-04。
 5. **发现披露**：读取标的与逻辑；无逻辑标的计入 `skipped_no_thesis`。对每个标的调用 `D-03.fetch_for_instrument`，得到窗口内全部 `FetchedEvent`。对每个事件调用 `persist_passages`：按 `EventFileDraft.seq` 作为 `file_seq` 依次用 S-01 切段，生成 `passage_id(event_id,file_seq,start,end)`，在**一个写事务**中 `INSERT ... ON CONFLICT(passage_id) DO NOTHING`；`content_status=title_only` 时不调用 S-01，直接把标题作为一个 `file_seq=-1, seq=0` 的段落写入，`content_status='title_only'`。任何事件落段失败则不创建该事件的批次。全部事件处理成功后，在短事务内推进水位线、写每对（标的，披露）一个 `pending` 批次，提交后启动 worker。另把最近 30 天内仍为 `failed` 或预算挂起 `pending` 的（标的，披露）并入本运行，按 `(instrument_id,event_id)` 去重；缓存负责跳过已完成的对。
-6. **执行批次**：按 `published_at ASC, event_id ASC` 逐个执行。读取该事件的 `PassageRecord` 与有效逻辑，在事务外调用 `S-05.process_batch(ctx, theses, passages, cancel)`；结果在一个事务内更新批次、运行累计列并提交。任何一批失败只标记该批 `failed`。一个事件如果没有可判定段落（全部为空/解析失败），批次记为 `succeeded`、`passages=0`，并在 `warn` 中记录。
+6. **执行批次**：按 `published_at ASC, event_id ASC` 逐个执行。读取该事件的 `PassageRecord` 与有效逻辑，在事务外调用 `S-05.process_batch(ctx, theses, passages, cancel)`；结果在一个事务内更新批次、运行累计列并提交。任何一批失败只标记该批 `failed`。fetch_failed 必须失败可重试，不得当作零段成功；正常 title_only 生成标题段落，只有真正没有标题/可判文字的正常事件可零段成功并记录告警。
 7. **预算耗尽**：S-05 抛 `BUDGET_EXCEEDED` 时，当前批保持 `pending` 并写 `error_code`；停止调度后续批次。已有成功批则运行 `partial`，没有成功批则 `failed`。
 8. **终态**：全部批次 `succeeded` → `succeeded`；至少一个成功且另有失败或挂起 → `partial`；没有成功且有失败或挂起 → `failed`；无批次 → `succeeded`。写 `finished_at` 后发 `scan.finished`。
 9. **取消**：每个批次边界和网络请求前检查取消令牌。取消后不再启动新批，已提交批保留，终态 `cancelled`。核心进程崩溃留下的 `running` 由第 3 步处理，绝不自动续跑半批。

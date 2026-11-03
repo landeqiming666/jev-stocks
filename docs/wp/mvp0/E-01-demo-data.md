@@ -53,7 +53,7 @@ stubs: []
 
 - P-03 已提供 `inbox.list` 所需的 `decision`、`thesis_action` 与 `v_last_action`。
 - P-05 已提供 `paper_account`、`cash_ledger`、`paper_order`、`fill`、`position`、`equity_snapshot` 的统一写入规则。
-- C-07 的组合根中已有一个 4 行适配器 `core/sentinel/app/methods/demo.py`，只从 `sentinel.demo.rpc` 导入 `register_handlers`；该文件属于 C-07，E-01 不得修改它。
+- C-07 后续创建组合根适配器 `core/sentinel/app/methods/demo.py`；本包提供 register_handlers，不依赖尚未创建的组合根，不修改该路径。
 - C-03 提供迁移执行器；`012_demo.sql` 由本包创建，内容逐字取自 [04](../../04-数据模型.md) §3.12。
 
 ## 4. 交付物清单
@@ -113,7 +113,7 @@ def register_handlers(registrar: HandlerRegistrar, service: DemoService) -> None
 | 名称 | 值 | 位置 | 含义 |
 |---|---|---|---|
 | `DEMO_VERSION` | `"1"` | `manifest.json` | 数据版本；变更必须全量重录 |
-| `DEMO_START` | `2025-10-01` | `prices.csv` | 首个共同交易日 |
+| `DEMO_START` | `2025-10-20` | `prices.csv` | 首个共同交易日；260 日区间由已验收日历核对 |
 | `DEMO_END` | `2026-10-30` | `prices.csv` | 最后一个共同交易日 |
 | `PENDING_COUNT` | `3` | `manifest.json` | 今日页未处理条目数 |
 | `UNCERTAIN_COUNT` | `1` | `manifest.json` | “系统拿不准”条目数 |
@@ -128,7 +128,7 @@ def register_handlers(registrar: HandlerRegistrar, service: DemoService) -> None
 5. 开启单事务，按 `instrument → holding → thesis → thesis_version → event_doc → event_file → event_passage → decision → thesis_action → scan_run → scan_batch → price_daily → paper_account → cash_ledger → paper_order → fill → position → equity_snapshot → risk_run` 顺序插入。
 6. 每插入一行，同步写一条 `demo_row(table_name, pk_json, inserted_at)`；`pk_json` 用排序后的键序列化，禁止空白差异。
 7. 写 `setting` 的 `demoDataLoaded=true`；该行也登记到 `demo_row`，清除时恢复为 `false` 而不是删除设置键。
-8. 提交后重新查询六类计数，任一与 `manifest.json` 不符则记录 `INTERNAL`，但数据已提交，必须在状态文件列为缺陷并停止发布。
+8. 同一写事务内重新查询六类计数，任一与 `manifest.json` 不符则 INTERNAL 并全回滚；不得提交后才发现坏计数（F18-01）。
 9. `clear` 读取 `demo_row`，按第 5 步的逆序执行 `DELETE`；`setting` 留到最后改为 `false`；随后删除全部演示登记行。
 10. `scripts/load_demo.py` 先获取 `platform.file_lock(data_dir/"core.lock")`，被占用时退出码 2；支持 `--clear`、`--dry-run`、`--json`。
 

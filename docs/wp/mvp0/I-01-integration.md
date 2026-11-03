@@ -144,7 +144,7 @@ class CoreHarness:
 | `test_spaces_and_chinese_path` | 同上 | `含 空格 目录` | 启动成功，日志文件存在 |
 | `test_demo_inbox_exact_counts` | `test_demo_flow.py` | `demo.load` | `3` 待处理、`1` 待确认 |
 | `test_decision_act_and_reopen` | 同上 | 第一条判定 | 处理后 2，重开后 3 |
-| `test_paper_advance_moves_clock_exactly_one_day` | `test_paper_risk_flow.py` | 演示账户 | `2026-10-30 → 2026-11-02` |
+| `test_paper_advance_moves_clock_exactly_one_day` | `test_paper_risk_flow.py` | 演示账户 | `2026-10-29 → 2026-10-30` |
 | `test_risk_has_60_observations` | 同上 | 6M、USD | `observations ≥ 60`，对角 `1.0` |
 | `test_offline_scan_fails_without_losing_inbox` | 同上 | `scan.start` | `SOURCE_UNAVAILABLE`，清单仍 3 |
 | `test_real_core_six_pages_have_data` | `demo-flow.spec.ts` | 1440 与 1024 | 六页有内容，无控制台错误 |
