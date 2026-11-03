@@ -67,7 +67,7 @@ it("strict_mode_remount_creates_a_fresh_client_and_subscribes_only_once", async 
     const client = clientWithResult();
     vi.spyOn(client, "subscribe"); clients.push(client); return client;
   };
-  const view = render(<StrictMode><Application createClient={factory} /></StrictMode>);
+  const view = render(<StrictMode><Application createClient={factory} view={<main><h1>Session fixture</h1></main>} /></StrictMode>);
   await waitForUI(() => expect(useAppStore.getState().bootstrap.status).toBe("ready"));
   expect(clients).toHaveLength(2);
   expect(clients[0]?.dispose).toHaveBeenCalledOnce();
@@ -76,7 +76,7 @@ it("strict_mode_remount_creates_a_fresh_client_and_subscribes_only_once", async 
   expect(clients[1]?.dispose).not.toHaveBeenCalled();
   expect(clients[1]?.subscribe).toHaveBeenCalledTimes(3);
   expect(useAppStore.getState().client).toBe(clients[1]);
-  expect(screen.getByText("页面正在搭建。")).toBeTruthy();
+  expect(screen.getByText("Session fixture")).toBeTruthy();
   view.unmount();
   expect(clients[1]?.dispose).toHaveBeenCalledOnce();
   expect(useAppStore.getState().client).toBeNull();
@@ -136,7 +136,7 @@ it("retry_disposes_failed_client_and_bootstraps_a_fresh_one", async () => {
   vi.mocked(broken.call).mockRejectedValue(new RpcError("TIMEOUT", "private detail"));
   const next = clientWithResult();
   const factory = vi.fn().mockReturnValueOnce(broken).mockReturnValueOnce(next);
-  render(<Application createClient={factory} />);
+  render(<Application createClient={factory} view={<main><h1>Session fixture</h1></main>} />);
   await screen.findByText("核心进程没有响应，请重试启动。");
   expect(broken.dispose).toHaveBeenCalled();
   expect(useAppStore.getState().client).toBeNull();

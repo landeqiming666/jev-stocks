@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import logging
 import threading
-from collections.abc import Callable
+from collections.abc import Callable, Mapping, Sequence
 from datetime import datetime
 from typing import Protocol
 
@@ -42,8 +42,15 @@ class ConnectionProbe(Protocol):
 
 
 class SettingsService:
-    def __init__(self, repo: SettingsRepository, clock: Callable[[], datetime]) -> None:
+    def __init__(
+        self,
+        repo: SettingsRepository,
+        clock: Callable[[], datetime],
+        *,
+        allowed_domains: Callable[[], Sequence[Mapping[str, str]]] | None = None,
+    ) -> None:
         self._repo, self._clock = repo, clock
+        self._allowed_domains = allowed_domains
         self._secrets: SecretsService | None = None
         self._lock = threading.RLock()
 
@@ -75,7 +82,14 @@ class SettingsService:
                 values
                 | {
                     "language": "zh-CN",
-                    "allowedDomains": [DomainRule.model_validate(rule) for rule in DOMAIN_RULES],
+                    "allowedDomains": [
+                        DomainRule.model_validate(rule)
+                        for rule in (
+                            self._allowed_domains()
+                            if self._allowed_domains is not None
+                            else DOMAIN_RULES
+                        )
+                    ],
                 }
             )
 

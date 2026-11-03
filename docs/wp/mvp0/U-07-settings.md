@@ -100,25 +100,25 @@ function useSettings(client: RpcClient): {
 };
 ```
 - `onSaveKey` 成功后清空本地输入并把状态切为“已保存”；任何时刻 DOM 中不得出现密钥明文。
-- `validateEmail` 只做基础格式校验：一个 `@`、域名含 `.`、总长 ≤254、无空白。
-- `validateBudget` 允许 1000..10,000,000 的整数；`validateLookback` 允许 1..30 的整数。
+- `validateEmail` 只做基础格式校验：一个 `@`、域名含 `.`、总长 ≤120、无空白。
+- `validateBudget` 允许 10000..50,000,000 的整数；`validateLookback` 允许 1..30 的整数。
 
 ### 5.2 数据结构
 | 字段 | 类型 | 必填 | 约束 | 含义 |
 |---|---|---|---|---|
 | `Settings.engine` | enum | 是 | `auto`/`jevdb`/`jev_direct` | 引擎选择 |
 | `Settings.modelId` | string | 是 | 只读 | 固定版本号 |
-| `Settings.dailyTokenBudget` | number | 是 | 1000..10,000,000 | 每日上限 |
+| `Settings.dailyTokenBudget` | number | 是 | 10000..50,000,000 | 每日上限 |
 | `Settings.firstScanLookbackDays` | number | 是 | 1..30 | 首次回看 |
 | `Settings.allowedDomains` | array | 是 | 只读 5 项 | 外联清单 |
 
 ### 5.3 常量与配置
 | 名称 | 值 | 位置 | 含义 |
 |---|---|---|---|
-| `BUDGET_MIN` / `BUDGET_MAX` | `1000` / `10000000` | `validation.ts` | token 上下限 |
+| `BUDGET_MIN` / `BUDGET_MAX` | `10000` / `50000000` | `validation.ts` | token 上下限 |
 | `LOOKBACK_MIN` / `LOOKBACK_MAX` | `1` / `30` | 同上 | 回看天数 |
 | `KEY_MAX` | `512` | `SecretsSection.tsx` | 密钥长度上限 |
-| `EMAIL_MAX` | `254` | `validation.ts` | 邮箱长度 |
+| `EMAIL_MAX` | `120` | `validation.ts` | 邮箱长度 |
 | `CHECK_ORDER` | `Jev,SEC,JEVDB` | `EngineSection.tsx` | 测试结果顺序 |
 
 ## 6. 实现步骤
@@ -156,7 +156,7 @@ function useSettings(client: RpcClient): {
 | `settings_save_key_clears_input` | `SecretsSection.test.tsx` | 输入假密钥并保存 | 保存后 input 值为空，状态“已保存” |
 | `settings_clear_key_requires_confirm` | 同上 | 点清除 | 确认前不调用 `secrets.clear` |
 | `settings_invalid_email_blocks_update` | `SettingsPage.test.tsx` | `abc` | 错误“联系邮箱格式不正确”，不发 `settings.update` |
-| `settings_budget_rejects_999` | `validation.test.ts` | `"999"` | `ok=false`，错误含 `1000` |
+| `settings_budget_rejects_999` | `validation.test.ts` | `"999"` | `ok=false`，错误含 `10000` |
 | `settings_lookback_rejects_31` | 同上 | `"31"` | `ok=false`，错误含 `30` |
 | `settings_test_connection_renders_three_rows` | `EngineSection.test.tsx` | `settings.testConnection/ok` | 3 行，顺序 Jev/SEC/JEVDB |
 | `settings_jevdb_failure_keeps_overall_ok` | 同上 | JEVDB ✗，Jev/SEC ✓ | 日常运行“可用”，说明含“最终验收仍需 JEVDB” |

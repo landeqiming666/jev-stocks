@@ -95,3 +95,21 @@ M-5 只要求可重放评测报告；保留显式 --gate 可选实验，不作�
 
 
 E-02 可以在已验收 engine/问题集/分类基础上先行做数据校验与功能 replay；它不修改 S-05，真实流水线联测在 S-05 主审后补齐。
+
+## 9. 当前配置与运行中更改护栏
+
+主 agent 为 C-04 register 补充可选 EngineSnapshot provider 和 before_change callable，
+保留原 snapshot 参数兼容。bootstrap/testConnection 每次使用实时引擎快照；设置/密钥更改
+前执行注入护栏，扫描中返回 CONFLICT，不能改掉运行中凭据。组合根必须注入实际 ScanService
+互斥检查及当前配置引擎 resolver，不能仅用启动时 snapshot。主审 3 个先失败回归验证动态
+切换、清空 key、连接测试及护栏拒绝后 settings/key 不变；修补不新增 RPC 方法或 wire 字段。
+
+SettingsService 可选 allowed_domains provider 用于披露实际 gateway 域名，默认仍是原 5 项。
+组合根在显式 endpoint 配置时将第一项模型域名替换为经过安全解析的当前 hostname，不增加
+可编辑域名权限，不修改默认常量；用户在设置页看到的发送目标必须与真正配置一致。
+U-07 的校验上限与 C-04/机器契约保持一致：budget 10000..50000000，邮箱 120 字符。
+
+主 agent 给 RouterView 增加可注入 pageModules、Application 可注入测试 view，默认仍加载
+真实业务页；U-00 的 placeholder/router 与 client 生命周期测试明确使用隔离 fixture，不能
+因为业务页已经交付而失败，也不能把旧任意 app.bootstrap 响应当作所有业务方法的响应。
+另加实际业务页替代 placeholder 的路由焦点回归，不修改页面的生产发现机制。

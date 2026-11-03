@@ -30,7 +30,7 @@ it("unknown_empty_and_encoded_hashes_preserve_uninterpreted_parameters", () => {
   expect(parseHash(buildHash("today", { q: "a&b ?#" })).params.get("q")).toBe("a&b ?#");
 });
 it("page_switch_focuses_title_resets_scroll_and_renders_all_six_placeholders", async () => {
-  render(<RouterView />);
+  render(<RouterView pageModules={{}} />);
   for (const route of ["today", "holdings", "trading", "risk", "scan", "settings"] as const) {
     const scroll = vi.fn();
     Object.defineProperty(document.querySelector("main"), "scrollTo", { value: scroll, configurable: true });
@@ -40,4 +40,10 @@ it("page_switch_focuses_title_resets_scroll_and_renders_all_six_placeholders", a
     expect(screen.getByText("页面正在搭建。")).toBeTruthy();
     expect(scroll).toHaveBeenCalled();
   }
+});
+
+it("provided_business_page_replaces_the_placeholder_and_receives_route_focus", async () => {
+  render(<RouterView pageModules={{ "../pages/today/index.tsx": { default: () => <main><h1>Today fixture</h1></main> } }} />);
+  await waitFor(() => expect(screen.getByRole("heading", { level: 1 })).toBe(document.activeElement));
+  expect(screen.queryByText("页面正在搭建。")).toBeNull();
 });

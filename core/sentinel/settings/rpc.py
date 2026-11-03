@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+from collections.abc import Callable
 from typing import cast
 
 from pydantic import BaseModel
@@ -31,28 +32,40 @@ def register(
     secrets: SecretsService,
     db: Database,
     platform_name: str,
-    engine: EngineSnapshot,
+    engine: EngineSnapshot | Callable[[], EngineSnapshot],
     probe: ConnectionProbe,
+    *,
+    before_change: Callable[[], None] | None = None,
 ) -> None:
+    def snapshot() -> EngineSnapshot:
+        return engine() if callable(engine) else engine
+
+    def guard() -> None:
+        if before_change is not None:
+            before_change()
+
     def bootstrap(params: BaseModel, ctx: RequestContext) -> BaseModel:
         return settings.bootstrap(
-            engine, secrets, db, platform_name, os.environ.get("SENTINEL_OFFLINE") == "1"
+            snapshot(), secrets, db, platform_name, os.environ.get("SENTINEL_OFFLINE") == "1"
         )
 
     def get(params: BaseModel, ctx: RequestContext) -> BaseModel:
         return settings.get()
 
     def update(params: BaseModel, ctx: RequestContext) -> BaseModel:
+        guard()
         return settings.update(cast(SettingsPatch, params))
 
     def test_connection(params: BaseModel, ctx: RequestContext) -> BaseModel:
-        return settings.test_connection(probe, engine)
+        return settings.test_connection(probe, snapshot())
 
     def set_key(params: BaseModel, ctx: RequestContext) -> BaseModel:
+        guard()
         secrets.set_jev_key(cast(SecretSet, params).value)
         return OkResult(ok=True)
 
     def clear(params: BaseModel, ctx: RequestContext) -> BaseModel:
+        guard()
         secrets.clear_jev_key()
         return OkResult(ok=True)
 
