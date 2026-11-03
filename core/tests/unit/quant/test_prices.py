@@ -15,8 +15,7 @@ def test_weight_calculation_isolated_from_caller_decimal_traps_and_flags(calenda
 
     days = trading_days(calendar)
     prices = {
-        name: [PricePoint(day, 100.0, 100.0) for day in days]
-        for name in ("us:ZZAR", "us:ZZFD")
+        name: [PricePoint(day, 100.0, 100.0) for day in days] for name in ("us:ZZAR", "us:ZZFD")
     }
     holdings = [HoldingPoint("us:ZZAR", "ZZAR", 1), HoldingPoint("us:ZZFD", "ZZFD", 2)]
     with localcontext() as context:
