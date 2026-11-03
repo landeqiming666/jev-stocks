@@ -67,7 +67,7 @@ PyPI `jevdb 0.1.0` 只有 Linux x86-64 wheel，macOS 必须从源码编译。JEV
 | `scripts/tests/test_probe_jevdb.py` | 新建 | 用假连接测 SQL、设置、错误映射与报告 |
 | `vendors/jevdb/README.md` | 新建 | 上游来源、MIT 许可证、构建边界、复现命令 |
 | `vendors/jevdb/pin.json` | 新建 | `commit=47a9070cba09012bedcc60f5e47e09ccb5c2c1fe`、DuckDB 1.4.3、源码 URL |
-| `vendors/jevdb/build.lock.json` | 生成 | 扩展 SHA256、OpenSSL 路径、构建时刻、工具版本 |
+| `.dev-data/jevdb/build.lock.json` | 生成，不提交 | 扩展 SHA256、OpenSSL 路径、构建时刻、工具版本 |
 
 ## 5. 接口规格
 
@@ -141,7 +141,7 @@ def main(argv: Sequence[str] | None = None) -> int: ...
 |---|---|---|---|
 | `test_pin_rejects_non_mvp0_duckdb_version` | `scripts/tests/test_build_jevdb.py` | `1.4.2` | `ValueError` |
 | `test_build_plan_uses_static_openssl_and_unsigned_extension` | 同上 | 固定 pin/prefix | 参数含 `OPENSSL_USE_STATIC_LIBS=ON`；产物路径固定 |
-| `test_build_plan_rejects_space_and_quote_in_extension_path` | 同上 | `a'b/c.duckdb_extension` | `ValueError` |
+| `test_build_plan_rejects_quote_in_extension_path` | 同上 | `a'b/c.duckdb_extension` | `ValueError`；普通空格允许，另测含空格仓库路径 |
 | `test_probe_sets_required_jevdb_settings` | `scripts/tests/test_probe_jevdb.py` | 假连接 | 7 条 `SET` 全部执行，`jevdb_on_error='error'` |
 | `test_probe_401_is_blocked_not_passed` | 同上 | 假连接抛 401 | exit 2；`call.status=BLOCKED` |
 | `test_probe_query_error_is_not_treated_as_false` | 同上 | 假连接抛 `MODEL_ERROR` | 不返回 false/NULL；`call.status=FAILED` |

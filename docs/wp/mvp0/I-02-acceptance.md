@@ -116,7 +116,7 @@ CLI：`scripts/acceptance.py [--offline|--full] [--report-dir PATH] [--skip-e2e]
 5. 关闭网络或在 `SENTINEL_OFFLINE=1` 下重新启动，打开六个页面；保存每页截图并断言已有数据仍可见，归入 M-2。
 6. 用假密钥触发保存、连接测试和一次 `INTERNAL`；扫描日志、DuckDB 文本列、`settings.get` 与 `app.bootstrap` 输出，泄漏一处即 M-3 fail。
 7. 查询 `decision`，断言 12 行的 `engine/model_id/question_set_version/evidence_kind` 非空且值在白名单；归入 M-4。
-8. 运行 `scripts/eval.py --replay … --split test --gate`；把 `report.md`、`report.json`、`predictions.jsonl` 归入 M-5。未达 F1 时 M-5 fail，但不得删产物。
+8. 运行 `scripts/eval.py --replay … --split test`；把 `report.md`、`report.json`、`predictions.jsonl` 归入 M-5。MVP-0 只要求完整报告，不调用 v1 的 `--gate`；评测执行失败或报告缺失时 M-5 fail，但不得删产物。
 9. 运行 I-01 的“无证据不展示”测试，人工在数据库插入一条缺少证据的阳性判定并重启，断言不进清单；归入 M-6。
 10. **仅 `--full`**：对一份固定公开 SEC 披露启动一次真实扫描，强制引擎为 `jevdb`；轮询到完成。保存扩展路径与 SHA-256、DuckDB 版本、模型 ID、问题集版本、生成 SQL、`jevdb_stats()`、`decision` 行和证据抽屉截图到 M-8 证据目录。若引擎降级、请求失败或界面显示 `jev_direct`，M-8 fail。
 11. 汇总 `overall`：仅当 M-1～M-8 全部 pass 时为 pass；任何 `not_run` 视为 fail。终端输出一行 `ACCEPTANCE PASS/FAIL <passed>/8`。
@@ -150,7 +150,7 @@ CLI：`scripts/acceptance.py [--offline|--full] [--report-dir PATH] [--skip-e2e]
 | `test_offline_keeps_six_pages_readable` | 同上 | `SENTINEL_OFFLINE=1` | 六页有数据、有离线提示 |
 | `test_secret_scan_finds_planted_secret` | `scripts/acceptance.py --self-test` | 日志写入假密钥 | M-3 fail，证据路径存在 |
 | `test_missing_evidence_blocks_inbox` | 同上 | 无证据阳性判定 | M-6 pass，清单不计该条 |
-| `test_eval_gate_failure_marks_m5_fail` | 同上 | F1 `0.79` | M-5 fail，报告保留 |
+| `test_eval_low_f1_still_reports_for_mvp0` | 同上 | F1 `0.79` 且报告完整 | M-5 pass，报告保留；缺报告或执行失败另测为 fail |
 | `test_demo_timing_under_five_minutes` | `demo-script.ts` | 按步骤自动计时 | 总时长 ≤ 300 s |
 | `test_1024_view_has_no_horizontal_scroll` | `acceptance.spec.ts` | 1024×700 | 六页均无页面级横向滚动 |
 
