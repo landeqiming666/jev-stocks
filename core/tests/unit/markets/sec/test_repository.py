@@ -1,5 +1,6 @@
 from contextlib import contextmanager
 from dataclasses import replace
+from hashlib import sha256
 from pathlib import Path
 
 import duckdb
@@ -37,9 +38,13 @@ def test_migration_matches_authoritative_bytes_and_is_idempotent(db):
     section = text.split("### 3.4 ", 1)[1].split("### 3.5 ", 1)[0]
     expected = section.split("```sql\n", 1)[1].split("```", 1)[0].encode()
     assert (root / "core/sentinel/storage/migrations/004_filings.sql").read_bytes() == expected
-    assert db.schema_version == 4
-    db.migrate()
-    assert db.schema_version == 4
+    version = db.schema_version
+    with db.read() as reader:
+        reader.execute("SELECT name, checksum FROM schema_version WHERE version = 4")
+        assert reader.fetchone() == ("filings", sha256(expected).hexdigest())
+    report = db.migrate()
+    assert report.applied == ()
+    assert report.current_version == db.schema_version == version
 
 
 @pytest.mark.parametrize("has_existing", [False, True])
@@ -151,13 +156,14 @@ def test_omitted_files_are_retained_without_physical_delete(db):
 
 def test_sql_bindings_and_codepoint_count_with_hostile_text(db, caplog):
     repo = SecFilingsRepository(db)
+    version = db.schema_version
     text = "'; DROP TABLE event_doc; -- 😀机密\n"
     ref = make_ref(items=None, primary_doc_description=text)
     repo.upsert(FetchedEvent(ref, [draft(text)], "full_text", fetched_at=NOW))
     stored = repo.get(ref)
     assert stored.files[0].text == text and stored.files[0].char_count == len(text)
     assert "机密" not in caplog.text and "DROP TABLE" not in caplog.text
-    assert db.schema_version == 4
+    assert db.schema_version == version
 
 
 def test_cached_ref_uses_saved_primary_url_not_new_metadata(db):
