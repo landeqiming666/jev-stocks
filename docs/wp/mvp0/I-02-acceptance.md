@@ -5,7 +5,8 @@ phase: mvp0
 platform: shared
 lane: integration
 deps: [I-01, E-02]
-size: M
+size: L
+size_approval: cr/F18-01-closure-clarifications.md
 owns: [scripts/acceptance.py, apps/desktop/e2e/acceptance/]
 appends: []
 stubs: []

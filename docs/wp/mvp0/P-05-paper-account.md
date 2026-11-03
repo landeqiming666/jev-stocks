@@ -5,8 +5,9 @@ phase: mvp0
 platform: shared
 lane: data
 deps: [P-04, C-03, D-04, C-01]
-size: M
-owns: [core/sentinel/trading/account.py, core/sentinel/trading/matching.py, core/sentinel/trading/ledger.py, core/sentinel/storage/migrations/010_paper.sql, core/tests/unit/trading/test_account.py, core/tests/unit/trading/test_matching.py, core/tests/unit/trading/test_ledger.py]
+size: L
+size_approval: cr/F18-01-closure-clarifications.md
+owns: [core/sentinel/trading/account.py, core/sentinel/trading/matching.py, core/sentinel/trading/ledger.py, core/sentinel/storage/migrations/010_paper.sql, core/tests/unit/trading/test_account.py, core/tests/unit/trading/test_matching.py, core/tests/unit/trading/test_ledger.py, core/sentinel/trading/__init__.py, core/sentinel/trading/models.py, core/sentinel/trading/rpc.py]
 appends: []
 stubs: []
 ---

@@ -5,8 +5,9 @@ phase: mvp0
 platform: shared
 lane: ui
 deps: [U-01]
-size: M
-owns: [apps/desktop/src/pages/today/, apps/desktop/src/components/evidence/]
+size: L
+size_approval: cr/F18-01-closure-clarifications.md
+owns: [apps/desktop/src/pages/today/, apps/desktop/src/components/evidence/, apps/desktop/src/i18n/zh-CN/today.ts]
 appends: []
 stubs: []
 ---

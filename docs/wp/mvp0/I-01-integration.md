@@ -5,7 +5,8 @@ phase: mvp0
 platform: shared
 lane: integration
 deps: [C-02, C-07, P-03, P-05, P-06, E-01, U-03, U-04, U-05, U-06, U-07, U-08]
-size: M
+size: L
+size_approval: cr/F18-01-closure-clarifications.md
 owns: [core/tests/integration/, apps/desktop/e2e/real-core/]
 appends: []
 stubs: []

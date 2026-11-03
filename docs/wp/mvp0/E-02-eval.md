@@ -5,7 +5,8 @@ phase: mvp0
 platform: shared
 lane: semantic
 deps: [S-05]
-size: M
+size: L
+size_approval: cr/F18-01-closure-clarifications.md
 owns: [core/sentinel/evaluation/, scripts/eval.py, core/tests/fixtures/eval/, core/tests/unit/evaluation/]
 appends: []
 stubs: []

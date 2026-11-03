@@ -7,7 +7,7 @@ lane: ui
 deps: [C-05, C-06, WP-00]
 size: L
 size_approval: cr/N10-01-execution-clarifications.md
-owns: [apps/desktop/src/main.tsx, apps/desktop/src/Hello.tsx, apps/desktop/src/Hello.test.tsx, apps/desktop/src/shell/, apps/desktop/src/router/, apps/desktop/src/styles/tokens.css, apps/desktop/src/styles/tokens.test.ts, apps/desktop/src/styles/base.css, apps/desktop/src/styles/layout.css, apps/desktop/src/app/, apps/desktop/src/i18n/]
+owns: [apps/desktop/src/main.tsx, apps/desktop/src/Hello.tsx, apps/desktop/src/Hello.test.tsx, apps/desktop/src/shell/, apps/desktop/src/router/, apps/desktop/src/styles/tokens.css, apps/desktop/src/styles/tokens.test.ts, apps/desktop/src/styles/base.css, apps/desktop/src/styles/layout.css, apps/desktop/src/app/, apps/desktop/src/i18n/index.ts, apps/desktop/src/i18n/zh-CN/index.ts, apps/desktop/src/i18n/zh-CN/common.ts]
 appends: []
 stubs: []
 ---

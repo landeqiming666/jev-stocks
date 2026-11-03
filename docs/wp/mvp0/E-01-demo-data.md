@@ -5,7 +5,8 @@ phase: mvp0
 platform: shared
 lane: semantic
 deps: [P-03, P-05]
-size: M
+size: L
+size_approval: cr/F18-01-closure-clarifications.md
 owns: [core/sentinel/demo/, core/sentinel/storage/migrations/012_demo.sql, resources/demo/, scripts/load_demo.py]
 appends: []
 stubs: []

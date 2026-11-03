@@ -5,7 +5,8 @@ phase: mvp0
 platform: shared
 lane: semantic
 deps: [S-02, G0-JEVDB]
-size: M
+size: L
+size_approval: cr/F18-01-closure-clarifications.md
 owns: [core/sentinel/semantic/engines/jevdb.py, core/tests/unit/semantic/test_jevdb.py, core/tests/fixtures/jevdb/]
 appends: []
 stubs: []
@@ -53,7 +54,7 @@ JEVDB 直接把语义判定写进 SQL，适合课程要求的“语义连接”�
 
 - S-02 已交付 Protocol、问题集、`estimate_tokens()`、`classify()`、错误类型。
 - G0-JEVDB 已交付扩展路径、SHA256、加载参数和 settings 结论。
-- 若 G0 结论不是 PASS：本包仍交付可导入的类、SQL 生成函数和全部失败测试，但 `load()` 固定抛 `ENGINE_UNAVAILABLE`，不得声称可用；最终验收状态必须为 BLOCKED。
+- G0 的本地构建/LOAD 已通过，可加载明确注入的已核对扩展；缺路径或 ABI 异常才抛 ENGINE_UNAVAILABLE。真实非 NULL 模型推理未验证仍阻止最终 M-8，不能以本地可用代替外部闸门（F18-01）。
 - 扩展路径只能来自设置或 `SENTINEL_JEVDB_PATH`；不接受 RPC 用户输入。
 
 ## 4. 交付物清单
@@ -75,7 +76,8 @@ class JevdbEngine:
     name: Literal["jevdb"] = "jevdb"
     def __init__(self, *, extension_path: Path, model_id: str,
                  secret_provider: Callable[[], str],
-                 connection_factory: Callable[..., DuckDBConnection] | None = None) -> None: ...
+                 connection_factory: Callable[..., DuckDBConnection] | None = None,
+                 endpoint: str | None = None) -> None: ...
     def health(self) -> EngineHealth: ...
     def load(self) -> None: ...
     def close(self) -> None: ...
@@ -117,12 +119,12 @@ def map_jevdb_error(message: str) -> EngineError: ...
 1. 校验 `duckdb.__version__ == "1.4.3"`；调用 `connection_factory(":memory:", config={"allow_unsigned_extensions":"true"})`，默认使用 `duckdb.connect`。禁止连接主库。
 2. 从 `secret_provider()` 取 key；在全局 `_ENV_LOCK` 下暂存 `JEV_API_KEY`，执行 `LOAD '<path>'`（路径先断言无引号/换行/NUL）和 `CREATE SECRET jev (TYPE jev, PROVIDER env)`，随后恢复原环境。key 不保存到实例。
 3. 执行固定 settings：`jevdb_backend=jev`、`jevdb_model=<model>`、`jevdb_threads=4`、`jevdb_max_retries=3`、`jevdb_retry_max_delay=30`、`jevdb_on_error=error`、`jevdb_timeout=60`、`threads=1`。禁止 `reject`。
-4. 评分 SQL 创建 `th(ref,thesis,kill_condition,keys)`、`ps(pid,document,keys)` 与 `wanted(ref,pid)`；`th/ps` 只插入本次 pair 涉及的去重输入，`wanted` 精确写入请求的 pair。`executemany` 绑定用户文字，keys 都写 `['batch']`；语义连接后再 `JOIN wanted`，保证输出严格等于请求集合。
+4. 评分 SQL 创建 `th(ref,thesis,kill_condition,keys)`、`ps(pid,document,keys)` 与 `wanted(ref,pid)`；`th/ps` 只插入本次 pair 涉及的去重输入，`wanted` 精确写入请求的 pair。`executemany` 绑定用户文字，keys 都写 `['batch']`；先通过 wanted 连接约束实体对，再对选中的对执行概率函数，不先算笛卡尔积再过滤（F18-01）。
 5. `SELECT th.ref, ps.pid` 与五个常量问题；`relevant/against/contradicts/supports` 输入 `{'thesis': th.thesis}` 与 `{'document': ps.document}`；`kill_met` 输入额外 `{'kill_condition': th.kill_condition}`。问题文字仅来自 S-02 的 JEVDB 变体。`score_event` 先生成全量 pair，再调用 `score_pairs`。
 6. 每行映射一个 `PairScore`；`classify()` 由上层调用。任一概率为 NULL（除 kill）或越界抛 `MODEL_ERROR`，不得填 0。查询后调用 `SELECT * FROM jevdb_stats()` 写 debug 日志。
 7. token 估算：每个 pair 按 `estimate_tokens(len(thesis)+len(kill or "")+len(document)+question_chars)`，`tokens_estimated=True`；`latency_ms` 为整条查询墙钟，同批复用。
 8. 证据 SQL 建临时表 `ev(sid,sentence,thesis,kill_condition)`；每行调用 `jev_probability`，问题来自 `build_evidence_questions(..., flavor="jevdb")`；返回 `s1..sN` 对应概率。句子原文不进入模型输出，偏移由 S-05 计算。
-9. `finally` 中 `DROP TABLE IF EXISTS` 两个临时表；失败路径也清理。`close()` 先 `DROP SECRET jev`，再关闭连接。
+9. `finally` 中 `DROP TABLE IF EXISTS` 清理所有本次创建的 th/ps/wanted 或 ev 临时表；失败路径也清理。`close()` 先 `DROP SECRET jev`，再关闭连接。
 10. 取消：另一个控制线程调用 `connection.interrupt()`；查询捕获 interrupt 错误后转 `CancelledError`。已被 selector 加载失败时 `load()` 抛 `ENGINE_UNAVAILABLE`。
 11. 错误映射：文本含 `401` → `UNAUTHENTICATED/INVALID_KEY`；`403` → `UNAUTHENTICATED/FORBIDDEN`；`429` → `RATE_LIMITED`（解析不到秒数用 30）；`timeout/timed out` → `TIMEOUT`；其他 DuckDB 查询错误 → `MODEL_ERROR`。仅加载/ABI/路径错误用 `ENGINE_UNAVAILABLE`。
 

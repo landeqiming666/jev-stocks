@@ -5,7 +5,8 @@ phase: mvp0
 platform: shared
 lane: core
 deps: [C-01, C-03, C-04, D-01, D-02, D-03, D-04, S-01, S-02, S-03, S-04, P-01, P-02, P-03, P-05, P-06, E-01]
-size: M
+size: L
+size_approval: cr/F18-01-closure-clarifications.md
 owns: [core/sentinel/__main__.py, core/sentinel/app/, core/tests/unit/app/]
 appends: []
 stubs: []

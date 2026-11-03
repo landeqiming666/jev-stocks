@@ -5,8 +5,9 @@ phase: mvp0
 platform: shared
 lane: semantic
 deps: [P-01, D-03, S-01, S-05, C-04]
-size: M
-owns: [core/sentinel/scan/orchestrator.py, core/sentinel/scan/watermark.py, core/sentinel/scan/passages.py, core/sentinel/storage/migrations/008_scan.sql, core/tests/unit/scan/test_orchestrator.py, core/tests/unit/scan/test_watermark.py]
+size: L
+size_approval: cr/F18-01-closure-clarifications.md
+owns: [core/sentinel/scan/orchestrator.py, core/sentinel/scan/watermark.py, core/sentinel/scan/passages.py, core/sentinel/storage/migrations/008_scan.sql, core/tests/unit/scan/test_orchestrator.py, core/tests/unit/scan/test_watermark.py, core/sentinel/scan/__init__.py, core/sentinel/scan/models.py, core/sentinel/scan/rpc.py, core/sentinel/messages/scan.py, core/tests/unit/scan/test_passages.py]
 appends: []
 stubs: []
 ---
