@@ -1,0 +1,170 @@
+{
+  "fields": [
+    "cik",
+    "name",
+    "ticker",
+    "exchange"
+  ],
+  "data": [
+    [
+      1045810,
+      "NVIDIA CORP",
+      "NVDA",
+      "Nasdaq"
+    ],
+    [
+      320193,
+      "Apple Inc.",
+      "AAPL",
+      "Nasdaq"
+    ],
+    [
+      789019,
+      "MICROSOFT CORP",
+      "MSFT",
+      "Nasdaq"
+    ],
+    [
+      1652044,
+      "Alphabet Inc.",
+      "GOOGL",
+      "Nasdaq"
+    ],
+    [
+      1018724,
+      "AMAZON COM INC",
+      "AMZN",
+      "Nasdaq"
+    ],
+    [
+      1730168,
+      "Broadcom Inc.",
+      "AVGO",
+      "Nasdaq"
+    ],
+    [
+      1326801,
+      "Meta Platforms, Inc.",
+      "META",
+      "Nasdaq"
+    ],
+    [
+      1318605,
+      "Tesla, Inc.",
+      "TSLA",
+      "Nasdaq"
+    ],
+    [
+      59478,
+      "ELI LILLY & Co",
+      "LLY",
+      "NYSE"
+    ],
+    [
+      1067983,
+      "BERKSHIRE HATHAWAY INC",
+      "BRK-B",
+      "NYSE"
+    ],
+    [
+      723125,
+      "MICRON TECHNOLOGY INC",
+      "MU",
+      "Nasdaq"
+    ],
+    [
+      104169,
+      "Walmart Inc.",
+      "WMT",
+      "Nasdaq"
+    ],
+    [
+      2488,
+      "ADVANCED MICRO DEVICES INC",
+      "AMD",
+      "Nasdaq"
+    ],
+    [
+      19617,
+      "JPMORGAN CHASE & CO",
+      "JPM",
+      "NYSE"
+    ],
+    [
+      1403161,
+      "VISA INC.",
+      "V",
+      "NYSE"
+    ],
+    [
+      2115436,
+      "ExxonMobil Holdings Corp",
+      "XOM",
+      "NYSE"
+    ],
+    [
+      200406,
+      "JOHNSON & JOHNSON",
+      "JNJ",
+      "NYSE"
+    ],
+    [
+      937966,
+      "ASML HOLDING NV",
+      "ASML",
+      "Nasdaq"
+    ],
+    [
+      1141391,
+      "Mastercard Inc",
+      "MA",
+      "NYSE"
+    ],
+    [
+      1551152,
+      "AbbVie Inc.",
+      "ABBV",
+      "NYSE"
+    ],
+    [
+      50863,
+      "INTEL CORP",
+      "INTC",
+      "Nasdaq"
+    ],
+    [
+      1321655,
+      "Palantir Technologies Inc.",
+      "PLTR",
+      "Nasdaq"
+    ],
+    [
+      93410,
+      "CHEVRON CORP",
+      "CVX",
+      "NYSE"
+    ],
+    [
+      909832,
+      "COSTCO WHOLESALE CORP /NEW",
+      "COST",
+      "Nasdaq"
+    ],
+    [
+      2070829,
+      "Contemporary Amperex Technology Co., Limited/ADR",
+      "CYATY",
+      "OTC"
+    ]
+  ],
+  "_provenance": {
+    "mode": "historical",
+    "url": "https://www.sec.gov/files/company_tickers_exchange.json",
+    "recordedAt": "2026-11-02T16:26:56.661841Z",
+    "fetchedAt": null,
+    "httpStatus": null,
+    "responseSha256": "67da093c67735ef6dd1182a5ab95040559c99456a8724b740196b7cd00e75f77",
+    "evidence": "resources/aliases/README.md at baseline 7b366dc7ae1a48863d8375fcc9a1a4179faf3452; input hash matched",
+    "timestampMeaning": "input mtime, not HTTP fetch time"
+  }
+}

@@ -1,0 +1,148 @@
+{
+  "symbols": [
+    {
+      "rows": 2,
+      "firstDate": "2011-06-02",
+      "lastDate": "2026-11-02",
+      "gaps": 1,
+      "duplicates": 0,
+      "order": "ascending",
+      "hasAdjClose": false,
+      "fractionalVolumes": 0,
+      "sample": {
+        "date": "2011-06-02",
+        "open": "346.220",
+        "close": "346.220",
+        "high": "347.840",
+        "low": "344.530",
+        "volume": "16780815.000"
+      },
+      "calendarVerified": false,
+      "adjustmentVerified": false,
+      "key": "day",
+      "symbol": "AAPL",
+      "provenance": {
+        "mode": "live",
+        "url": "https://web.ifzq.gtimg.cn/appstock/app/fqkline/get?param=usAAPL,day,,,250,qfq",
+        "requestedAt": "2026-11-03T03:43:37.886078Z",
+        "fetchedAt": "2026-11-03T03:43:37.973833Z",
+        "httpStatus": 200,
+        "elapsedMs": 88,
+        "contentType": "text/html; charset=UTF-8",
+        "httpDate": "Tue, 03 Nov 2026 03:43:37 GMT",
+        "responseSha256": "78186d65e747ff09f2a68a3c310bcd1bad9f0a6ca20727c20e9ae27fb840eb7c"
+      }
+    },
+    {
+      "rows": 2,
+      "firstDate": "2011-06-02",
+      "lastDate": "2026-11-02",
+      "gaps": 1,
+      "duplicates": 0,
+      "order": "ascending",
+      "hasAdjClose": false,
+      "fractionalVolumes": 0,
+      "sample": {
+        "date": "2011-06-02",
+        "open": "24.190",
+        "close": "24.190",
+        "high": "24.620",
+        "low": "24.190",
+        "volume": "72426855.000"
+      },
+      "calendarVerified": false,
+      "adjustmentVerified": false,
+      "key": "day",
+      "symbol": "MSFT",
+      "provenance": {
+        "mode": "live",
+        "url": "https://web.ifzq.gtimg.cn/appstock/app/fqkline/get?param=usMSFT,day,,,250,qfq",
+        "requestedAt": "2026-11-03T03:43:38.891106Z",
+        "fetchedAt": "2026-11-03T03:43:39.017737Z",
+        "httpStatus": 200,
+        "elapsedMs": 127,
+        "contentType": "text/html; charset=UTF-8",
+        "httpDate": "Tue, 03 Nov 2026 03:43:39 GMT",
+        "responseSha256": "9a3257948a4782493179cef8e4d7626bc5b26e72b7db5cd53524b89d68318266"
+      }
+    },
+    {
+      "mode": "live",
+      "url": "https://web.ifzq.gtimg.cn/appstock/app/fqkline/get?param=usBRK-B,day,,,250,qfq",
+      "requestedAt": "2026-11-03T03:43:39.893861Z",
+      "fetchedAt": "2026-11-03T03:43:46.666012Z",
+      "httpStatus": 200,
+      "elapsedMs": 6772,
+      "contentType": "text/html; charset=UTF-8",
+      "httpDate": "Tue, 03 Nov 2026 03:43:39 GMT",
+      "responseSha256": "971ab46eefad1532572b8f1b2672bce557c8f633643a998e2540ba7e57aa3bb9"
+    },
+    {
+      "rows": 2,
+      "firstDate": "2011-06-02",
+      "lastDate": "2026-11-02",
+      "gaps": 1,
+      "duplicates": 0,
+      "order": "ascending",
+      "hasAdjClose": false,
+      "fractionalVolumes": 0,
+      "sample": {
+        "date": "2011-06-02",
+        "open": "19.020",
+        "close": "19.020",
+        "high": "19.280",
+        "low": "18.840",
+        "volume": "19701450.000"
+      },
+      "calendarVerified": false,
+      "adjustmentVerified": false,
+      "key": "day",
+      "symbol": "NVDA",
+      "provenance": {
+        "mode": "live",
+        "url": "https://web.ifzq.gtimg.cn/appstock/app/fqkline/get?param=usNVDA,day,,,250,qfq",
+        "requestedAt": "2026-11-03T03:43:46.666092Z",
+        "fetchedAt": "2026-11-03T03:43:46.774277Z",
+        "httpStatus": 200,
+        "elapsedMs": 108,
+        "contentType": "text/html; charset=UTF-8",
+        "httpDate": "Tue, 03 Nov 2026 03:43:46 GMT",
+        "responseSha256": "7f0cf9c11c9773b040ed7e89bfbf0f76c9175943ac42f5ec16ee011540261574"
+      }
+    },
+    {
+      "rows": 2,
+      "firstDate": "2011-06-02",
+      "lastDate": "2026-11-02",
+      "gaps": 1,
+      "duplicates": 0,
+      "order": "ascending",
+      "hasAdjClose": false,
+      "fractionalVolumes": 0,
+      "sample": {
+        "date": "2011-06-02",
+        "open": "66.020",
+        "close": "66.020",
+        "high": "66.700",
+        "low": "65.670",
+        "volume": "5135370.000"
+      },
+      "calendarVerified": false,
+      "adjustmentVerified": false,
+      "key": "day",
+      "symbol": "KO",
+      "provenance": {
+        "mode": "live",
+        "url": "https://web.ifzq.gtimg.cn/appstock/app/fqkline/get?param=usKO,day,,,250,qfq",
+        "requestedAt": "2026-11-03T03:43:47.671676Z",
+        "fetchedAt": "2026-11-03T03:43:54.794299Z",
+        "httpStatus": 200,
+        "elapsedMs": 7123,
+        "contentType": "text/html; charset=UTF-8",
+        "httpDate": "Tue, 03 Nov 2026 03:43:47 GMT",
+        "responseSha256": "6ac7746586d671b97a7ef67a97980b973e3baaf6fdf4b93a98b714fdb3c38772"
+      }
+    }
+  ],
+  "requestedDays": 250
+}

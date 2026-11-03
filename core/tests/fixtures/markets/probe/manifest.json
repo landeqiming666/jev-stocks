@@ -1,0 +1,910 @@
+{
+  "mode": "public-probe",
+  "generatedAt": "2026-11-03T03:49:16.953188Z",
+  "gatePassed": false,
+  "files": {
+    "quotes_tencent_us.probe.json": "64d320357cd583571fe8e3a6a0aaf852a19c9488d4206b0462991d037cdbd679",
+    "quotes_tencent_cn.probe.json": "9559c45696dd5c893217f277d052ff81bd6b4fc528f383a23b8d2184fbb98e0b",
+    "quotes_nasdaq_us.probe.json": "2926437eac0d67e15100e377bdf908c2bf6ad81825af4e6785b2f2ae8b548996",
+    "prices_250d_summary.json": "9a534f7a34b5a728593f519fcb498cce9a1831192e7a86eff74af6f70a85cbee",
+    "negative_sources.json": "6d46e4eb7e1f169b9bd58d582bec3429014377837e821cfe8f02866aed37112f",
+    "schema_observations.json": "b028a452d3f973ba36a4916476ae9b6c2dcee15ed4956cbe8644b10aaf6e1a06",
+    "company_tickers_exchange.probe.json": "b63025204e080b40220df513d43c1f0e5d04678ec76a1bce06343a4bce47e3e0",
+    "quotes_tencent_hk.probe.json": "df2cb281bee5236de537fe5994c52b299d0ac804e3a8b77bc2c9c8bfb97a0653",
+    "synthetic_boundaries.json": "f390d0d86ebbceefc1bd3216d64c33561c1bc60ea47188c4795c948bcf21c3e6"
+  },
+  "checks": [
+    {
+      "name": "sec.submissions",
+      "status": "fail",
+      "required": true,
+      "http_status": null,
+      "elapsed_ms": null,
+      "detail": "CONFIG_REQUIRED; no SEC requests this run",
+      "values": {}
+    },
+    {
+      "name": "sec.tickers",
+      "status": "fail",
+      "required": true,
+      "http_status": null,
+      "elapsed_ms": null,
+      "detail": "CONFIG_REQUIRED; no SEC requests this run",
+      "values": {}
+    },
+    {
+      "name": "sec.browse",
+      "status": "fail",
+      "required": true,
+      "http_status": null,
+      "elapsed_ms": null,
+      "detail": "CONFIG_REQUIRED; no SEC requests this run",
+      "values": {}
+    },
+    {
+      "name": "sec.index",
+      "status": "fail",
+      "required": true,
+      "http_status": null,
+      "elapsed_ms": null,
+      "detail": "CONFIG_REQUIRED; no SEC requests this run",
+      "values": {}
+    },
+    {
+      "name": "tencent_us",
+      "status": "fail",
+      "required": true,
+      "http_status": 200,
+      "elapsed_ms": 3530,
+      "detail": "three sequential attempts; fewer than requested 30 daily rows",
+      "values": {
+        "rows": 2,
+        "firstDate": "2011-06-02",
+        "lastDate": "2026-11-02",
+        "gaps": 1,
+        "duplicates": 0,
+        "order": "ascending",
+        "hasAdjClose": false,
+        "fractionalVolumes": 0,
+        "sample": {
+          "date": "2011-06-02",
+          "open": "346.220",
+          "close": "346.220",
+          "high": "347.840",
+          "low": "344.530",
+          "volume": "16780815.000"
+        },
+        "calendarVerified": false,
+        "adjustmentVerified": false,
+        "key": "day",
+        "symbol": "usAAPL",
+        "provenance": {
+          "mode": "live",
+          "url": "https://web.ifzq.gtimg.cn/appstock/app/fqkline/get?param=usAAPL,day,,,30,qfq",
+          "requestedAt": "2026-11-03T03:43:02.098691Z",
+          "fetchedAt": "2026-11-03T03:43:25.610088Z",
+          "httpStatus": 200,
+          "elapsedMs": 23511,
+          "contentType": "text/html; charset=UTF-8",
+          "httpDate": "Tue, 03 Nov 2026 03:43:02 GMT",
+          "responseSha256": "67c6f60b9c2fd3c86b5427375718127ccac79f74446b88a3627684d9cdb013d4"
+        },
+        "attempts": [
+          {
+            "name": "tencent_us",
+            "status": "warn",
+            "required": true,
+            "http_status": 200,
+            "elapsed_ms": 3530,
+            "detail": "parsed public response",
+            "values": {
+              "rows": 2,
+              "firstDate": "2011-06-02",
+              "lastDate": "2026-11-02",
+              "gaps": 1,
+              "duplicates": 0,
+              "order": "ascending",
+              "hasAdjClose": false,
+              "fractionalVolumes": 0,
+              "sample": {
+                "date": "2011-06-02",
+                "open": "346.220",
+                "close": "346.220",
+                "high": "347.840",
+                "low": "344.530",
+                "volume": "16780815.000"
+              },
+              "calendarVerified": false,
+              "adjustmentVerified": false,
+              "key": "day",
+              "symbol": "usAAPL",
+              "provenance": {
+                "mode": "live",
+                "url": "https://web.ifzq.gtimg.cn/appstock/app/fqkline/get?param=usAAPL,day,,,30,qfq",
+                "requestedAt": "2026-11-03T03:42:57.568519Z",
+                "fetchedAt": "2026-11-03T03:43:01.098250Z",
+                "httpStatus": 200,
+                "elapsedMs": 3530,
+                "contentType": "text/html; charset=UTF-8",
+                "httpDate": "Tue, 03 Nov 2026 03:42:59 GMT",
+                "responseSha256": "fa52bdabadbfef9c4912dbd1e42aead834da6b0a35f18582a69689405a7d3134"
+              }
+            }
+          },
+          {
+            "name": "tencent_us",
+            "status": "pass",
+            "required": true,
+            "http_status": 200,
+            "elapsed_ms": 99,
+            "detail": "parsed public response",
+            "values": {
+              "rows": 2,
+              "firstDate": "2011-06-02",
+              "lastDate": "2026-11-02",
+              "gaps": 1,
+              "duplicates": 0,
+              "order": "ascending",
+              "hasAdjClose": false,
+              "fractionalVolumes": 0,
+              "sample": {
+                "date": "2011-06-02",
+                "open": "346.220",
+                "close": "346.220",
+                "high": "347.840",
+                "low": "344.530",
+                "volume": "16780815.000"
+              },
+              "calendarVerified": false,
+              "adjustmentVerified": false,
+              "key": "day",
+              "symbol": "usAAPL",
+              "provenance": {
+                "mode": "live",
+                "url": "https://web.ifzq.gtimg.cn/appstock/app/fqkline/get?param=usAAPL,day,,,30,qfq",
+                "requestedAt": "2026-11-03T03:43:01.098443Z",
+                "fetchedAt": "2026-11-03T03:43:01.197232Z",
+                "httpStatus": 200,
+                "elapsedMs": 99,
+                "contentType": "text/html; charset=UTF-8",
+                "httpDate": "Tue, 03 Nov 2026 03:43:01 GMT",
+                "responseSha256": "fa52bdabadbfef9c4912dbd1e42aead834da6b0a35f18582a69689405a7d3134"
+              }
+            }
+          },
+          {
+            "name": "tencent_us",
+            "status": "warn",
+            "required": true,
+            "http_status": 200,
+            "elapsed_ms": 23511,
+            "detail": "parsed public response",
+            "values": {
+              "rows": 2,
+              "firstDate": "2011-06-02",
+              "lastDate": "2026-11-02",
+              "gaps": 1,
+              "duplicates": 0,
+              "order": "ascending",
+              "hasAdjClose": false,
+              "fractionalVolumes": 0,
+              "sample": {
+                "date": "2011-06-02",
+                "open": "346.220",
+                "close": "346.220",
+                "high": "347.840",
+                "low": "344.530",
+                "volume": "16780815.000"
+              },
+              "calendarVerified": false,
+              "adjustmentVerified": false,
+              "key": "day",
+              "symbol": "usAAPL",
+              "provenance": {
+                "mode": "live",
+                "url": "https://web.ifzq.gtimg.cn/appstock/app/fqkline/get?param=usAAPL,day,,,30,qfq",
+                "requestedAt": "2026-11-03T03:43:02.098691Z",
+                "fetchedAt": "2026-11-03T03:43:25.610088Z",
+                "httpStatus": 200,
+                "elapsedMs": 23511,
+                "contentType": "text/html; charset=UTF-8",
+                "httpDate": "Tue, 03 Nov 2026 03:43:02 GMT",
+                "responseSha256": "67c6f60b9c2fd3c86b5427375718127ccac79f74446b88a3627684d9cdb013d4"
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "tencent_hk",
+      "status": "warn",
+      "required": true,
+      "http_status": 200,
+      "elapsed_ms": 1621,
+      "detail": "three sequential attempts; observed seventh metadata field retained",
+      "values": {
+        "rows": 31,
+        "firstDate": "2026-09-18",
+        "lastDate": "2026-11-03",
+        "gaps": 0,
+        "duplicates": 0,
+        "order": "ascending",
+        "hasAdjClose": false,
+        "fractionalVolumes": 0,
+        "sample": {
+          "date": "2026-09-18",
+          "open": "428.000",
+          "close": "419.000",
+          "high": "430.400",
+          "low": "419.000",
+          "volume": "28796138.000"
+        },
+        "calendarVerified": false,
+        "adjustmentVerified": false,
+        "fieldCounts": [
+          6,
+          7
+        ],
+        "volumeUnitVerified": false,
+        "key": "day",
+        "symbol": "hk00700",
+        "provenance": {
+          "mode": "live",
+          "url": "https://web.ifzq.gtimg.cn/appstock/app/fqkline/get?param=hk00700,day,,,30,qfq",
+          "requestedAt": "2026-11-03T03:47:49.910533Z",
+          "fetchedAt": "2026-11-03T03:47:51.531159Z",
+          "httpStatus": 200,
+          "elapsedMs": 1621,
+          "contentType": "text/html; charset=UTF-8",
+          "httpDate": "Tue, 03 Nov 2026 03:47:49 GMT",
+          "responseSha256": "a270d10ba513429822f2f840999bfe85893dc7946dab2713f536bd48947cc947"
+        },
+        "attempts": [
+          {
+            "name": "tencent_hk",
+            "status": "warn",
+            "required": true,
+            "http_status": 200,
+            "elapsed_ms": 5602,
+            "detail": "parsed public response",
+            "values": {
+              "rows": 31,
+              "firstDate": "2026-09-18",
+              "lastDate": "2026-11-03",
+              "gaps": 0,
+              "duplicates": 0,
+              "order": "ascending",
+              "hasAdjClose": false,
+              "fractionalVolumes": 0,
+              "sample": {
+                "date": "2026-09-18",
+                "open": "428.000",
+                "close": "419.000",
+                "high": "430.400",
+                "low": "419.000",
+                "volume": "28796138.000"
+              },
+              "calendarVerified": false,
+              "adjustmentVerified": false,
+              "fieldCounts": [
+                6,
+                7
+              ],
+              "volumeUnitVerified": false,
+              "key": "day",
+              "symbol": "hk00700",
+              "provenance": {
+                "mode": "live",
+                "url": "https://web.ifzq.gtimg.cn/appstock/app/fqkline/get?param=hk00700,day,,,30,qfq",
+                "requestedAt": "2026-11-03T03:47:43.302547Z",
+                "fetchedAt": "2026-11-03T03:47:48.904653Z",
+                "httpStatus": 200,
+                "elapsedMs": 5602,
+                "contentType": "text/html; charset=UTF-8",
+                "httpDate": "Tue, 03 Nov 2026 03:47:48 GMT",
+                "responseSha256": "8df44d21525a01a8c1c9330e8f4be69201417546d8b0b1cbd04a9b576070a8fe"
+              }
+            }
+          },
+          {
+            "name": "tencent_hk",
+            "status": "pass",
+            "required": true,
+            "http_status": 200,
+            "elapsed_ms": 312,
+            "detail": "parsed public response",
+            "values": {
+              "rows": 31,
+              "firstDate": "2026-09-18",
+              "lastDate": "2026-11-03",
+              "gaps": 0,
+              "duplicates": 0,
+              "order": "ascending",
+              "hasAdjClose": false,
+              "fractionalVolumes": 0,
+              "sample": {
+                "date": "2026-09-18",
+                "open": "428.000",
+                "close": "419.000",
+                "high": "430.400",
+                "low": "419.000",
+                "volume": "28796138.000"
+              },
+              "calendarVerified": false,
+              "adjustmentVerified": false,
+              "fieldCounts": [
+                6,
+                7
+              ],
+              "volumeUnitVerified": false,
+              "key": "day",
+              "symbol": "hk00700",
+              "provenance": {
+                "mode": "live",
+                "url": "https://web.ifzq.gtimg.cn/appstock/app/fqkline/get?param=hk00700,day,,,30,qfq",
+                "requestedAt": "2026-11-03T03:47:48.906367Z",
+                "fetchedAt": "2026-11-03T03:47:49.218296Z",
+                "httpStatus": 200,
+                "elapsedMs": 312,
+                "contentType": "text/html; charset=UTF-8",
+                "httpDate": "Tue, 03 Nov 2026 03:47:48 GMT",
+                "responseSha256": "a270d10ba513429822f2f840999bfe85893dc7946dab2713f536bd48947cc947"
+              }
+            }
+          },
+          {
+            "name": "tencent_hk",
+            "status": "pass",
+            "required": true,
+            "http_status": 200,
+            "elapsed_ms": 1621,
+            "detail": "parsed public response",
+            "values": {
+              "rows": 31,
+              "firstDate": "2026-09-18",
+              "lastDate": "2026-11-03",
+              "gaps": 0,
+              "duplicates": 0,
+              "order": "ascending",
+              "hasAdjClose": false,
+              "fractionalVolumes": 0,
+              "sample": {
+                "date": "2026-09-18",
+                "open": "428.000",
+                "close": "419.000",
+                "high": "430.400",
+                "low": "419.000",
+                "volume": "28796138.000"
+              },
+              "calendarVerified": false,
+              "adjustmentVerified": false,
+              "fieldCounts": [
+                6,
+                7
+              ],
+              "volumeUnitVerified": false,
+              "key": "day",
+              "symbol": "hk00700",
+              "provenance": {
+                "mode": "live",
+                "url": "https://web.ifzq.gtimg.cn/appstock/app/fqkline/get?param=hk00700,day,,,30,qfq",
+                "requestedAt": "2026-11-03T03:47:49.910533Z",
+                "fetchedAt": "2026-11-03T03:47:51.531159Z",
+                "httpStatus": 200,
+                "elapsedMs": 1621,
+                "contentType": "text/html; charset=UTF-8",
+                "httpDate": "Tue, 03 Nov 2026 03:47:49 GMT",
+                "responseSha256": "a270d10ba513429822f2f840999bfe85893dc7946dab2713f536bd48947cc947"
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "tencent_cn",
+      "status": "warn",
+      "required": true,
+      "http_status": 200,
+      "elapsed_ms": 127,
+      "detail": "three sequential attempts; median latency",
+      "values": {
+        "rows": 31,
+        "firstDate": "2026-09-14",
+        "lastDate": "2026-11-03",
+        "gaps": 1,
+        "duplicates": 0,
+        "order": "ascending",
+        "hasAdjClose": false,
+        "fractionalVolumes": 0,
+        "sample": {
+          "date": "2026-09-14",
+          "open": "1277.270",
+          "close": "1277.960",
+          "high": "1285.530",
+          "low": "1270.360",
+          "volume": "16571.000"
+        },
+        "calendarVerified": false,
+        "adjustmentVerified": false,
+        "key": "qfqday",
+        "symbol": "sh600519",
+        "provenance": {
+          "mode": "live",
+          "url": "https://web.ifzq.gtimg.cn/appstock/app/fqkline/get?param=sh600519,day,,,30,qfq",
+          "requestedAt": "2026-11-03T03:43:31.012163Z",
+          "fetchedAt": "2026-11-03T03:43:34.249831Z",
+          "httpStatus": 200,
+          "elapsedMs": 3238,
+          "contentType": "text/html; charset=UTF-8",
+          "httpDate": "Tue, 03 Nov 2026 03:43:31 GMT",
+          "responseSha256": "6b9a3f3100c5d1902b3425a7c36eafed8c88c141fe023fe45c894600e2bb5fbb"
+        },
+        "attempts": [
+          {
+            "name": "tencent_cn",
+            "status": "pass",
+            "required": true,
+            "http_status": 200,
+            "elapsed_ms": 127,
+            "detail": "parsed public response",
+            "values": {
+              "rows": 31,
+              "firstDate": "2026-09-14",
+              "lastDate": "2026-11-03",
+              "gaps": 1,
+              "duplicates": 0,
+              "order": "ascending",
+              "hasAdjClose": false,
+              "fractionalVolumes": 0,
+              "sample": {
+                "date": "2026-09-14",
+                "open": "1277.270",
+                "close": "1277.960",
+                "high": "1285.530",
+                "low": "1270.360",
+                "volume": "16571.000"
+              },
+              "calendarVerified": false,
+              "adjustmentVerified": false,
+              "key": "qfqday",
+              "symbol": "sh600519",
+              "provenance": {
+                "mode": "live",
+                "url": "https://web.ifzq.gtimg.cn/appstock/app/fqkline/get?param=sh600519,day,,,30,qfq",
+                "requestedAt": "2026-11-03T03:43:29.002115Z",
+                "fetchedAt": "2026-11-03T03:43:29.129244Z",
+                "httpStatus": 200,
+                "elapsedMs": 127,
+                "contentType": "text/html; charset=UTF-8",
+                "httpDate": "Tue, 03 Nov 2026 03:43:29 GMT",
+                "responseSha256": "4f19dd8c429fa84a7e6b056fe9e63a38d13cc7214acaa056c2ff7f2014147421"
+              }
+            }
+          },
+          {
+            "name": "tencent_cn",
+            "status": "pass",
+            "required": true,
+            "http_status": 200,
+            "elapsed_ms": 105,
+            "detail": "parsed public response",
+            "values": {
+              "rows": 31,
+              "firstDate": "2026-09-14",
+              "lastDate": "2026-11-03",
+              "gaps": 1,
+              "duplicates": 0,
+              "order": "ascending",
+              "hasAdjClose": false,
+              "fractionalVolumes": 0,
+              "sample": {
+                "date": "2026-09-14",
+                "open": "1277.270",
+                "close": "1277.960",
+                "high": "1285.530",
+                "low": "1270.360",
+                "volume": "16571.000"
+              },
+              "calendarVerified": false,
+              "adjustmentVerified": false,
+              "key": "qfqday",
+              "symbol": "sh600519",
+              "provenance": {
+                "mode": "live",
+                "url": "https://web.ifzq.gtimg.cn/appstock/app/fqkline/get?param=sh600519,day,,,30,qfq",
+                "requestedAt": "2026-11-03T03:43:30.007145Z",
+                "fetchedAt": "2026-11-03T03:43:30.111933Z",
+                "httpStatus": 200,
+                "elapsedMs": 105,
+                "contentType": "text/html; charset=UTF-8",
+                "httpDate": "Tue, 03 Nov 2026 03:43:30 GMT",
+                "responseSha256": "6b9a3f3100c5d1902b3425a7c36eafed8c88c141fe023fe45c894600e2bb5fbb"
+              }
+            }
+          },
+          {
+            "name": "tencent_cn",
+            "status": "warn",
+            "required": true,
+            "http_status": 200,
+            "elapsed_ms": 3238,
+            "detail": "parsed public response",
+            "values": {
+              "rows": 31,
+              "firstDate": "2026-09-14",
+              "lastDate": "2026-11-03",
+              "gaps": 1,
+              "duplicates": 0,
+              "order": "ascending",
+              "hasAdjClose": false,
+              "fractionalVolumes": 0,
+              "sample": {
+                "date": "2026-09-14",
+                "open": "1277.270",
+                "close": "1277.960",
+                "high": "1285.530",
+                "low": "1270.360",
+                "volume": "16571.000"
+              },
+              "calendarVerified": false,
+              "adjustmentVerified": false,
+              "key": "qfqday",
+              "symbol": "sh600519",
+              "provenance": {
+                "mode": "live",
+                "url": "https://web.ifzq.gtimg.cn/appstock/app/fqkline/get?param=sh600519,day,,,30,qfq",
+                "requestedAt": "2026-11-03T03:43:31.012163Z",
+                "fetchedAt": "2026-11-03T03:43:34.249831Z",
+                "httpStatus": 200,
+                "elapsedMs": 3238,
+                "contentType": "text/html; charset=UTF-8",
+                "httpDate": "Tue, 03 Nov 2026 03:43:31 GMT",
+                "responseSha256": "6b9a3f3100c5d1902b3425a7c36eafed8c88c141fe023fe45c894600e2bb5fbb"
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "nasdaq_us",
+      "status": "warn",
+      "required": true,
+      "http_status": 200,
+      "elapsed_ms": 3634,
+      "detail": "parsed public response",
+      "values": {
+        "rows": 30,
+        "firstDate": "2026-09-22",
+        "lastDate": "2026-11-02",
+        "gaps": 0,
+        "duplicates": 0,
+        "order": "descending",
+        "hasAdjClose": false,
+        "fractionalVolumes": 0,
+        "sample": {
+          "date": "2026-11-02",
+          "open": "342.67",
+          "close": "338.32",
+          "high": "343.80",
+          "low": "335.82",
+          "volume": "64757690"
+        },
+        "calendarVerified": false,
+        "adjustmentVerified": false,
+        "symbol": "AAPL",
+        "dollarPrefix": true,
+        "provenance": {
+          "mode": "live",
+          "url": "https://api.nasdaq.com/api/quote/AAPL/historical?assetclass=stocks&fromdate=2026-09-04&limit=30",
+          "requestedAt": "2026-11-03T03:43:34.250121Z",
+          "fetchedAt": "2026-11-03T03:43:37.884177Z",
+          "httpStatus": 200,
+          "elapsedMs": 3634,
+          "contentType": "application/json; charset=utf-8",
+          "httpDate": "Tue, 03 Nov 2026 03:43:37 GMT",
+          "responseSha256": "dde4cbd8f336284ba769458e1ed48db5c522eadd0640ee05a0320280c201a3cb"
+        }
+      }
+    },
+    {
+      "name": "continuity.AAPL",
+      "status": "fail",
+      "required": true,
+      "http_status": 200,
+      "elapsed_ms": 88,
+      "detail": "row count only; TODO-VERIFY(G1-US) calendar/adjustment",
+      "values": {
+        "rows": 2,
+        "firstDate": "2011-06-02",
+        "lastDate": "2026-11-02",
+        "gaps": 1,
+        "duplicates": 0,
+        "order": "ascending",
+        "hasAdjClose": false,
+        "fractionalVolumes": 0,
+        "sample": {
+          "date": "2011-06-02",
+          "open": "346.220",
+          "close": "346.220",
+          "high": "347.840",
+          "low": "344.530",
+          "volume": "16780815.000"
+        },
+        "calendarVerified": false,
+        "adjustmentVerified": false,
+        "key": "day",
+        "symbol": "AAPL",
+        "provenance": {
+          "mode": "live",
+          "url": "https://web.ifzq.gtimg.cn/appstock/app/fqkline/get?param=usAAPL,day,,,250,qfq",
+          "requestedAt": "2026-11-03T03:43:37.886078Z",
+          "fetchedAt": "2026-11-03T03:43:37.973833Z",
+          "httpStatus": 200,
+          "elapsedMs": 88,
+          "contentType": "text/html; charset=UTF-8",
+          "httpDate": "Tue, 03 Nov 2026 03:43:37 GMT",
+          "responseSha256": "78186d65e747ff09f2a68a3c310bcd1bad9f0a6ca20727c20e9ae27fb840eb7c"
+        }
+      }
+    },
+    {
+      "name": "continuity.MSFT",
+      "status": "fail",
+      "required": true,
+      "http_status": 200,
+      "elapsed_ms": 127,
+      "detail": "row count only; TODO-VERIFY(G1-US) calendar/adjustment",
+      "values": {
+        "rows": 2,
+        "firstDate": "2011-06-02",
+        "lastDate": "2026-11-02",
+        "gaps": 1,
+        "duplicates": 0,
+        "order": "ascending",
+        "hasAdjClose": false,
+        "fractionalVolumes": 0,
+        "sample": {
+          "date": "2011-06-02",
+          "open": "24.190",
+          "close": "24.190",
+          "high": "24.620",
+          "low": "24.190",
+          "volume": "72426855.000"
+        },
+        "calendarVerified": false,
+        "adjustmentVerified": false,
+        "key": "day",
+        "symbol": "MSFT",
+        "provenance": {
+          "mode": "live",
+          "url": "https://web.ifzq.gtimg.cn/appstock/app/fqkline/get?param=usMSFT,day,,,250,qfq",
+          "requestedAt": "2026-11-03T03:43:38.891106Z",
+          "fetchedAt": "2026-11-03T03:43:39.017737Z",
+          "httpStatus": 200,
+          "elapsedMs": 127,
+          "contentType": "text/html; charset=UTF-8",
+          "httpDate": "Tue, 03 Nov 2026 03:43:39 GMT",
+          "responseSha256": "9a3257948a4782493179cef8e4d7626bc5b26e72b7db5cd53524b89d68318266"
+        }
+      }
+    },
+    {
+      "name": "continuity.BRK.B",
+      "status": "fail",
+      "required": true,
+      "http_status": 200,
+      "elapsed_ms": 6772,
+      "detail": "empty price rows; Content-Type=text/html; charset=UTF-8",
+      "values": {
+        "mode": "live",
+        "url": "https://web.ifzq.gtimg.cn/appstock/app/fqkline/get?param=usBRK-B,day,,,250,qfq",
+        "requestedAt": "2026-11-03T03:43:39.893861Z",
+        "fetchedAt": "2026-11-03T03:43:46.666012Z",
+        "httpStatus": 200,
+        "elapsedMs": 6772,
+        "contentType": "text/html; charset=UTF-8",
+        "httpDate": "Tue, 03 Nov 2026 03:43:39 GMT",
+        "responseSha256": "971ab46eefad1532572b8f1b2672bce557c8f633643a998e2540ba7e57aa3bb9"
+      }
+    },
+    {
+      "name": "continuity.NVDA",
+      "status": "fail",
+      "required": true,
+      "http_status": 200,
+      "elapsed_ms": 108,
+      "detail": "row count only; TODO-VERIFY(G1-US) calendar/adjustment",
+      "values": {
+        "rows": 2,
+        "firstDate": "2011-06-02",
+        "lastDate": "2026-11-02",
+        "gaps": 1,
+        "duplicates": 0,
+        "order": "ascending",
+        "hasAdjClose": false,
+        "fractionalVolumes": 0,
+        "sample": {
+          "date": "2011-06-02",
+          "open": "19.020",
+          "close": "19.020",
+          "high": "19.280",
+          "low": "18.840",
+          "volume": "19701450.000"
+        },
+        "calendarVerified": false,
+        "adjustmentVerified": false,
+        "key": "day",
+        "symbol": "NVDA",
+        "provenance": {
+          "mode": "live",
+          "url": "https://web.ifzq.gtimg.cn/appstock/app/fqkline/get?param=usNVDA,day,,,250,qfq",
+          "requestedAt": "2026-11-03T03:43:46.666092Z",
+          "fetchedAt": "2026-11-03T03:43:46.774277Z",
+          "httpStatus": 200,
+          "elapsedMs": 108,
+          "contentType": "text/html; charset=UTF-8",
+          "httpDate": "Tue, 03 Nov 2026 03:43:46 GMT",
+          "responseSha256": "7f0cf9c11c9773b040ed7e89bfbf0f76c9175943ac42f5ec16ee011540261574"
+        }
+      }
+    },
+    {
+      "name": "continuity.KO",
+      "status": "fail",
+      "required": true,
+      "http_status": 200,
+      "elapsed_ms": 7123,
+      "detail": "row count only; TODO-VERIFY(G1-US) calendar/adjustment",
+      "values": {
+        "rows": 2,
+        "firstDate": "2011-06-02",
+        "lastDate": "2026-11-02",
+        "gaps": 1,
+        "duplicates": 0,
+        "order": "ascending",
+        "hasAdjClose": false,
+        "fractionalVolumes": 0,
+        "sample": {
+          "date": "2011-06-02",
+          "open": "66.020",
+          "close": "66.020",
+          "high": "66.700",
+          "low": "65.670",
+          "volume": "5135370.000"
+        },
+        "calendarVerified": false,
+        "adjustmentVerified": false,
+        "key": "day",
+        "symbol": "KO",
+        "provenance": {
+          "mode": "live",
+          "url": "https://web.ifzq.gtimg.cn/appstock/app/fqkline/get?param=usKO,day,,,250,qfq",
+          "requestedAt": "2026-11-03T03:43:47.671676Z",
+          "fetchedAt": "2026-11-03T03:43:54.794299Z",
+          "httpStatus": 200,
+          "elapsedMs": 7123,
+          "contentType": "text/html; charset=UTF-8",
+          "httpDate": "Tue, 03 Nov 2026 03:43:47 GMT",
+          "responseSha256": "6ac7746586d671b97a7ef67a97980b973e3baaf6fdf4b93a98b714fdb3c38772"
+        }
+      }
+    },
+    {
+      "name": "negative.yahoo",
+      "status": "warn",
+      "required": false,
+      "http_status": 429,
+      "elapsed_ms": 654,
+      "detail": "observation only; reconsider if available",
+      "values": {
+        "mode": "live",
+        "url": "https://query1.finance.yahoo.com/v8/finance/chart/AAPL?range=1mo&interval=1d",
+        "requestedAt": "2026-11-03T03:43:54.794399Z",
+        "fetchedAt": "2026-11-03T03:43:55.448283Z",
+        "httpStatus": 429,
+        "elapsedMs": 654,
+        "contentType": "text/html",
+        "httpDate": "Tue, 03 Nov 2026 03:43:55 GMT",
+        "responseSha256": "0d24c98db98d3b4a87b9626a026e7d72c99754ab6bd88211a17bc372350b7d89",
+        "available": false,
+        "summary": "Edge: Too Many Requests"
+      }
+    },
+    {
+      "name": "negative.stooq",
+      "status": "warn",
+      "required": false,
+      "http_status": 404,
+      "elapsed_ms": 931,
+      "detail": "observation only; reconsider if available",
+      "values": {
+        "mode": "live",
+        "url": "https://stooq.com/q/d/l/?s=aapl.us&i=d",
+        "requestedAt": "2026-11-03T03:43:55.799027Z",
+        "fetchedAt": "2026-11-03T03:43:56.729732Z",
+        "httpStatus": 404,
+        "elapsedMs": 931,
+        "contentType": "text/html",
+        "httpDate": "Tue, 03 Nov 2026 03:43:56 GMT",
+        "responseSha256": "03fa6d7ffcac125ba680b7558912f278abec5a5685a4fee3c26a023b32354115",
+        "available": false,
+        "summary": "<meta charset=utf-8><title>Stooq</title><center style=font-family:arial;margin-top:50px><p><a href=/><img src=//static.stooq.com/stooq.svg height=68></a><p style=font-size:x-large>The page you request"
+      }
+    },
+    {
+      "name": "negative.eastmoney",
+      "status": "warn",
+      "required": false,
+      "http_status": 200,
+      "elapsed_ms": 392,
+      "detail": "observation only; reconsider if available",
+      "values": {
+        "mode": "live",
+        "url": "https://push2his.eastmoney.com/api/qt/stock/kline/get?secid=105.AAPL&klt=101&fqt=1&lmt=30&end=20500101&fields1=f1,f2,f3,f4,f5,f6&fields2=f51,f52,f53,f54,f55,f56,f57,f58,f59,f60,f61",
+        "requestedAt": "2026-11-03T03:43:56.804032Z",
+        "fetchedAt": "2026-11-03T03:43:57.195900Z",
+        "httpStatus": 200,
+        "elapsedMs": 392,
+        "contentType": "application/json; charset=UTF-8",
+        "httpDate": "Tue, 03 Nov 2026 03:43:56 GMT",
+        "responseSha256": "1c21331494022797759a3d4d715fc6c3c499625f753c0f8bef35ca81141d02dd",
+        "available": true,
+        "summary": "{\"rc\":0,\"rt\":17,\"svr\":177617938,\"lt\":1,\"full\":0,\"dlmkts\":\"\",\"dsc\":\"0\",\"data\":{\"code\":\"AAPL\",\"market\":105,\"name\":\"\u82f9\u679c\",\"decimal\":3,\"dktotal\":10622,\"preKPrice\":338.98,\"klines\":[\"2026-09-22,340.135,339.75"
+      }
+    },
+    {
+      "name": "historical.sec.tickers",
+      "status": "warn",
+      "required": false,
+      "http_status": null,
+      "elapsed_ms": null,
+      "detail": "verified historical snapshot hash; no live SEC request",
+      "values": {
+        "rows": 10423,
+        "brkB": 1,
+        "otc": 2572,
+        "duplicates": 0,
+        "spaces": 0
+      }
+    },
+    {
+      "name": "gate.continuity",
+      "status": "fail",
+      "required": true,
+      "http_status": null,
+      "elapsed_ms": null,
+      "detail": "TODO-VERIFY(G1-US) 250 trading days require verified exchange calendar and session dates",
+      "values": {}
+    },
+    {
+      "name": "gate.adjustment",
+      "status": "fail",
+      "required": true,
+      "http_status": null,
+      "elapsed_ms": null,
+      "detail": "TODO-VERIFY(G1-US) qfqday/day names do not prove split/dividend adjustment",
+      "values": {}
+    },
+    {
+      "name": "gate.terms",
+      "status": "fail",
+      "required": true,
+      "http_status": null,
+      "elapsed_ms": null,
+      "detail": "TODO-VERIFY(G1-US) personal-use permission not verified",
+      "values": {}
+    },
+    {
+      "name": "gate.rate",
+      "status": "fail",
+      "required": true,
+      "http_status": null,
+      "elapsed_ms": null,
+      "detail": "TODO-VERIFY(G1-US) one-second pacing is not a verified source limit; no load test",
+      "values": {}
+    }
+  ]
+}

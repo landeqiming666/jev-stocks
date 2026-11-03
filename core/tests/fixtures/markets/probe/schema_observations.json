@@ -1,0 +1,443 @@
+{
+  "mode": "live-observation",
+  "observations": [
+    {
+      "url": "https://web.ifzq.gtimg.cn/appstock/app/fqkline/get?param=usAAPL,day,,,30,qfq",
+      "fetchedAt": "2026-11-03T03:43:01.098205Z",
+      "responseSha256": "fa52bdabadbfef9c4912dbd1e42aead834da6b0a35f18582a69689405a7d3134",
+      "symbol": "usAAPL",
+      "key": "day",
+      "rows": 2,
+      "fieldCounts": [
+        6
+      ],
+      "sample": [
+        [
+          "2011-06-02",
+          "346.220",
+          "346.220",
+          "347.840",
+          "344.530",
+          "16780815.000"
+        ],
+        [
+          "2026-11-02",
+          "342.67",
+          "338.32",
+          "343.80",
+          "335.82",
+          "64757691"
+        ]
+      ]
+    },
+    {
+      "url": "https://web.ifzq.gtimg.cn/appstock/app/fqkline/get?param=usAAPL,day,,,30,qfq",
+      "fetchedAt": "2026-11-03T03:43:01.197203Z",
+      "responseSha256": "fa52bdabadbfef9c4912dbd1e42aead834da6b0a35f18582a69689405a7d3134",
+      "symbol": "usAAPL",
+      "key": "day",
+      "rows": 2,
+      "fieldCounts": [
+        6
+      ],
+      "sample": [
+        [
+          "2011-06-02",
+          "346.220",
+          "346.220",
+          "347.840",
+          "344.530",
+          "16780815.000"
+        ],
+        [
+          "2026-11-02",
+          "342.67",
+          "338.32",
+          "343.80",
+          "335.82",
+          "64757691"
+        ]
+      ]
+    },
+    {
+      "url": "https://web.ifzq.gtimg.cn/appstock/app/fqkline/get?param=usAAPL,day,,,30,qfq",
+      "fetchedAt": "2026-11-03T03:43:25.610059Z",
+      "responseSha256": "67c6f60b9c2fd3c86b5427375718127ccac79f74446b88a3627684d9cdb013d4",
+      "symbol": "usAAPL",
+      "key": "day",
+      "rows": 2,
+      "fieldCounts": [
+        6
+      ],
+      "sample": [
+        [
+          "2011-06-02",
+          "346.220",
+          "346.220",
+          "347.840",
+          "344.530",
+          "16780815.000"
+        ],
+        [
+          "2026-11-02",
+          "342.67",
+          "338.32",
+          "343.80",
+          "335.82",
+          "64757691"
+        ]
+      ]
+    },
+    {
+      "url": "https://web.ifzq.gtimg.cn/appstock/app/fqkline/get?param=hk00700,day,,,30,qfq",
+      "fetchedAt": "2026-11-03T03:43:25.699563Z",
+      "responseSha256": "618402f673dc5b0966a7457ac8634a4900833f677a8e5e26d5dec77cc75e1971",
+      "symbol": "hk00700",
+      "key": "day",
+      "rows": 31,
+      "fieldCounts": [
+        6,
+        7
+      ],
+      "sample": [
+        [
+          "2026-09-18",
+          "428.000",
+          "419.000",
+          "430.400",
+          "419.000",
+          "28796138.000",
+          {
+            "cqr": "2026-09-18",
+            "FHcontent": "",
+            "HGcontent": "\u56de\u8d2d23.70\u4e07\u80a1\uff0c\u5747\u4ef7423.851\u6e2f\u5143",
+            "paixiri": "",
+            "hgcgContent": "",
+            "ggContent": ""
+          }
+        ],
+        [
+          "2026-09-21",
+          "424.600",
+          "430.000",
+          "434.800",
+          "423.000",
+          "19669333.000",
+          {
+            "cqr": "2026-09-21",
+            "FHcontent": "",
+            "HGcontent": "\u56de\u8d2d23.50\u4e07\u80a1\uff0c\u5747\u4ef7427.814\u6e2f\u5143",
+            "paixiri": "",
+            "hgcgContent": "",
+            "ggContent": ""
+          }
+        ]
+      ]
+    },
+    {
+      "url": "https://web.ifzq.gtimg.cn/appstock/app/fqkline/get?param=hk00700,day,,,30,qfq",
+      "fetchedAt": "2026-11-03T03:43:26.929811Z",
+      "responseSha256": "488646ad8978ad4c77ec08fc1796cfb83bea56a2ae9220ba43bcc24fa86a3692",
+      "symbol": "hk00700",
+      "key": "day",
+      "rows": 31,
+      "fieldCounts": [
+        6,
+        7
+      ],
+      "sample": [
+        [
+          "2026-09-18",
+          "428.000",
+          "419.000",
+          "430.400",
+          "419.000",
+          "28796138.000",
+          {
+            "cqr": "2026-09-18",
+            "FHcontent": "",
+            "HGcontent": "\u56de\u8d2d23.70\u4e07\u80a1\uff0c\u5747\u4ef7423.851\u6e2f\u5143",
+            "paixiri": "",
+            "hgcgContent": "",
+            "ggContent": ""
+          }
+        ],
+        [
+          "2026-09-21",
+          "424.600",
+          "430.000",
+          "434.800",
+          "423.000",
+          "19669333.000",
+          {
+            "cqr": "2026-09-21",
+            "FHcontent": "",
+            "HGcontent": "\u56de\u8d2d23.50\u4e07\u80a1\uff0c\u5747\u4ef7427.814\u6e2f\u5143",
+            "paixiri": "",
+            "hgcgContent": "",
+            "ggContent": ""
+          }
+        ]
+      ]
+    },
+    {
+      "url": "https://web.ifzq.gtimg.cn/appstock/app/fqkline/get?param=hk00700,day,,,30,qfq",
+      "fetchedAt": "2026-11-03T03:43:29.001998Z",
+      "responseSha256": "569f90b0016c97a8d4ee573a512a0d51e626646b8538a2ee0b887ad901781459",
+      "symbol": "hk00700",
+      "key": "day",
+      "rows": 31,
+      "fieldCounts": [
+        6,
+        7
+      ],
+      "sample": [
+        [
+          "2026-09-18",
+          "428.000",
+          "419.000",
+          "430.400",
+          "419.000",
+          "28796138.000",
+          {
+            "cqr": "2026-09-18",
+            "FHcontent": "",
+            "HGcontent": "\u56de\u8d2d23.70\u4e07\u80a1\uff0c\u5747\u4ef7423.851\u6e2f\u5143",
+            "paixiri": "",
+            "hgcgContent": "",
+            "ggContent": ""
+          }
+        ],
+        [
+          "2026-09-21",
+          "424.600",
+          "430.000",
+          "434.800",
+          "423.000",
+          "19669333.000",
+          {
+            "cqr": "2026-09-21",
+            "FHcontent": "",
+            "HGcontent": "\u56de\u8d2d23.50\u4e07\u80a1\uff0c\u5747\u4ef7427.814\u6e2f\u5143",
+            "paixiri": "",
+            "hgcgContent": "",
+            "ggContent": ""
+          }
+        ]
+      ]
+    },
+    {
+      "url": "https://web.ifzq.gtimg.cn/appstock/app/fqkline/get?param=sh600519,day,,,30,qfq",
+      "fetchedAt": "2026-11-03T03:43:29.129217Z",
+      "responseSha256": "4f19dd8c429fa84a7e6b056fe9e63a38d13cc7214acaa056c2ff7f2014147421",
+      "symbol": "sh600519",
+      "key": "qfqday",
+      "rows": 31,
+      "fieldCounts": [
+        6
+      ],
+      "sample": [
+        [
+          "2026-09-14",
+          "1277.270",
+          "1277.960",
+          "1285.530",
+          "1270.360",
+          "16571.000"
+        ],
+        [
+          "2026-09-15",
+          "1281.000",
+          "1272.750",
+          "1284.500",
+          "1271.280",
+          "13762.000"
+        ]
+      ]
+    },
+    {
+      "url": "https://web.ifzq.gtimg.cn/appstock/app/fqkline/get?param=sh600519,day,,,30,qfq",
+      "fetchedAt": "2026-11-03T03:43:30.111905Z",
+      "responseSha256": "6b9a3f3100c5d1902b3425a7c36eafed8c88c141fe023fe45c894600e2bb5fbb",
+      "symbol": "sh600519",
+      "key": "qfqday",
+      "rows": 31,
+      "fieldCounts": [
+        6
+      ],
+      "sample": [
+        [
+          "2026-09-14",
+          "1277.270",
+          "1277.960",
+          "1285.530",
+          "1270.360",
+          "16571.000"
+        ],
+        [
+          "2026-09-15",
+          "1281.000",
+          "1272.750",
+          "1284.500",
+          "1271.280",
+          "13762.000"
+        ]
+      ]
+    },
+    {
+      "url": "https://web.ifzq.gtimg.cn/appstock/app/fqkline/get?param=sh600519,day,,,30,qfq",
+      "fetchedAt": "2026-11-03T03:43:34.249800Z",
+      "responseSha256": "6b9a3f3100c5d1902b3425a7c36eafed8c88c141fe023fe45c894600e2bb5fbb",
+      "symbol": "sh600519",
+      "key": "qfqday",
+      "rows": 31,
+      "fieldCounts": [
+        6
+      ],
+      "sample": [
+        [
+          "2026-09-14",
+          "1277.270",
+          "1277.960",
+          "1285.530",
+          "1270.360",
+          "16571.000"
+        ],
+        [
+          "2026-09-15",
+          "1281.000",
+          "1272.750",
+          "1284.500",
+          "1271.280",
+          "13762.000"
+        ]
+      ]
+    },
+    {
+      "url": "https://web.ifzq.gtimg.cn/appstock/app/fqkline/get?param=usAAPL,day,,,250,qfq",
+      "fetchedAt": "2026-11-03T03:43:37.973806Z",
+      "responseSha256": "78186d65e747ff09f2a68a3c310bcd1bad9f0a6ca20727c20e9ae27fb840eb7c",
+      "symbol": "usAAPL",
+      "key": "day",
+      "rows": 2,
+      "fieldCounts": [
+        6
+      ],
+      "sample": [
+        [
+          "2011-06-02",
+          "346.220",
+          "346.220",
+          "347.840",
+          "344.530",
+          "16780815.000"
+        ],
+        [
+          "2026-11-02",
+          "342.67",
+          "338.32",
+          "343.80",
+          "335.82",
+          "64757691"
+        ]
+      ]
+    },
+    {
+      "url": "https://web.ifzq.gtimg.cn/appstock/app/fqkline/get?param=usMSFT,day,,,250,qfq",
+      "fetchedAt": "2026-11-03T03:43:39.017714Z",
+      "responseSha256": "9a3257948a4782493179cef8e4d7626bc5b26e72b7db5cd53524b89d68318266",
+      "symbol": "usMSFT",
+      "key": "day",
+      "rows": 2,
+      "fieldCounts": [
+        6
+      ],
+      "sample": [
+        [
+          "2011-06-02",
+          "24.190",
+          "24.190",
+          "24.620",
+          "24.190",
+          "72426855.000"
+        ],
+        [
+          "2026-11-02",
+          "524.02",
+          "507.12",
+          "529.63",
+          "504.96",
+          "34743321"
+        ]
+      ]
+    },
+    {
+      "url": "https://web.ifzq.gtimg.cn/appstock/app/fqkline/get?param=usBRK-B,day,,,250,qfq",
+      "fetchedAt": "2026-11-03T03:43:46.665962Z",
+      "responseSha256": "971ab46eefad1532572b8f1b2672bce557c8f633643a998e2540ba7e57aa3bb9",
+      "symbol": "usBRK-B",
+      "key": "day",
+      "rows": 0,
+      "fieldCounts": [],
+      "sample": []
+    },
+    {
+      "url": "https://web.ifzq.gtimg.cn/appstock/app/fqkline/get?param=usNVDA,day,,,250,qfq",
+      "fetchedAt": "2026-11-03T03:43:46.774207Z",
+      "responseSha256": "7f0cf9c11c9773b040ed7e89bfbf0f76c9175943ac42f5ec16ee011540261574",
+      "symbol": "usNVDA",
+      "key": "day",
+      "rows": 2,
+      "fieldCounts": [
+        6
+      ],
+      "sample": [
+        [
+          "2011-06-02",
+          "19.020",
+          "19.020",
+          "19.280",
+          "18.840",
+          "19701450.000"
+        ],
+        [
+          "2026-11-02",
+          "207.53",
+          "202.06",
+          "209.98",
+          "201.66",
+          "119272174"
+        ]
+      ]
+    },
+    {
+      "url": "https://web.ifzq.gtimg.cn/appstock/app/fqkline/get?param=usKO,day,,,250,qfq",
+      "fetchedAt": "2026-11-03T03:43:54.794270Z",
+      "responseSha256": "6ac7746586d671b97a7ef67a97980b973e3baaf6fdf4b93a98b714fdb3c38772",
+      "symbol": "usKO",
+      "key": "day",
+      "rows": 2,
+      "fieldCounts": [
+        6
+      ],
+      "sample": [
+        [
+          "2011-06-02",
+          "66.020",
+          "66.020",
+          "66.700",
+          "65.670",
+          "5135370.000"
+        ],
+        [
+          "2026-11-02",
+          "94.28",
+          "95.83",
+          "96.26",
+          "94.28",
+          "22707286"
+        ]
+      ]
+    }
+  ]
+}
