@@ -2,6 +2,7 @@
 
 - 基线：`7b366dc7ae1a48863d8375fcc9a1a4179faf3452`。
 - 代码实现、公开录制、外部闸门分别验收；当前 SEC 联系邮箱未配置，禁止本轮 SEC 请求。总闸门未通过。
+- 首轮交付为 `a2016cacd6436c1b8991b1a89f551fc623d8ae51`；首轮历史证据保留，最新补丁结果见末节。
 - 自行编辑仅 G1-US owns 与本文件；没有 push、merge、修改 main、依赖、契约、知识库或个人日志。
 - 追加用户批准的前置 `78673adf3f3a7407fa216292b0fe61ff8b2cf5a3`，本地 cherry-pick SHA：
   `2cf8fecf28539f5eb1a4a9236fc8cc6b63e0d1bf`。该共享提交带入脚本 pytest runner、其回归测试和 N10-01 §5，
@@ -69,9 +70,9 @@
   用户已告知主 agent 核实 NYSE 2025/26/27 日历，G1 没有重复 D-04 日历任务或伪称已用该日历复核行情。
 - JSON 保留原响应形状和 `_provenance`；manifest 保留文件哈希与检查结果；offline 校验本地形状和哈希，
   从不建网络 client，成功 exit 0 只代表解析通过，报告固定 `Gate: NOT PASSED`。
-- 最终实现 758 行、测试 384 行，共 **1,142 行**。超过 800 行的规模 CR 已先提出，未删除回归。
+- 首轮实现 758 行、测试 384 行，共 **1,142 行**。超过 800 行的规模 CR 已先提出，未删除回归。
 
-## 本轮公开录制
+## 首轮公开录制（a2016）
 
 共 **21 次公开 HTTP 请求，0 次 SEC 请求**：首轮 18 次；修正已观察港股字段后另做三次港股复测。
 均串行且请求起点至少相隔 1 秒，无高频压测。保留的本轮请求区间：
@@ -93,12 +94,12 @@
 总报告为 **required 3 passed, 14 failed**（CLI 按规格将 warn 计入 passed），总闸门未通过。
 250 交易日连续性已发现不足；SEC 联系配置、复权、条款、限速与日历对照仍保持 TODO，不解锁 D-03/D-04 外部验收。
 
-## 最终全部 G1-US 变更路径
+## 全部 G1-US 变更路径
 
 | 路径 | 内容 |
 |---|---|
 | `scripts/probe_sources.py` | 探针、裁剪、报告、offline CLI |
-| `core/tests/unit/markets/probe/test_probe_sources.py` | 规定十项及边界/来源隔离回归，67 项 |
+| `core/tests/unit/markets/probe/test_probe_sources.py` | 规定十项及边界/来源隔离回归，首轮 67 项、最终 95 项 |
 | `core/tests/fixtures/markets/probe/REPORT.md` | 实际检查结论与四项 TODO |
 | `core/tests/fixtures/markets/probe/manifest.json` | 模式、检查值、裁剪文件哈希 |
 | `core/tests/fixtures/markets/probe/company_tickers_exchange.probe.json` | 历史 SEC 25 行，不含伪造边界 |
@@ -115,7 +116,7 @@
 前置共享提交另带入（本 G1 提交不包含）：`scripts/check.py`、`scripts/tests/test_check_runner.py`、
 `docs/wp/cr/N10-01-execution-clarifications.md`。
 
-## 测试与验收证据
+## 首轮测试与验收证据
 
 - 初始化 `cd core && uv sync --frozen --offline`：锁定 43 个包，未改依赖/锁。
   全仓前端检查另用 `pnpm install --frozen-lockfile --offline` 复用 228 包，下载 0。
@@ -132,3 +133,50 @@
   全仓 ruff/format/mypy、前端 lint/typecheck、Rust fmt/clippy 均通过。
   两个未执行项明确为缺失的 generated-ts 与未启用 E2E；未把它们计作已验证。
 - 无真实 SEC、Jev、GUI E2E、Windows 或来源高频限速验证；不把上述绿色代码门禁冒充外部闸门通过。
+
+## 主审批准后的安全补丁（最终）
+
+已按用户指令继承以下三个精确共享提交；runner 前置已存在，不重复继承、不自行修改共享文件：
+
+| 主审批准原 SHA | 本地 cherry-pick SHA |
+|---|---|
+| `ef80707cb1deaef707aee2f1deda4675d5bbf19f` | `115ad46b3bcf7c307904e9e6712cd65e6c5cb3d9` |
+| `5c92f2084be14843c84301e37147c486eb19885c` | `030021bcd96b18a077e55fcb5aa789e5c6812531` |
+| `760753154a9aa7f9e27d7e5c467dc9ba079a2cbc` | `45969ff2c7baabe9bc215353b0339bc4a7789990` |
+
+- 7607531 / N10-01 §9 已批准 L 与真实来源边界；本轮方案库重查命中前文已完整读取的多 Agent 方案卡。
+  再执行 `uv sync --frozen --offline`：43 包审计通过，无依赖/锁变更。
+- 精确核对已有港股录制 18 个公司行动对象：键集合为 `cqr/FHcontent/HGcontent/paixiri/hgcgContent/ggContent`，
+  值均为字符串且 `cqr` 等于行日期。仅 HK 可使用已核实形状；未知键、类型、日期、市场和额外列均拒绝。
+- 低行数直接 fail；即使返回 250 行，末日距 UTC today 超过 4 自然日或在未来也 fail。
+  这是 freshness 启发检查，不冒充交易日历对照。价格、volume 精度/单位与复权的原有保守语义保留。
+- `_request` 按 httpx 实际 URL 匹配的 transport（含 mounts 和 redirect history）分类。
+  Mock 挂载到真实默认 transport 仍标 synthetic；自定义/未知 transport 标 unverified 和 warn，
+  未验证来源不能通过 offline provenance 校验，不误标 live。
+- offline 验证来源模式、预期主机、UTC Z 时间、原响应 hash 与裁剪文件 hash；拒绝缺失/未知元数据、symlink、
+  不安全文件名以及输入输出同目录。真实历史来源仍保留 recordedAt，绝不以报告发布时间替换 fetchedAt。
+- 坏 accession 返回 index fail，不抛未处理 TypeError；不构造 submissions/index 成功录制。
+- `write_fixtures` 完整校验、序列化所有 payload/REPORT/manifest 后才写暂存快照，
+  同文件系统目录切换发布；写暂存失败或发布失败恢复旧输出，旧快照未混入新文件集。
+  跨平台切换窗口可能短暂缺目录，不会暴露混合文件；恢复本身失败时保留暂存目录中的原快照。
+  不自动删除未知输出文件，拒绝 unmanaged 输出；保留输入录制。
+- Reporter 明确 `Scope: observation/parse only`，不能自动 PASS 全部 G1 门槛。
+  `unresolved_checks()` 四项刻意保留 fail：连续性/复权/条款/限速需另有主审证据。
+  SEC 明确 **NOT_RUN/CONFIG_REQUIRED**，整体仍 **Gate NOT PASSED**。
+- **本补丁新增网络 0 次、SEC 0 次**。仅复用首轮公开观察；九份录制 payload 哈希逐一验证完全不变。
+  本补丁自行修改五条路径：`scripts/probe_sources.py`、`core/tests/unit/markets/probe/test_probe_sources.py`、
+  `core/tests/fixtures/markets/probe/REPORT.md`、`core/tests/fixtures/markets/probe/manifest.json`、本文件。
+- 最终实现 **907 行**、测试 **608 行**，共 **1515 行**。高于 L 约 1200 行的最初估算，
+  增量来自用户追加的 mounts/provenance 安全验证和整套发布回滚；实际规模在此交主审复核，未删回归压缩。
+
+### 最终测试
+
+- 第一组新增回归先取得 **12 failed、1 passed、67 deselected**，修复后 **80 passed**。
+- mounts/事务发布组先取得 **6 failed、1 passed、80 deselected**，修复并补主机/时间/hash/redirect/HK 类型回归后，
+  专项最终 **95 passed**；没有跳过或删除原 67 项。
+- 专项 ruff check、format 通过；实际 offline 回放保持原来源和 Gate NOT PASSED。
+- 完整 `scripts/check.sh`：**15 passed、0 failed、2 skipped**；核心 **1362 passed**（含 G1 的 95），
+  脚本 **198 passed、4282 subtests passed**，前端 **1 passed**；Rust fmt/clippy、全仓 ruff/format/mypy 和前端 lint/typecheck 均通过。
+  未执行项仍明确为缺失的 generated-ts 与未启用的 E2E。
+- 无 push、merge、新 worktree、真实 SEC/Jev 请求、额外公开网络、D-04 日历工作或个人/知识库日志写入。
+  最终固定补丁 SHA 在最终交接消息给出，之后按用户要求暂停等待主审。

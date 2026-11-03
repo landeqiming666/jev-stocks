@@ -1,6 +1,6 @@
 {
   "mode": "public-probe",
-  "generatedAt": "2026-11-03T03:49:16.953188Z",
+  "generatedAt": "2026-11-03T04:06:03.400663Z",
   "gatePassed": false,
   "files": {
     "quotes_tencent_us.probe.json": "64d320357cd583571fe8e3a6a0aaf852a19c9488d4206b0462991d037cdbd679",
@@ -20,8 +20,11 @@
       "required": true,
       "http_status": null,
       "elapsed_ms": null,
-      "detail": "CONFIG_REQUIRED; no SEC requests this run",
-      "values": {}
+      "detail": "NOT_RUN/CONFIG_REQUIRED; no SEC requests",
+      "values": {
+        "execution": "NOT_RUN",
+        "reason": "CONFIG_REQUIRED"
+      }
     },
     {
       "name": "sec.tickers",
@@ -29,8 +32,11 @@
       "required": true,
       "http_status": null,
       "elapsed_ms": null,
-      "detail": "CONFIG_REQUIRED; no SEC requests this run",
-      "values": {}
+      "detail": "NOT_RUN/CONFIG_REQUIRED; no SEC requests",
+      "values": {
+        "execution": "NOT_RUN",
+        "reason": "CONFIG_REQUIRED"
+      }
     },
     {
       "name": "sec.browse",
@@ -38,8 +44,11 @@
       "required": true,
       "http_status": null,
       "elapsed_ms": null,
-      "detail": "CONFIG_REQUIRED; no SEC requests this run",
-      "values": {}
+      "detail": "NOT_RUN/CONFIG_REQUIRED; no SEC requests",
+      "values": {
+        "execution": "NOT_RUN",
+        "reason": "CONFIG_REQUIRED"
+      }
     },
     {
       "name": "sec.index",
@@ -47,8 +56,11 @@
       "required": true,
       "http_status": null,
       "elapsed_ms": null,
-      "detail": "CONFIG_REQUIRED; no SEC requests this run",
-      "values": {}
+      "detail": "NOT_RUN/CONFIG_REQUIRED; no SEC requests",
+      "values": {
+        "execution": "NOT_RUN",
+        "reason": "CONFIG_REQUIRED"
+      }
     },
     {
       "name": "tencent_us",

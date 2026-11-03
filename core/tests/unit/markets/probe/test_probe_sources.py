@@ -174,7 +174,17 @@ def test_fractional_volume_is_reported_without_truncation(probe):
 
 
 def test_real_hk_metadata_shape_retained(probe):
-    row = [*ROW, {"cqr": "2026-10-30", "HGcontent": ""}]
+    row = [
+        *ROW,
+        {
+            "cqr": "2026-10-30",
+            "FHcontent": "",
+            "HGcontent": "",
+            "paixiri": "",
+            "hgcgContent": "",
+            "ggContent": "",
+        },
+    ]
     payload = {"code": 0, "data": {"hk00700": {"day": [row]}}}
     result = probe.parse_tencent(payload, "hk00700")
     assert result["fieldCounts"] == [7]
@@ -204,10 +214,13 @@ def test_duplicate_and_unsorted_dates_rejected(probe, dates):
     assert result.status == "fail"
 
 
-def test_continuity_row_count_does_not_verify_calendar(probe):
+def test_continuity_row_count_does_not_verify_calendar(probe, monkeypatch):
     from datetime import date, timedelta
 
-    rows = [[(date(2025, 1, 1) + timedelta(days=i)).isoformat(), *ROW[1:]] for i in range(250)]
+    monkeypatch.setenv("SENTINEL_CLOCK", "2026-11-03T00:00:00Z")
+    rows = [
+        [(date(2026, 11, 3) - timedelta(days=249 - i)).isoformat(), *ROW[1:]] for i in range(250)
+    ]
     result = probe.probe_continuity({"ZZAR": rows})[0]
     assert result.status == "warn" and result.values["rows"] == 250
     assert result.values["calendarVerified"] is False
@@ -382,3 +395,214 @@ def test_unknown_manifest_file_is_rejected(probe, tmp_path):
     (tmp_path / "manifest.json").write_text(json.dumps({"files": {"unexpected.json": "x"}}))
     with pytest.raises(ValueError, match="unsupported"):
         probe.offline_checks(tmp_path)
+
+
+@pytest.mark.parametrize("metadata", [{}, {"unknown": "value"}, {"cqr": "2026-10-30"}])
+def test_unknown_hk_company_action_shape_rejected(probe, metadata):
+    with pytest.raises(ValueError, match="metadata"):
+        probe.parse_tencent(
+            {"code": 0, "data": {"hk00700": {"day": [[*ROW, metadata]]}}}, "hk00700"
+        )
+
+
+def test_stale_us_history_fails_continuity(probe, monkeypatch):
+    from datetime import date, timedelta
+
+    monkeypatch.setenv("SENTINEL_CLOCK", "2026-11-03T00:00:00Z")
+    rows = [[(date(2025, 1, 1) + timedelta(days=i)).isoformat(), *ROW[1:]] for i in range(250)]
+    check = probe.probe_continuity({"ZZAR": rows})[0]
+    assert check.status == "fail" and "stale" in check.detail
+
+
+def test_offline_cannot_overwrite_recording_source(probe, tmp_path):
+    from shutil import copytree
+
+    source = tmp_path / "input"
+    copytree(SCRIPT.parent.parent / "core/tests/fixtures/markets/probe", source)
+    before = (source / "manifest.json").read_bytes()
+    assert probe.main(["--offline-fixtures", str(source), "--out", str(source)]) == 2
+    assert (source / "manifest.json").read_bytes() == before
+
+
+@pytest.mark.parametrize("mode", [None, "unverified", "live", "historical"])
+def test_offline_rejects_missing_or_incomplete_provenance(probe, mode, tmp_path):
+    payload = {"code": 0, "data": {"usAAPL": {"day": [ROW]}}}
+    if mode is not None:
+        payload["_provenance"] = {"mode": mode}
+    (tmp_path / "quotes_tencent_us.probe.json").write_text(json.dumps(payload))
+    checks, _ = probe.offline_checks(tmp_path)
+    assert checks[0].status == "fail" and "provenance" in checks[0].detail
+
+
+def test_offline_rejects_fixture_symlink(probe, tmp_path):
+    target = tmp_path / "private.json"
+    target.write_text('{"secret":"synthetic-secret"}')
+    (tmp_path / "quotes_tencent_us.probe.json").symlink_to(target)
+    with pytest.raises(ValueError, match="symlink"):
+        probe.offline_checks(tmp_path)
+
+
+def test_writer_prevalidates_all_paths(probe, tmp_path):
+    with pytest.raises(ValueError, match="unsafe"):
+        probe.write_fixtures(tmp_path, [], {"valid.json": {}, "..\\escape.json": {}})
+    assert not (tmp_path / "valid.json").exists()
+
+
+def test_malformed_accession_reports_failure_without_index_request(probe):
+    payload = submissions()
+    payload["filings"]["recent"]["accessionNumber"] = [None]
+    checks = probe.probe_sec(CONTACT, client_for(payload))
+    assert checks[-1].name == "sec.index" and checks[-1].status == "fail"
+
+
+def test_mock_recording_never_claims_live_or_retains_secrets(probe, tmp_path, monkeypatch):
+    monkeypatch.setenv("JEV_API_KEY", "synthetic-secret-jev")
+    monkeypatch.setenv("TYPESAFE_API_KEY", "synthetic-secret-typesafe")
+    client = client_for({"code": 0, "data": {"usAAPL": {"day": [ROW]}}})
+    checks = probe.probe_tencent(client)
+    payloads = probe.recordings(client)
+    assert payloads["quotes_tencent_us.probe.json"]["_provenance"]["mode"] == "synthetic"
+    probe.write_fixtures(tmp_path, checks, payloads)
+    text = "".join(path.read_text() for path in tmp_path.iterdir())
+    assert "synthetic-secret" not in text and CONTACT not in text
+
+
+def test_mock_mount_on_real_default_transport_is_synthetic(probe):
+    transport = httpx.MockTransport(
+        lambda _: httpx.Response(200, json={"code": 0, "data": {"usAAPL": {"day": [ROW]}}})
+    )
+    with httpx.Client(trust_env=False, mounts={"https://web.ifzq.gtimg.cn": transport}) as client:
+        check = probe._request(
+            client,
+            "tencent_us",
+            probe.TENCENT_URL.format(symbol="usAAPL", limit=30),
+            lambda p: probe.parse_tencent(p, "usAAPL"),
+        )
+    assert check.values["provenance"]["mode"] == "synthetic"
+
+
+def test_unknown_transport_is_unverified(probe):
+    class Custom(httpx.BaseTransport):
+        def handle_request(self, request):
+            return httpx.Response(200, json={"code": 0, "data": {"usAAPL": {"day": [ROW]}}})
+
+    with httpx.Client(transport=Custom()) as client:
+        check = probe._request(
+            client,
+            "tencent_us",
+            probe.TENCENT_URL.format(symbol="usAAPL", limit=30),
+            lambda p: probe.parse_tencent(p, "usAAPL"),
+        )
+    assert check.status == "warn" and check.values["provenance"]["mode"] == "unverified"
+
+
+@pytest.mark.parametrize("phase", ["serialize", "manifest", "stage", "publish"])
+def test_fixture_publication_failure_preserves_complete_previous_output(
+    probe, tmp_path, monkeypatch, phase
+):
+    out = tmp_path / "out"
+    probe.write_fixtures(out, [], {"old.json": {"generation": "old"}})
+    before = {p.name: p.read_bytes() for p in out.iterdir()}
+    payload = {"new.json": {"generation": "new"}}
+    results = []
+    if phase == "serialize":
+        payload["later.json"] = {"bad": object()}
+    elif phase == "manifest":
+        results = [
+            probe.ProbeCheck("test", "pass", True, None, None, "synthetic", {"bad": object()})
+        ]
+    elif phase == "stage":
+        original = Path.write_bytes
+
+        def fail_stage(path, data):
+            if path.name == "REPORT.md":
+                raise OSError("synthetic stage failure")
+            return original(path, data)
+
+        monkeypatch.setattr(Path, "write_bytes", fail_stage)
+    else:
+        original = probe.os.replace
+
+        def fail_publish(source, destination):
+            if Path(source).name == "new":
+                raise OSError("synthetic publish failure")
+            return original(source, destination)
+
+        monkeypatch.setattr(probe.os, "replace", fail_publish)
+    with pytest.raises((OSError, TypeError)):
+        probe.write_fixtures(out, results, payload)
+    assert {p.name: p.read_bytes() for p in out.iterdir()} == before
+
+
+def test_fixture_publication_replaces_snapshot_and_keeps_manifest_consistent(probe, tmp_path):
+    import hashlib
+
+    probe.write_fixtures(tmp_path, [], {"old.json": {"generation": "old"}})
+    probe.write_fixtures(tmp_path, [], {"new.json": {"generation": "new"}})
+    assert not (tmp_path / "old.json").exists()
+    manifest = json.loads((tmp_path / "manifest.json").read_text())
+    assert set(manifest["files"]) == {"new.json"}
+    assert (
+        manifest["files"]["new.json"]
+        == hashlib.sha256((tmp_path / "new.json").read_bytes()).hexdigest()
+    )
+    assert "observation/parse only" in (tmp_path / "REPORT.md").read_text()
+
+
+def test_writer_refuses_unmanaged_output_files(probe, tmp_path):
+    (tmp_path / "keep.txt").write_text("user file")
+    with pytest.raises(ValueError, match="unmanaged"):
+        probe.write_fixtures(tmp_path, [], {})
+    assert (tmp_path / "keep.txt").read_text() == "user file"
+
+
+@pytest.mark.parametrize(
+    "field,value",
+    [
+        ("url", "https://api.nasdaq.com/api/quote/AAPL/historical"),
+        ("fetchedAt", "2026-11-03T00:00:00"),
+        ("responseSha256", "unknown"),
+    ],
+)
+def test_offline_provenance_validates_source_time_and_hash(probe, tmp_path, field, value):
+    source = SCRIPT.parent.parent / "core/tests/fixtures/markets/probe/quotes_tencent_us.probe.json"
+    payload = json.loads(source.read_text())
+    payload["_provenance"][field] = value
+    (tmp_path / source.name).write_text(json.dumps(payload))
+    assert probe.offline_checks(tmp_path)[0][0].status == "fail"
+
+
+def test_redirect_with_unknown_transport_stays_unverified(probe):
+    class Custom(httpx.BaseTransport):
+        def handle_request(self, request):
+            return httpx.Response(200, json={"code": 0, "data": {"usAAPL": {"day": [ROW]}}})
+
+    first = httpx.MockTransport(
+        lambda _: httpx.Response(302, headers={"Location": "https://api.nasdaq.com/final"})
+    )
+    with httpx.Client(
+        trust_env=False,
+        follow_redirects=True,
+        mounts={"https://web.ifzq.gtimg.cn": first, "https://api.nasdaq.com": Custom()},
+    ) as client:
+        check = probe._request(
+            client,
+            "tencent_us",
+            "https://web.ifzq.gtimg.cn/start",
+            lambda p: probe.parse_tencent(p, "usAAPL"),
+        )
+    assert check.values["provenance"]["mode"] == "unverified"
+
+
+@pytest.mark.parametrize("kind", ["wrong_type", "wrong_date", "wrong_market"])
+def test_hk_action_values_and_market_are_checked(probe, kind):
+    source = SCRIPT.parent.parent / "core/tests/fixtures/markets/probe/quotes_tencent_hk.probe.json"
+    rows = json.loads(source.read_text())["data"]["hk00700"]["day"]
+    row = next(r for r in rows if len(r) == 7)
+    symbol = "usZZAR" if kind == "wrong_market" else "hk00700"
+    if kind == "wrong_type":
+        row[6]["FHcontent"] = None
+    if kind == "wrong_date":
+        row[6]["cqr"] = "1900-01-01"
+    with pytest.raises(ValueError, match="metadata"):
+        probe.parse_tencent({"code": 0, "data": {symbol: {"day": [row]}}}, symbol)

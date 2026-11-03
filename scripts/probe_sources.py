@@ -10,8 +10,10 @@ import json
 import math
 import os
 import re
+import shutil
 import statistics
 import sys
+import tempfile
 import time
 from collections import Counter
 from dataclasses import asdict, dataclass
@@ -50,7 +52,15 @@ NEGATIVE_URLS = {
         "&fields2=f51,f52,f53,f54,f55,f56,f57,f58,f59,f60,f61"
     ),
 }
-JSON_ERRORS = (ValueError, KeyError, TypeError, IndexError, AttributeError, InvalidOperation)
+JSON_ERRORS = (
+    ValueError,
+    KeyError,
+    TypeError,
+    IndexError,
+    AttributeError,
+    InvalidOperation,
+    httpx.InvalidURL,
+)
 
 
 @dataclass(frozen=True)
@@ -96,14 +106,26 @@ def volume(value: object) -> Decimal:
     return Decimal(value.replace(",", ""))
 
 
-def _bar(row: list[str]) -> dict[str, str]:
+def _bar(row: list[str], allow_metadata: bool = False) -> dict[str, str]:
     if not isinstance(row, list):
         raise TypeError("price row must be a list")
     if len(row) != 6 and not (len(row) == 7 and isinstance(row[6], dict)):
         raise ValueError(f"Tencent row field count {len(row)}; expected 6 or 7 with metadata")
+    if len(row) == 7:
+        metadata = row[6]
+        if (
+            not allow_metadata
+            or set(metadata)
+            != {"cqr", "FHcontent", "HGcontent", "paixiri", "hgcgContent", "ggContent"}
+            or any(not isinstance(v, str) for v in metadata.values())
+            or metadata["cqr"] != row[0]
+        ):
+            raise ValueError("unknown company-action metadata shape")
     row = row[:6]
     if any(not isinstance(v, str) for v in row):
         raise ValueError("price row must contain strings")
+    if not re.fullmatch(r"[0-9]{4}-[0-9]{2}-[0-9]{2}", row[0]):
+        raise ValueError("trade date must be YYYY-MM-DD")
     date.fromisoformat(row[0])
     prices = [price(v) for v in row[1:5]]
     opened, closed, high, low = prices
@@ -113,10 +135,10 @@ def _bar(row: list[str]) -> dict[str, str]:
     return dict(zip(("date", "open", "close", "high", "low", "volume"), row, strict=True))
 
 
-def _row_stats(rows: list[list[str]]) -> dict[str, object]:
+def _row_stats(rows: list[list[str]], allow_metadata: bool = False) -> dict[str, object]:
     if not isinstance(rows, list) or not rows:
         raise ValueError("empty price rows")
-    bars = [_bar(row) for row in rows]
+    bars = [_bar(row, allow_metadata) for row in rows]
     dates = [date.fromisoformat(b["date"]) for b in bars]
     unique = sorted(set(dates))
     duplicates = len(dates) - len(unique)
@@ -139,19 +161,27 @@ def _row_stats(rows: list[list[str]]) -> dict[str, object]:
         "adjustmentVerified": False,
         "fieldCounts": sorted({len(r) for r in rows}),
         "volumeUnitVerified": False,
+        "ageDays": (clock.utc_today() - unique[-1]).days,
     }
 
 
 def parse_tencent(payload: dict, symbol: str) -> dict[str, object]:
+    if type(payload["code"]) is not int:
+        raise ValueError("Tencent code must be an integer")
     if payload["code"] != 0:
         raise ValueError(f"Tencent code={payload['code']}; source error")
     data = payload["data"][symbol]
     key = "qfqday" if "qfqday" in data else "day"
-    return {**_row_stats(data[key]), "key": key, "symbol": symbol}
+    return {**_row_stats(data[key], symbol.startswith("hk")), "key": key, "symbol": symbol}
 
 
 def parse_nasdaq(payload: dict) -> dict[str, object]:
     rows = payload["data"]["tradesTable"]["rows"]
+    if any(
+        not isinstance(r["date"], str) or not re.fullmatch(r"[0-9]{2}/[0-9]{2}/[0-9]{4}", r["date"])
+        for r in rows
+    ):
+        raise ValueError("Nasdaq date must be MM/DD/YYYY")
     mapped = [
         [
             datetime.strptime(r["date"], "%m/%d/%Y").date().isoformat(),
@@ -275,17 +305,18 @@ def _request(client, name, url, parser, *, headers=None, filename=None, required
         time.sleep(max(0, 1 - (time.monotonic() - previous)))
     client._probe_last_request = time.monotonic()
     started = time.perf_counter()
-    mode = (
-        "synthetic"
-        if isinstance(getattr(client, "_transport", None), httpx.MockTransport)
-        else "live"
-    )
+    mode = _transport_mode(client, url)
     provenance = {"mode": mode, "url": url, "requestedAt": clock.to_iso(clock.now())}
     try:
         response = client.get(url, headers=headers)
     except httpx.HTTPError as exc:
         elapsed = round((time.perf_counter() - started) * 1000)
         return ProbeCheck(name, "fail", required, None, elapsed, type(exc).__name__, provenance)
+    modes = {_transport_mode(client, str(r.url)) for r in [*response.history, response]}
+    mode = (
+        "unverified" if "unverified" in modes else "synthetic" if "synthetic" in modes else "live"
+    )
+    provenance["mode"] = mode
     elapsed = round((time.perf_counter() - started) * 1000)
     provenance.update(
         {
@@ -306,7 +337,7 @@ def _request(client, name, url, parser, *, headers=None, filename=None, required
             False,
             response.status_code,
             elapsed,
-            "public negative-source observation",
+            "negative-source observation",
             {**provenance, **values},
         )
     if response.status_code != 200:
@@ -330,7 +361,10 @@ def _request(client, name, url, parser, *, headers=None, filename=None, required
         if filename:
             clipped = _crop(name, payload)
             if isinstance(clipped, str):
-                clipped = f"<!-- source: {url}; accessed: {provenance['fetchedAt']} -->\n" + clipped
+                clipped = (
+                    f"<!-- mode: {mode}; source: {url}; accessed: {provenance['fetchedAt']} -->\n"
+                    + clipped
+                )
             else:
                 clipped["_provenance"] = provenance
             recordings(client)[filename] = clipped
@@ -345,7 +379,11 @@ def _request(client, name, url, parser, *, headers=None, filename=None, required
             " ".join(detail.split()),
             provenance,
         )
-    status = "warn" if elapsed > 3000 or values.get("fractionalVolumes", 0) else "pass"
+    status = (
+        "warn"
+        if elapsed > 3000 or values.get("fractionalVolumes", 0) or mode == "unverified"
+        else "pass"
+    )
     if name == "sec.tickers" and values["rows"] != EXPECTED_TICKER_ROWS:
         status = "warn"
     return ProbeCheck(
@@ -354,9 +392,17 @@ def _request(client, name, url, parser, *, headers=None, filename=None, required
         required,
         200,
         elapsed,
-        "parsed public response",
+        "parsed response; transport unverified" if mode == "unverified" else "parsed response",
         {**values, "provenance": provenance},
     )
+
+
+def _transport_mode(client: httpx.Client, url: str) -> str:
+    selector = getattr(client, "_transport_for_url", None)
+    transport = selector(httpx.URL(url)) if selector else None
+    if isinstance(transport, httpx.MockTransport):
+        return "synthetic"
+    return "live" if type(transport) is httpx.HTTPTransport else "unverified"
 
 
 def probe_sec(contact: str, client: httpx.Client) -> list[ProbeCheck]:
@@ -394,7 +440,7 @@ def probe_sec(contact: str, client: httpx.Client) -> list[ProbeCheck]:
     forms = recent.get("form", [])
     if "8-K" in forms:
         accession = recent["accessionNumber"][forms.index("8-K")]
-        if re.fullmatch(r"[0-9]{10}-[0-9]{2}-[0-9]{6}", accession):
+        if isinstance(accession, str) and re.fullmatch(r"[0-9]{10}-[0-9]{2}-[0-9]{6}", accession):
             url = (
                 "https://www.sec.gov/Archives/edgar/data/320193/"
                 f"{accession.replace('-', '')}/{accession}-index.htm"
@@ -451,6 +497,8 @@ def probe_tencent(client: httpx.Client) -> list[ProbeCheck]:
         if "rows" in values and values["rows"] < 30:
             status = "fail"
             detail += "; fewer than requested 30 daily rows"
+        if name == "tencent_us" and values.get("ageDays", 0) > 4:
+            status, detail = "fail", "stale US dates; >4 calendar-day freshness heuristic"
         elapsed = [c.elapsed_ms for c in attempts if c.elapsed_ms is not None]
         median = round(statistics.median(elapsed)) if elapsed else None
         checks.append(
@@ -532,12 +580,19 @@ def probe_continuity(frames: dict[str, list[list[str]]]) -> list[ProbeCheck]:
     for symbol, rows in frames.items():
         try:
             values = {"symbol": symbol, **_row_stats(rows)}
-            status = "fail" if values["rows"] < 250 else "warn"
-            detail = "row count and >4 calendar-day gaps only; TODO-VERIFY(G1-US) calendar"
+            status, detail = _history_status(values)
         except JSON_ERRORS as exc:
             values, status, detail = {"symbol": symbol}, "fail", str(exc)
         checks.append(ProbeCheck(f"continuity.{symbol}", status, True, None, None, detail, values))
     return checks
+
+
+def _history_status(values: dict) -> tuple[str, str]:
+    if values["rows"] < 250:
+        return "fail", "fewer than 250 daily rows; TODO-VERIFY(G1-US) calendar/adjustment"
+    if values["ageDays"] > 4 or values["ageDays"] < 0:
+        return "fail", "stale or future dates; >4 calendar-day freshness heuristic"
+    return "warn", "row count only; TODO-VERIFY(G1-US) calendar/adjustment"
 
 
 def fetch_continuity(client: httpx.Client, symbols: list[str], days: int) -> list[ProbeCheck]:
@@ -552,14 +607,14 @@ def fetch_continuity(client: httpx.Client, symbols: list[str], days: int) -> lis
 
         check = _request(client, f"continuity.{symbol}", url, parse)
         if check.status != "fail" and "rows" in check.values:
-            status = "fail" if check.values["rows"] < 250 else "warn"
+            status, detail = _history_status(check.values)
             check = ProbeCheck(
                 check.name,
                 status,
                 True,
                 check.http_status,
                 check.elapsed_ms,
-                "row count only; TODO-VERIFY(G1-US) calendar/adjustment",
+                detail,
                 check.values,
             )
         checks.append(check)
@@ -583,19 +638,17 @@ def unresolved_checks() -> list[ProbeCheck]:
 
 
 def write_fixtures(out: Path, results: list[ProbeCheck], payloads: dict[str, object]) -> None:
-    out.mkdir(parents=True, exist_ok=True)
-    files = {}
+    files, prepared = {}, {}
     for filename, payload in payloads.items():
-        if Path(filename).name != filename or not filename.endswith((".json", ".html")):
+        if not _safe_filename(filename) or filename == "manifest.json":
             raise ValueError("unsafe fixture filename")
         text = (
             payload
             if isinstance(payload, str)
-            else json.dumps(payload, indent=2, ensure_ascii=True)
+            else json.dumps(payload, indent=2, ensure_ascii=True, allow_nan=False)
         )
-        content = (text + "\n").encode("utf-8")
-        (out / filename).write_bytes(content)
-        files[filename] = hashlib.sha256(content).hexdigest()
+        prepared[filename] = (text + "\n").encode("utf-8")
+    files = {name: hashlib.sha256(raw).hexdigest() for name, raw in prepared.items()}
     offline = any(c.name.startswith("offline.") for c in results)
     failed = sum(c.required and c.status == "fail" for c in results)
     passed = sum(c.required and c.status != "fail" for c in results)
@@ -606,11 +659,15 @@ def write_fixtures(out: Path, results: list[ProbeCheck], payloads: dict[str, obj
         "files": files,
         "checks": [asdict(c) for c in results],
     }
-    (out / "manifest.json").write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
+    prepared["manifest.json"] = (json.dumps(manifest, indent=2, allow_nan=False) + "\n").encode(
+        "utf-8"
+    )
     lines = [
         "# G1-US source probe report",
         "",
         "Gate: NOT PASSED; SEC/continuity/adjustment/terms/rate evidence required.",
+        "Scope: observation/parse only; this script cannot automatically PASS the full G1 gate.",
+        "Terms, adjustment, verified calendar continuity and rate need separate reviewed evidence.",
         "Mode: OFFLINE parsing only; no new HTTP evidence."
         if offline
         else "Mode: public observations; historical provenance remains historical.",
@@ -619,7 +676,9 @@ def write_fixtures(out: Path, results: list[ProbeCheck], payloads: dict[str, obj
         "|---|---|---|---|---|---|---|",
     ]
     for c in results:
-        values = json.dumps(c.values, ensure_ascii=True, sort_keys=True).replace("|", "\\|")
+        values = json.dumps(c.values, ensure_ascii=True, sort_keys=True, allow_nan=False).replace(
+            "|", "\\|"
+        )
         lines.append(
             f"| {c.name} | {c.required} | {c.status} | {c.http_status} | {c.elapsed_ms} | "
             f"{values} | {c.detail.replace('|', '/')} |"
@@ -631,10 +690,83 @@ def write_fixtures(out: Path, results: list[ProbeCheck], payloads: dict[str, obj
         "Recorded JSON has _provenance; manifest lists clipped-file hashes. "
         "No full prices are retained.",
         "Historical file timestamps are recording times, not verified HTTP access times.",
+        "Report publication time does not replace original fetchedAt or recordedAt.",
         "",
     ]
     lines += [f"- {c.detail}" for c in unresolved_checks()]
-    (out / "REPORT.md").write_text("\n".join(lines) + "\n", encoding="utf-8")
+    prepared["REPORT.md"] = ("\n".join(lines) + "\n").encode("utf-8")
+    _publish_snapshot(out, prepared)
+
+
+def _safe_filename(filename: object) -> bool:
+    return (
+        isinstance(filename, str)
+        and re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9_.-]*\.(?:json|html)", filename) is not None
+    )
+
+
+def _publish_snapshot(out: Path, prepared: dict[str, bytes]) -> None:
+    if out.is_symlink() or any((out / n).is_symlink() for n in prepared):
+        raise ValueError("symlink output forbidden")
+    if out.exists():
+        previous = out / "manifest.json"
+        owned = json.loads(previous.read_text()).get("files", {}) if previous.exists() else {}
+        if not isinstance(owned, dict) or any(not _safe_filename(n) for n in owned):
+            raise ValueError("invalid prior output manifest")
+        if {p.name for p in out.iterdir()} - set(owned) - set(prepared):
+            raise ValueError("output contains unmanaged files")
+    out.parent.mkdir(parents=True, exist_ok=True)
+    stage = Path(tempfile.mkdtemp(prefix=".probe-", dir=out.parent))
+    new, backup = stage / "new", stage / "old"
+    committed = False
+    try:
+        new.mkdir()
+        for filename, raw in prepared.items():
+            (new / filename).write_bytes(raw)
+        if out.exists():
+            os.replace(out, backup)
+        try:
+            os.replace(new, out)
+            committed = True
+        except OSError:
+            if backup.exists():
+                os.replace(backup, out)
+            raise
+    finally:
+        # 恢复本身失败时保留原快照；发布窗口只能缺目录，不会暴露混合文件。
+        if committed or not backup.exists():
+            shutil.rmtree(stage)
+
+
+def _validate_provenance(payload: dict, filename: str) -> None:
+    origin = payload.get("_provenance", {})
+    if not isinstance(origin, dict) or origin.get("mode") not in (
+        "live",
+        "historical",
+        "synthetic",
+    ):
+        raise ValueError("missing or unknown provenance mode")
+    if origin["mode"] == "synthetic":
+        return
+    url = httpx.URL(origin.get("url", ""))
+    timestamp = origin.get("fetchedAt") if origin["mode"] == "live" else origin.get("recordedAt")
+    expected_host = (
+        "www.sec.gov"
+        if filename == "company_tickers_exchange.probe.json"
+        else "data.sec.gov"
+        if filename == "submissions_0000320193.probe.json"
+        else "api.nasdaq.com"
+        if filename == "quotes_nasdaq_us.probe.json"
+        else "web.ifzq.gtimg.cn"
+    )
+    if (
+        url.scheme != "https"
+        or url.userinfo
+        or url.host != expected_host
+        or not valid_acceptance_datetime(timestamp)
+        or not re.fullmatch(r"[a-f0-9]{64}", str(origin.get("responseSha256", "")))
+    ):
+        raise ValueError("incomplete public-source provenance")
 
 
 def offline_checks(source: Path) -> tuple[list[ProbeCheck], dict[str, object]]:
@@ -652,6 +784,8 @@ def offline_checks(source: Path) -> tuple[list[ProbeCheck], dict[str, object]]:
         }
     )
     manifest_path = source / "manifest.json"
+    if source.is_symlink() or manifest_path.is_symlink():
+        raise ValueError("symlink fixture input forbidden")
     manifest = json.loads(manifest_path.read_text()) if manifest_path.exists() else {}
     expected = manifest.get("files", {})
     extras = {
@@ -664,8 +798,10 @@ def offline_checks(source: Path) -> tuple[list[ProbeCheck], dict[str, object]]:
         raise ValueError("unsupported fixture manifest")
     for filename in set(parsers) | extras | set(expected):
         path = source / filename
-        if Path(filename).name != filename:
+        if not _safe_filename(filename):
             raise ValueError("unsafe manifest filename")
+        if path.is_symlink():
+            raise ValueError("symlink fixture input forbidden")
         if not path.exists():
             if filename in expected:
                 raise ValueError(f"missing manifested fixture {filename}")
@@ -675,6 +811,16 @@ def offline_checks(source: Path) -> tuple[list[ProbeCheck], dict[str, object]]:
             raise ValueError(f"fixture hash mismatch {filename}")
         try:
             payload = raw.decode("utf-8") if filename.endswith(".html") else json.loads(raw)
+            if filename in parsers and isinstance(payload, dict):
+                _validate_provenance(payload, filename)
+            if filename.endswith(".html") and not re.match(
+                r"<!-- mode: (?:live|historical|synthetic); "
+                r"source: https://www\.sec\.gov/\S+; accessed: \S+ -->",
+                payload,
+            ):
+                raise ValueError("missing HTML provenance header")
+            if filename not in parsers and not isinstance(payload, dict):
+                raise ValueError("derived fixture must be a JSON object")
             values = parsers[filename](payload) if filename in parsers else {"derivedOnly": True}
             results.append(
                 ProbeCheck(
@@ -731,6 +877,9 @@ def main(argv: list[str] | None = None) -> int:
         return 2
     try:
         if args.offline_fixtures:
+            if args.out.resolve() == args.offline_fixtures.resolve():
+                print("offline output must differ from recording source", file=sys.stderr)
+                return 2
             results, payloads = offline_checks(args.offline_fixtures)
         elif os.environ.get("SENTINEL_OFFLINE") == "1":
             results = [ProbeCheck("network", "fail", True, None, None, "OFFLINE; no request", {})]
