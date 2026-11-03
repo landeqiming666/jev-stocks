@@ -2,9 +2,11 @@ from __future__ import annotations
 
 import hashlib
 import json
+import logging
 import os
 import threading
 import time
+import traceback
 from collections.abc import Iterable, Sequence
 from pathlib import Path
 from typing import Any
@@ -13,7 +15,17 @@ import duckdb
 import pytest
 from duckdb.func import FunctionNullHandling
 from duckdb.sqltypes import DOUBLE, VARCHAR
-from sentinel.errors import CancelledError, EngineError, ErrorCode, SourceError, UserError
+from sentinel.errors import (
+    CancelledError,
+    EngineError,
+    ErrorCode,
+    InternalError,
+    SourceError,
+    UserError,
+)
+from sentinel.logging_setup import JsonFormatter
+from sentinel.secrets.service import SecretsService
+from sentinel.security.redact import MASK, clear_secrets, redact_text
 from sentinel.semantic.base import (
     EvidenceScore,
     PairInput,
@@ -659,10 +671,12 @@ def test_provider_exception_is_sanitized_in_health_and_score(
         raise RuntimeError(KEY)
 
     engine.secret_provider = provider
-    assert engine.health().state == "unconfigured"
-    with pytest.raises(UserError) as error:
-        engine.score_pairs("ZZAR", pairs(inputs), Token())
-    assert KEY not in repr(error.value.to_wire())
+    for invoke in (engine.health, lambda: engine.score_pairs("ZZAR", pairs(inputs), Token())):
+        with pytest.raises(InternalError) as error:
+            invoke()
+        assert error.value.reason == "SECRET_PROVIDER_FAILED"
+        assert KEY not in repr(error.value.to_wire("provider-request"))
+        assert error.value.__context__ is None
 
 
 def test_empty_and_precancelled_inputs_never_open_connection(
@@ -828,6 +842,142 @@ def test_stored_error_has_no_raw_exception_context(setup_engine: Any, inputs: An
     assert engine._job is not None and engine._job.error is not None
     assert engine._job.error.__context__ is None
     assert engine._job.error.__cause__ is None
+
+
+@pytest.mark.parametrize("status", [400, 413, 422])
+def test_invalid_request_mapper_returns_internal_without_remote_body(status: int) -> None:
+    error = jevdb.map_jevdb_error(f"Jev HTTP {status}; synthetic invalid timeout option {KEY}")
+    assert isinstance(error, InternalError)
+    assert error.code == ErrorCode.INTERNAL and error.reason == "INVALID_REQUEST"
+    assert error.retryable is True
+    assert KEY not in repr(error.to_wire("invalid-request"))
+    assert error.__context__ is error.__cause__ is None
+
+
+@pytest.mark.parametrize("status", [400, 413, 422])
+@pytest.mark.parametrize("operation", ["score", "evidence"])
+def test_invalid_request_propagates_internal_and_cleans_up(
+    setup_engine: Any, inputs: Any, status: int, operation: str
+) -> None:
+    engine, con, _ = setup_engine
+    con.failure = f"HTTP {status} synthetic invalid request {KEY}"
+    with pytest.raises(InternalError) as error:
+        if operation == "score":
+            engine.score_pairs("ZZAR", pairs(inputs), Token())
+        else:
+            engine.locate_evidence(inputs[0][0], "weaken", ["ZZAR sentence"], Token())
+    assert error.value.reason == "INVALID_REQUEST"
+    assert KEY not in repr(error.value.to_wire("invalid-request"))
+    assert error.value.__context__ is error.value.__cause__ is None
+    assert not con.secret
+    assert con.db.execute("SELECT count(*) FROM duckdb_tables() WHERE temporary").fetchone()[0] == 0
+
+
+@pytest.mark.parametrize("operation", ["health", "score", "evidence"])
+def test_secrets_service_keyring_failure_keeps_internal_code(
+    setup_engine: Any, inputs: Any, operation: str
+) -> None:
+    engine, con, _ = setup_engine
+
+    class BrokenStore:
+        def get(self, account: str) -> str | None:
+            raise RuntimeError("synthetic private keyring failure " + KEY)
+
+        def set(self, account: str, value: str) -> None:
+            raise AssertionError("unexpected key write")
+
+        def delete(self, account: str) -> None:
+            raise AssertionError("unexpected key delete")
+
+    from sentinel import clock
+
+    service = SecretsService(BrokenStore(), clock.now)
+    engine.secret_provider = lambda: service.get_jev_key() or ""
+    with pytest.raises(InternalError) as error:
+        if operation == "health":
+            engine.health()
+        elif operation == "score":
+            engine.score_pairs("ZZAR", pairs(inputs), Token())
+        else:
+            engine.locate_evidence(inputs[0][0], "weaken", ["ZZAR sentence"], Token())
+    assert error.value.code == ErrorCode.INTERNAL
+    assert error.value.message_key == "settings.keyring_unavailable"
+    assert "钥匙串" in str(error.value.to_wire("keyring-request")["message"])
+    assert "missing" not in error.value.params
+    assert KEY not in repr(error.value.to_wire("keyring-request"))
+    assert error.value.__context__ is error.value.__cause__ is None
+    assert not con.calls and not con.secret
+
+
+@pytest.mark.parametrize("operation", ["health", "score", "evidence"])
+def test_pure_provider_key_is_registered_for_remote_error_logging(
+    setup_engine: Any, inputs: Any, operation: str
+) -> None:
+    engine, con, _ = setup_engine
+    key = "s04-pure-provider-key-do-not-use"
+    clear_secrets()
+    try:
+        assert redact_text(key) == key
+        engine.secret_provider = lambda: key
+        con.failure = "HTTP 401 synthetic remote body " + key
+        if operation == "health":
+            assert engine.health().state == "ok"
+        else:
+            with pytest.raises(EngineError) as error:
+                if operation == "score":
+                    engine.score_pairs("ZZAR", pairs(inputs), Token())
+                else:
+                    engine.locate_evidence(inputs[0][0], "weaken", ["ZZAR sentence"], Token())
+            assert key not in "".join(traceback.format_exception(error.value))
+        assert redact_text(key) == MASK
+        record = logging.LogRecord(
+            "sentinel.semantic.engines.jevdb",
+            logging.ERROR,
+            __file__,
+            1,
+            "synthetic remote error context %s",
+            (key,),
+            None,
+        )
+        formatted = JsonFormatter().format(record)
+        assert key not in formatted and MASK in formatted
+        assert not con.secret
+    finally:
+        clear_secrets()
+
+
+@pytest.mark.parametrize("operation", ["health", "score"])
+def test_provider_sentinel_error_metadata_is_sanitized(
+    setup_engine: Any, inputs: Any, operation: str
+) -> None:
+    engine, _, _ = setup_engine
+    key = "s04-provider-metadata-key-do-not-use"
+    clear_secrets()
+    try:
+        engine.secret_provider = lambda: key
+        assert engine.health().state == "ok"
+
+        def provider() -> str:
+            raise InternalError(
+                message_key="settings.keyring_unavailable",
+                reason="KEYRING_UNAVAILABLE",
+                detail="synthetic provider body " + key,
+                params={"diagnostic": key, "operation": "read", "token": key},
+            )
+
+        engine.secret_provider = provider
+        with pytest.raises(InternalError) as error:
+            if operation == "health":
+                engine.health()
+            else:
+                engine.score_pairs("ZZAR", pairs(inputs), Token())
+        assert error.value.reason == "KEYRING_UNAVAILABLE"
+        wire = error.value.to_wire("provider-request")
+        assert key not in repr(wire)
+        assert key not in "".join(traceback.format_exception(error.value))
+        assert error.value.__context__ is error.value.__cause__ is None
+    finally:
+        clear_secrets()
 
 
 def test_native_close_has_bounded_wait(setup_engine: Any, monkeypatch: pytest.MonkeyPatch) -> None:

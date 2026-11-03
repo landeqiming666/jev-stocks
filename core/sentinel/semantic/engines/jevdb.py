@@ -21,12 +21,14 @@ from sentinel.errors import (
     CancelledError,
     EngineError,
     ErrorCode,
+    InternalError,
     SentinelError,
     SourceError,
     UserError,
 )
 from sentinel.ids import new_id
 from sentinel.messages import render
+from sentinel.security.redact import redact_obj, redact_text, register_secret
 from sentinel.semantic import questions
 from sentinel.semantic.base import (
     CancelToken,
@@ -188,8 +190,9 @@ def build_evidence_sql(question_set: dict[str, QuestionSpec], table_suffix: str)
     )
 
 
-def map_jevdb_error(message: str) -> EngineError:
+def map_jevdb_error(message: str) -> SentinelError:
     # 上游可在异常 body 中带回 key/原文；仅发布分类和可验证的等待秒数。
+    message = redact_text(message)
     for status, reason in (("401", "INVALID_KEY"), ("403", "FORBIDDEN")):
         if re.search(rf"\b{status}\b", message):
             return EngineError(ErrorCode.UNAUTHENTICATED, reason=reason)
@@ -197,9 +200,31 @@ def map_jevdb_error(message: str) -> EngineError:
         match = re.search(r"retry[-_ ]after(?:sec)?\s*[:=]\s*(\d+)\b", message, re.I)
         seconds = min(int(match[1]), JEVDB_RETRY_AFTER_MAX) if match else DEFAULT_RETRY_AFTER_SEC
         return EngineError(ErrorCode.RATE_LIMITED, params={"retryAfterSec": seconds})
+    if re.search(r"\b(?:400|413|422)\b", message):
+        return InternalError(reason="INVALID_REQUEST")
     if "timeout" in message.lower() or "timed out" in message.lower():
         return EngineError(ErrorCode.TIMEOUT)
     return EngineError(ErrorCode.MODEL_ERROR)
+
+
+def _sanitize_provider_error(error: SentinelError) -> SentinelError:
+    family = next(
+        (
+            cls
+            for cls in (CancelledError, InternalError, EngineError, SourceError, UserError)
+            if isinstance(error, cls)
+        ),
+        SentinelError,
+    )
+    return family(
+        error.code,
+        message_key=redact_text(error.message_key) if error.message_key else None,
+        params=cast(dict[str, object], redact_obj(error.params)),
+        field=redact_text(error.field) if error.field else None,
+        reason=redact_text(error.reason) if error.reason else None,
+        detail=redact_text(error.detail)[:200] if error.detail else None,
+        retryable=error.retryable,
+    )
 
 
 @dataclass
@@ -239,19 +264,23 @@ class JevdbEngine:
     def _key(self) -> str:
         try:
             key = self.secret_provider()
+        except SentinelError as error:
+            failure = _sanitize_provider_error(error)
         except Exception:
-            raise UserError(ErrorCode.CONFIG_REQUIRED, params={"missing": ["jevKey"]}) from None
-        return (
-            key
-            if (
+            failure = InternalError(reason="SECRET_PROVIDER_FAILED")
+        else:
+            if not (
                 isinstance(key, str)
                 and key
                 and key.isascii()
                 and key.isprintable()
                 and not any(c.isspace() for c in key)
-            )
-            else ""
-        )
+            ):
+                return ""
+            register_secret(key)
+            return key
+        # 离开 except 再抛新对象，health 路径也不保留 provider 的原始异常链。
+        raise failure
 
     @staticmethod
     def _check(cancel: CancelToken | None, stop: threading.Event, deadline: float) -> None:
@@ -391,7 +420,9 @@ class JevdbEngine:
                 return EngineHealth("degraded", render("error.ENGINE_UNAVAILABLE"))
             try:
                 key = self._key()
-            except UserError:
+            except UserError as error:
+                if error.code != ErrorCode.CONFIG_REQUIRED:
+                    raise
                 key = ""
             if not key:
                 return EngineHealth(
