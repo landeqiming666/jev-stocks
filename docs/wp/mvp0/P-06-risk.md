@@ -131,7 +131,7 @@ def register_handlers(registrar: HandlerRegistrar, service: RiskService) -> None
 | `MAX_EXPLAINED_COMPONENTS` | `5` | `risk.py` | 解释方差与载荷上限 |
 
 ## 6. 实现步骤
-1. **窗口终点**：每只参与标的取 `price_daily.trade_date <= clock.now()` 的最大日期；终点是所有最大日期的最小值。起点用日历月回退：6/12/36 个月，目标月无该日时取月末。
+1. **窗口终点**：行情不超过已收盘市场日；终点为所有参与标的共同具有有效原 close 的最近交易日。通常等于 min(latest)，该上界存在内洞则退到共同日但保留资产权重。起点用日历月回退：6/12/36 个月，目标月无该日时取月末。
 2. **价格基线**：窗口内所有参与标的的 `adj_close` 均非空时使用 `adj_close`；任一缺失时全部使用 `close`，并加“价格未复权”警告。
 3. **逐只收益**：按市场交易日历对每只标的计算相邻交易日的简单收益 `P_t/P_{t-1}-1`；任一端点缺失或非有限值，该日收益无效。禁止先删除缺价日再计算，避免把多日收益压成日收益。
 4. **有效交集与门槛**：取所有标的都拥有有效一日收益的日期交集，升序排列，`T = len(intersection)`；`T < 60` 抛 `DATA_INSUFFICIENT(data.observations=T, required=60)`。

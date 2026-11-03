@@ -119,3 +119,20 @@ U-07 的校验上限与 C-04/机器契约保持一致：budget 10000..50000000�
 在配置横幅下保留列表；空清单才使用配置空状态。清空 key 后同样保留历史结果与本地页面。
 
 P-03 可先对权威 006/007/008 DDL与稳定机器契约独立开发，不依赖 ScanService 实现；测试仅临时库、未交付 DDL 按权威字节搭建明确fixture，最终与 S-05/P-02 联测不能省略。E-01 测试移入 core/tests/unit/demo/，避免默认 testpaths 只扫 tests 而遗漏生产包内的单测。
+
+## 10. 主审的原生错误、缓存与风险事务修正
+
+S-04 mapper 返回 SentinelError 公共基类，非上下文的 400/413/422 用 INTERNAL/INVALID_REQUEST，
+auth/rate/timeout 保持独立且无原文回显；secret_provider 的基础 SentinelError 保留分类，
+不能把系统钥匙串不可用误报为缺 key，读到的 key 必须注册脱敏。原生固定 pin 不支持 NOUL
+criteria 透传，S-04 只能使用 instructions；其差异必须明确列入真实语义等价未验证项，
+不得通过改问题文本伪造同等。是否改原生桥另立显式适配与产物验证，不夹带改依赖。
+
+S-05 缓存行 relation 与 headline 必须匹配同一 Probabilities 的 classify/headline，
+不是仅验证枚举/范围；created_at 读出补 UTC。模型用量归调用开始的 UTC 日期，跨午夜
+返回仍记开始日；下一次证据请求属于新的日期。已完成调用的缓存去重不冒称零远端计费。
+
+RiskService 在单一 read snapshot 中获取输入，退出读上下文后进行 NumPy/JSON，最后
+短 write 只插入审计；审计输入 SHA 和矩阵保证其可复现，不为计算过程长期占住写锁。
+行情终点为共同可用原 close 的最近日，min(latest) 的内洞可回退到共同日，不能删除权重。
+收缩/奇异阈值拒绝 bool 和非数值。数值样例与零方差资产保留规则不变。

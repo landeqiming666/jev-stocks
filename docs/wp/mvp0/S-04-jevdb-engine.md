@@ -90,7 +90,7 @@ class JevdbEngine:
 
 def build_score_sql(question_set: dict[str, QuestionSpec], table_suffix: str) -> str: ...
 def build_evidence_sql(question_set: dict[str, QuestionSpec], table_suffix: str) -> str: ...
-def map_jevdb_error(message: str) -> EngineError: ...
+def map_jevdb_error(message: str) -> SentinelError: ...
 ```
 `load()` 幂等；未调用 `load()` 时 `score_pairs` 自动调用一次。`close()` 幂等。同一实例的公开方法用 `threading.RLock` 串行，避免临时表名和连接状态互相污染。`score_pairs` 返回数必须严格等于 `len(pairs)`，不得返回未请求的组合；`score_event` 只是全量笛卡尔积包装。`extension_path` 必须绝对、存在、后缀 `.duckdb_extension`，否则 `ENGINE_UNAVAILABLE`。
 
@@ -126,7 +126,7 @@ def map_jevdb_error(message: str) -> EngineError: ...
 8. 证据 SQL 建临时表 `ev(sid,sentence,thesis,kill_condition)`；每行调用 `jev_probability`，问题来自 `build_evidence_questions(..., flavor="jevdb")`；返回 `s1..sN` 对应概率。句子原文不进入模型输出，偏移由 S-05 计算。
 9. `finally` 中 `DROP TABLE IF EXISTS` 清理所有本次创建的 th/ps/wanted 或 ev 临时表；失败路径也清理。`close()` 先 `DROP SECRET jev`，再关闭连接。
 10. 取消：另一个控制线程调用 `connection.interrupt()`；查询捕获 interrupt 错误后转 `CancelledError`。已被 selector 加载失败时 `load()` 抛 `ENGINE_UNAVAILABLE`。
-11. 错误映射：文本含 `401` → `UNAUTHENTICATED/INVALID_KEY`；`403` → `UNAUTHENTICATED/FORBIDDEN`；`429` → `RATE_LIMITED`（解析不到秒数用 30）；`timeout/timed out` → `TIMEOUT`；其他 DuckDB 查询错误 → `MODEL_ERROR`。仅加载/ABI/路径错误用 `ENGINE_UNAVAILABLE`。
+11. 错误映射：文本含 `401` → `UNAUTHENTICATED/INVALID_KEY`；`403` → `UNAUTHENTICATED/FORBIDDEN`；`429` → `RATE_LIMITED`（解析不到秒数用 30）；`timeout/timed out` → `TIMEOUT`；非上下文 400/413/422 → `INTERNAL/INVALID_REQUEST`；其他 DuckDB 查询错误 → `MODEL_ERROR`。仅加载/ABI/路径错误用 `ENGINE_UNAVAILABLE`。
 
 ## 7. 错误与边界情况
 
