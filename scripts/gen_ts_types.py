@@ -81,7 +81,10 @@ def js(value, indent=None):
 
 
 def numeric(value):
-    return type(value) in (int, float) and math.isfinite(value)
+    try:
+        return type(value) in (int, float) and math.isfinite(value)
+    except OverflowError:
+        return False
 
 
 def matches(value, kind):

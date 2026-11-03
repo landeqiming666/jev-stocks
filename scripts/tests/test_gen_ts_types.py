@@ -105,6 +105,18 @@ class GeneratorTests(unittest.TestCase):
         self.assertIn("demo.clear", result.stderr)
         self.assertEqual(self.outputs(), before)
 
+    def test_unrepresentable_numeric_bound_fails_cleanly_without_overwriting(self):
+        self.assertEqual(self.run_gen().returncode, 0)
+        before = self.outputs()
+        path = self.contracts / "types.schema.json"
+        types = json.loads(path.read_text())
+        types["$defs"]["HugeBound"] = {"type": "integer", "minimum": 10**400}
+        path.write_text(json.dumps(types))
+        result = self.run_gen()
+        self.assertEqual(result.returncode, 2)
+        self.assertNotIn("Traceback", result.stderr)
+        self.assertEqual(self.outputs(), before)
+
     def test_invalid_schema_does_not_create_partial_output(self):
         path = self.contracts / "notifications.json"
         item = json.loads(path.read_text())
