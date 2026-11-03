@@ -1,0 +1,14 @@
+{
+  "synthetic": true,
+  "source": "Hand-authored S-03 unit-test data based on installed typesafe-sdk 0.7.5 wire schema; no remote request or cassette.",
+  "response": {
+    "status": 429,
+    "body": {
+      "message": "Synthetic rate limit response"
+    },
+    "headers": {
+      "x-typesafe-request-id": "synthetic-429",
+      "retry-after-ms": "2500"
+    }
+  }
+}

@@ -1,0 +1,49 @@
+{
+  "synthetic": true,
+  "source": "Hand-authored S-03 unit-test data based on installed typesafe-sdk 0.7.5 wire schema; no remote request or cassette.",
+  "response": {
+    "model": "jev-1.14.0",
+    "answers": {
+      "t1__relevant": {
+        "type": "noul",
+        "noul": 0.2
+      },
+      "t1__against": {
+        "type": "noul",
+        "noul": 0.2
+      },
+      "t1__contradicts": {
+        "type": "noul",
+        "noul": 0.2
+      },
+      "t1__kill_met": {
+        "type": "noul",
+        "noul": 0.2
+      },
+      "t1__supports": {
+        "type": "noul",
+        "noul": 0.2
+      },
+      "t2__relevant": {
+        "type": "noul",
+        "noul": 0.2
+      },
+      "t2__against": {
+        "type": "noul",
+        "noul": 0.2
+      },
+      "t2__contradicts": {
+        "type": "noul",
+        "noul": 0.2
+      },
+      "t2__supports": {
+        "type": "noul",
+        "noul": 0.2
+      }
+    },
+    "usage": {
+      "input_tokens": 11,
+      "output_tokens": 3
+    }
+  }
+}
