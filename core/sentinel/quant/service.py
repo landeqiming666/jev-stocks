@@ -83,8 +83,8 @@ class RiskService:
             raise ValueError("clock must be timezone-aware")
         now = now.astimezone(UTC)
         cutoff = self.calendar.latest_closed_day(now)
-        # 输入查询与审计共享同一事务，避免持仓/行情并发变化使记录与计算脱节。
-        with self.db.write() as tx:
+        # 持仓与行情在同一只读快照内取完，计算期间不持数据库锁。
+        with self.db.read() as tx:
             holdings = _holdings(tx)
             tx.execute(
                 "SELECT p.instrument_id, p.trade_date, p.close, p.adj_close, p.source "
@@ -104,67 +104,67 @@ class RiskService:
                         cast(str, source),
                     )
                 )
-            data = build_risk_input(
-                holdings,
-                prices,
-                cast(WindowLabel, window),
-                MIN_OBSERVATIONS,
-                calendar=self.calendar,
-                as_of=cutoff,
-            )
-            result = compute_risk(data)
-            snapshot = {
-                "symbols": data.symbols,
-                "weights": data.weights.tolist(),
-                "endpoint_closes": data.endpoint_closes.tolist(),
-                "returns": data.returns.tolist(),
-                "return_dates": [day.isoformat() for day in data.return_dates],
-                "quantities": {
-                    h.instrument_id: str(h.quantity)
-                    for h in holdings
-                    if h.instrument_id in data.instrument_ids
-                },
-                "sources": {
-                    instrument_id: sorted(
-                        {
-                            point.source
-                            for point in prices[instrument_id]
-                            if data.from_date <= point.trade_date <= data.as_of
-                            and point.source is not None
-                        }
-                    )
-                    for instrument_id in data.instrument_ids
-                },
-            }
-            snapshot_json = json.dumps(
-                snapshot, allow_nan=False, sort_keys=True, separators=(",", ":")
-            )
-            params = {
-                "shrinkage_alpha": SHRINKAGE_ALPHA,
-                "singularity_ratio": SINGULARITY_RATIO,
-                "periods_per_year": PERIODS_PER_YEAR,
-                "min_observations": MIN_OBSERVATIONS,
-                "price_basis": data.price_basis,
-                "code_version": CODE_VERSION,
-                "clock": system_clock.to_iso(now),
-                "price_cutoff": cutoff.isoformat(),
-                "input_sha256": hashlib.sha256(snapshot_json.encode()).hexdigest(),
-                "input": snapshot,
-            }
-            result_json = json.dumps(result.model_dump(mode="json", by_alias=True), allow_nan=False)
+        data = build_risk_input(
+            holdings,
+            prices,
+            cast(WindowLabel, window),
+            MIN_OBSERVATIONS,
+            calendar=self.calendar,
+            as_of=cutoff,
+        )
+        result = compute_risk(data)
+        snapshot = {
+            "symbols": data.symbols,
+            "weights": data.weights.tolist(),
+            "endpoint_closes": data.endpoint_closes.tolist(),
+            "returns": data.returns.tolist(),
+            "return_dates": [day.isoformat() for day in data.return_dates],
+            "quantities": {
+                h.instrument_id: str(h.quantity)
+                for h in holdings
+                if h.instrument_id in data.instrument_ids
+            },
+            "sources": {
+                instrument_id: sorted(
+                    {
+                        point.source
+                        for point in prices[instrument_id]
+                        if data.from_date <= point.trade_date <= data.as_of
+                        and point.source is not None
+                    }
+                )
+                for instrument_id in data.instrument_ids
+            },
+        }
+        snapshot_json = json.dumps(snapshot, allow_nan=False, sort_keys=True, separators=(",", ":"))
+        params = {
+            "shrinkage_alpha": SHRINKAGE_ALPHA,
+            "singularity_ratio": SINGULARITY_RATIO,
+            "periods_per_year": PERIODS_PER_YEAR,
+            "min_observations": MIN_OBSERVATIONS,
+            "price_basis": data.price_basis,
+            "code_version": CODE_VERSION,
+            "clock": system_clock.to_iso(now),
+            "price_cutoff": cutoff.isoformat(),
+            "input_sha256": hashlib.sha256(snapshot_json.encode()).hexdigest(),
+            "input": snapshot,
+        }
+        audit_row = [
+            new_id(),
+            now,
+            scope,
+            window,
+            currency,
+            data.window_observations,
+            json.dumps(data.instrument_ids, allow_nan=False),
+            json.dumps(params, allow_nan=False),
+            json.dumps(result.model_dump(mode="json", by_alias=True), allow_nan=False),
+        ]
+        # 仅审计插入持写锁；提交失败时不得返回计算成功。
+        with self.db.write() as tx:
             tx.execute(
                 "INSERT INTO risk_run VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
-                [
-                    new_id(),
-                    now,
-                    scope,
-                    window,
-                    currency,
-                    data.window_observations,
-                    json.dumps(data.instrument_ids, allow_nan=False),
-                    json.dumps(params, allow_nan=False),
-                    result_json,
-                ],
+                audit_row,
             )
         return result
 

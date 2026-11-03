@@ -1,7 +1,10 @@
 import hashlib
 import json
+from contextlib import contextmanager
 from datetime import UTC, datetime
 from decimal import Decimal
+from queue import Queue
+from threading import Event, Thread
 
 import jsonschema
 import numpy as np
@@ -245,3 +248,137 @@ def test_011_authoritative_ddl_and_recorded_checksum(db):
     with db.read() as reader:
         reader.execute("SELECT name, checksum FROM schema_version WHERE version = 11")
         assert reader.fetchone() == ("risk", hashlib.sha256(ddl.encode()).hexdigest())
+
+
+def test_cpu_and_json_have_no_database_scope_and_write_only_inserts_audit(
+    db, calendar, monkeypatch
+):
+    import sentinel.quant.service as risk_service
+
+    seed(db, calendar)
+    active, contexts = [], []
+    reads, writes = [], []
+
+    def observe_context(original, label, queries):
+        @contextmanager
+        def observed():
+            with original() as executor:
+                active.append(label)
+                contexts.append(label)
+                execute = executor.execute
+
+                def observed_execute(sql, params=None):
+                    queries.append(sql)
+                    return execute(sql, params)
+
+                monkeypatch.setattr(executor, "execute", observed_execute)
+                try:
+                    yield executor
+                finally:
+                    active.pop()
+
+        return observed
+
+    monkeypatch.setattr(db, "read", observe_context(db.read, "read", reads))
+    monkeypatch.setattr(db, "write", observe_context(db.write, "write", writes))
+    stages = []
+
+    def outside_database(original, label):
+        def observed(*args, **kwargs):
+            assert active == [], f"{label} ran inside {active}"
+            stages.append(label)
+            return original(*args, **kwargs)
+
+        return observed
+
+    monkeypatch.setattr(
+        risk_service,
+        "build_risk_input",
+        outside_database(risk_service.build_risk_input, "build"),
+    )
+    monkeypatch.setattr(
+        np.linalg,
+        "svd",
+        outside_database(np.linalg.svd, "svd"),
+    )
+    monkeypatch.setattr(
+        risk_service.json,
+        "dumps",
+        outside_database(risk_service.json.dumps, "json"),
+    )
+    service = risk_service.RiskService(db, calendar=calendar, clock=lambda: NOW)
+    service.compute("holdings", "1Y", "USD")
+    assert "build" in stages and "svd" in stages and "json" in stages
+    assert contexts == ["read", "write"]
+    assert len(reads) == 2 and all(sql.startswith("SELECT") for sql in reads)
+    assert len(writes) == 1 and writes[0].startswith("INSERT INTO risk_run")
+
+
+def test_concurrent_update_after_read_preserves_detached_input_and_matching_audit(
+    db, calendar, monkeypatch
+):
+    import sentinel.quant.service as risk_service
+
+    days = seed(db, calendar)
+    service = risk_service.RiskService(db, calendar=calendar, clock=lambda: NOW)
+    before_update = service.compute("holdings", "1Y", "USD")
+    snapshot_ready, resume, updated = Event(), Event(), Event()
+    results, failures = Queue(), Queue()
+    original_build = risk_service.build_risk_input
+
+    def paused_build(*args, **kwargs):
+        snapshot_ready.set()
+        assert resume.wait(5), "snapshot test did not resume"
+        return original_build(*args, **kwargs)
+
+    monkeypatch.setattr(risk_service, "build_risk_input", paused_build)
+
+    def compute():
+        try:
+            results.put(service.compute("holdings", "1Y", "USD"))
+        except BaseException as exc:
+            failures.put(exc)
+
+    def update():
+        try:
+            with db.write() as tx:
+                tx.execute("UPDATE holding SET quantity = 100.0000 WHERE instrument_id = 'us:ZZAR'")
+                tx.execute(
+                    "UPDATE price_daily SET close = 999, adj_close = 999 "
+                    "WHERE instrument_id = 'us:ZZAR' AND trade_date = ?",
+                    [days[-1]],
+                )
+            updated.set()
+        except BaseException as exc:
+            failures.put(exc)
+
+    calculator = Thread(target=compute)
+    writer = Thread(target=update)
+    calculator.start()
+    try:
+        assert snapshot_ready.wait(3), "calculation did not finish reading inputs"
+        writer.start()
+        assert updated.wait(2), "detached CPU calculation blocked the concurrent writer"
+    finally:
+        resume.set()
+        calculator.join(5)
+        if writer.ident is not None:
+            writer.join(5)
+    assert not calculator.is_alive() and not writer.is_alive()
+    assert failures.empty(), list(failures.queue)
+    assert results.get_nowait() == before_update
+    with db.read() as reader:
+        reader.execute("SELECT quantity FROM holding WHERE instrument_id = 'us:ZZAR'")
+        assert reader.fetchone()[0] == Decimal("100.0000")
+        reader.execute("SELECT params_json, result_json FROM risk_run")
+        audits = reader.fetchall()
+    assert len(audits) == 2
+    for params_json, result_json in audits:
+        params = json.loads(params_json)
+        assert params["input"]["quantities"]["us:ZZAR"] == "0.1250"
+        assert params["input"]["endpoint_closes"][0] == 165.0
+        snapshot_json = json.dumps(
+            params["input"], allow_nan=False, sort_keys=True, separators=(",", ":")
+        )
+        assert hashlib.sha256(snapshot_json.encode()).hexdigest() == params["input_sha256"]
+        assert json.loads(result_json) == before_update.model_dump(mode="json", by_alias=True)

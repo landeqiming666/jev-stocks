@@ -137,6 +137,19 @@ def _drawdown(portfolio: FloatArray) -> float:
     return float(np.max(-np.expm1(log_values - log_peaks)))
 
 
+def _finite_parameter(value: object, field: str) -> float:
+    # bool 与自定义 __float__ 均不能成为数值配置，避免隐式转换执行调用方代码。
+    if type(value) not in (int, float):
+        raise UserError("INVALID_ARGUMENT", field=field)
+    try:
+        number = float(cast(int | float, value))
+    except OverflowError as exc:
+        raise UserError("INVALID_ARGUMENT", field=field) from exc
+    if not math.isfinite(number):
+        raise UserError("INVALID_ARGUMENT", field=field)
+    return number
+
+
 def compute_risk(
     data: RiskInput,
     *,
@@ -144,9 +157,11 @@ def compute_risk(
     singularity_ratio: float = SINGULARITY_RATIO,
 ) -> RiskResult:
     _validate(data)
-    if not math.isfinite(shrinkage_alpha) or not 0 <= shrinkage_alpha <= 1:
+    shrinkage_alpha = _finite_parameter(shrinkage_alpha, "shrinkage_alpha")
+    singularity_ratio = _finite_parameter(singularity_ratio, "singularity_ratio")
+    if not 0 <= shrinkage_alpha <= 1:
         raise UserError("INVALID_ARGUMENT", field="shrinkage_alpha")
-    if not math.isfinite(singularity_ratio) or not 0 < singularity_ratio < 1:
+    if not 0 < singularity_ratio < 1:
         raise UserError("INVALID_ARGUMENT", field="singularity_ratio")
     try:
         with np.errstate(over="raise", invalid="raise", divide="raise"):

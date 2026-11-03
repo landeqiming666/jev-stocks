@@ -273,3 +273,24 @@ def test_actual_largest_loading_sign_wins_over_near_tie(monkeypatch):
     result = compute_risk(risk_input())
     maximum = max(result.svd.loadings, key=lambda item: abs(item.value))
     assert maximum.symbol == "ZZCL" and maximum.value > 0
+
+
+class FloatTrap:
+    def __float__(self):
+        raise AssertionError("untrusted __float__ was called")
+
+
+@pytest.mark.parametrize("field", ["shrinkage_alpha", "singularity_ratio"])
+@pytest.mark.parametrize(
+    "value",
+    [True, False, None, "0.1", Decimal("0.1"), FloatTrap(), 10**1000, float("nan"), float("inf")],
+    ids=["true", "false", "none", "text", "decimal", "float-trap", "overflowing-int", "nan", "inf"],
+)
+def test_numeric_configuration_rejects_bool_nonbuiltin_and_nonfinite(field, value):
+    from sentinel.errors import UserError
+    from sentinel.quant import compute_risk
+
+    with pytest.raises(UserError) as raised:
+        compute_risk(risk_input(), **{field: value})
+    assert raised.value.code == "INVALID_ARGUMENT"
+    assert raised.value.field == field
