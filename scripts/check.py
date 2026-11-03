@@ -37,9 +37,9 @@ STEPS: List[Step] = [
     ),
     Step(
         "scripts-test",
-        ["{python}", "-m", "unittest", "discover", "-s", "scripts/tests"],
+        ["uv", "run", "--project", "core", "python", "-m", "pytest", "-q", "scripts/tests"],
         ".",
-        ["scripts/tests"],
+        ["scripts/tests", "core/pyproject.toml"],
     ),
     Step("contrast", ["{python}", "scripts/check_contrast.py"], ".", ["scripts/check_contrast.py"]),
     Step("proto", ["{python}", "scripts/check_proto.py"], ".", ["scripts/check_proto.py"]),

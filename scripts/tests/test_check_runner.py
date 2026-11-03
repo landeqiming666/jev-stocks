@@ -186,6 +186,14 @@ class RunStepsTests(unittest.TestCase):
         argv, _ = rec.calls[0]
         self.assertEqual(argv[0], sys.executable)
 
+    def test_script_checks_use_locked_core_pytest_environment(self) -> None:
+        step = next(step for step in runner.STEPS if step.name == "scripts-test")
+        self.assertEqual(
+            step.command,
+            ["uv", "run", "--project", "core", "python", "-m", "pytest", "-q", "scripts/tests"],
+        )
+        self.assertIn("core/pyproject.toml", step.requires)
+
     def test_list_flag_prints_steps_without_running(self) -> None:
         rec = Recorder()
         lines = []

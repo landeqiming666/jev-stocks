@@ -28,3 +28,7 @@ G0-JEV 第 11 节已经允许保留全 mock 开发；S-02/S-03 在闸门未过�
 ## 4. 评测口径
 
 以 01 第 8 节 M-5 和 09 第 9.1 节为准：MVP-0 要求完整报告，不设 F1 通过线；F1 0.80 与中文差异门槛属于 v1。E-02 可以保留显式 `--gate` 供后续使用，I-02 的 MVP-0 最终验收不得默认调用该质量门槛或因 F1 低于 0.80 判失败。
+
+## 5. 脚本测试使用已有锁定运行时
+
+G0 探针使用已锁定的 `httpx` 与核心公共模块，且规定测试含 pytest 函数；宿主 Python 的 unittest discover 既可能缺少依赖，也不会收集 pytest 函数。主 agent 在 `scripts/check.py` 将 scripts-test 改为 `uv run --project core python -m pytest -q scripts/tests`，继续收集所有既有 unittest 与新增 pytest，不跳过任何探针测试，不增加依赖。先失败证据保存在 `/tmp/jev-next10-runner-red.log`；对应回归由主 agent 追加于原 `test_check_runner.py`。
