@@ -88,3 +88,9 @@ G0-JEVDB 主审独立实测静态扩展 LOAD、本地 overlap、NULL 短路、32
 已批准 S-02 规模 L，约 1300 行实现、typed fake 与测试，SQL/TOML 另列；保留 85 项首轮回归。主 agent 在既有 `messages/app.py` 注册精确 `engine.changed` 文案，独立测试真实公共目录，不让单测临时注入掩盖生产缺键。
 
 semantic 的模型适配层可以静态调用 security.redact 注册和清理密钥，禁止 raw SDK 响应、异常或 request ID 回显秘密；domain 层仍不依赖 security 或任何 I/O。主 agent 对这两个原先失败的边界追加测试后修正分层与文案，不动态导入绕过检查。真实模型与价格仍保留 G0 未验证标识。
+
+## 14. U-00 的原型一致性与规模
+
+已批准 U-00 规模 L，约 1500 行实现加测试，契约样例与两张截图另列；保留 42 项首轮定向和 3 项浏览器检查。正文与原型字体回退次序不一致时采用已建成的原型 `IBM Plex Sans, system-ui, CJK`，03 同步该顺序，不下载额外字体或改原型。
+
+应用外壳保留原型 top/nav/body/status 四个 grid-area，PageFrame 在 body 中管理正文/aside，尺寸和 1199/1200 断点不变；U-00 的文字示例同步实际结构。日期格式化消费契约合法 UTC 小数秒（共享时钟实际六位），只截断到 JavaScript 毫秒、不跨秒舍入；尚无 DataStatus 时仅用真实 Bootstrap 已提供的 engine 信息标明 auto 降级。配置提示准确列出实际缺少项，不能把只缺邮箱说成密钥也没配置。

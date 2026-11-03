@@ -5,7 +5,8 @@ phase: mvp0
 platform: shared
 lane: ui
 deps: [C-05, C-06, WP-00]
-size: M
+size: L
+size_approval: cr/N10-01-execution-clarifications.md
 owns: [apps/desktop/src/main.tsx, apps/desktop/src/Hello.tsx, apps/desktop/src/Hello.test.tsx, apps/desktop/src/shell/, apps/desktop/src/router/, apps/desktop/src/styles/tokens.css, apps/desktop/src/styles/tokens.test.ts, apps/desktop/src/styles/base.css, apps/desktop/src/styles/layout.css, apps/desktop/src/app/, apps/desktop/src/i18n/]
 appends: []
 stubs: []
@@ -132,7 +133,7 @@ function useAppStore(): AppState;
 1. 删除 `Hello.tsx`、`Hello.test.tsx`；`main.tsx` 用 `createRoot` 挂载 `<AppShell><RouterView/></AppShell>`，并把 `document.documentElement.dataset.platform` 设为 `bootstrap.platform`（启动前按平台预置 `macos` 或 `windows`）。
 2. 把 §2.1–§2.4 的颜色、字体、字号、间距、圆角、阴影、层级、动效逐项抄入 `tokens.css` 的第一个 `:root`。不得改值：`--accent:#C4472D`、`--accent-text:#A93A22`、`--radius-card:10px`、`--radius-input:6px`、`--dur-in:180ms`；末尾写 `[data-market="us"]{--up:#1E7A5A;--down:#C0392B}` 与 `[data-market="cn"],[data-market="hk"]{--up:#C0392B;--down:#1E7A5A}`。
 3. `base.css` 设置 `box-sizing:border-box`、`html,body,#root{height:100%}`、`body{background:var(--paper);color:var(--ink);font:var(--text-body) var(--font-sans)}`；焦点统一 `outline:2px solid var(--focus-ring);outline-offset:1px`；在 `prefers-reduced-motion:reduce` 下禁用动画与过渡。
-4. `layout.css` 用 grid：`.l-app{display:grid;grid-template-rows:56px minmax(0,1fr) 28px;height:100vh}`；`.l-body{display:grid;grid-template-columns:68px minmax(0,1fr)}`；`.l-content{display:grid;grid-template-columns:minmax(0,1fr)}`，`asideOpen` 且宽度 ≥1200 时加 `400px` 第二列。
+4. `layout.css` 沿用原型 grid-area：`.l-app` 为 68px 导航列与可伸缩内容列、56px/可伸缩/28px 三行，区域为 `top top / nav body / status status`；`.l-body` 承载横幅和 PageFrame，`.l-content` 为 `minmax(0,1fr)`，`asideOpen` 且宽度 ≥1200 时加 `400px` 第二列。两种结构文字冲突由 N10-01 裁定为保留原型区域和类名。
 5. `AppShell` 把 `dataStatus.market` 写入 `document.documentElement.dataset.market`；`TopBar` 左留 `padding-left:var(--titlebar-inset-left)`，中段显示市场状态，右段显示 `EngineBadge` 与离线标签；市场状态由 `DataStatus` 计算：`open`→“开盘中”，`closed`→“已收盘 · 下次开盘 …”，`holiday`→“休市”。
 6. `NavRail` 渲染 `今天/持仓/交易/风险/扫描`，底部 `设置`；当前项加 `aria-current="page"`、`is-active`、左缘 2px `--accent`；宽度 <1080 时只显示图标，并保留 `title` 与 `aria-label`。
 7. `StatusBar` 左侧依次显示 `数据截至 {日期}`、`最近扫描 {时间}`、`今日 {used} / {limit} tokens`；右侧在扫描时显示 `扫描中 {done} / {total}`，否则显示固定声明“仅记录与提醒，不构成投资建议。”
