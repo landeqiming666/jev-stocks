@@ -5,7 +5,8 @@ phase: mvp0
 platform: shared
 lane: semantic
 deps: [S-02, G0-JEV]
-size: M
+size: L
+size_approval: cr/N10-01-execution-clarifications.md
 owns: [core/sentinel/semantic/engines/jev_direct.py, core/tests/unit/semantic/test_jev_direct.py, core/tests/fixtures/jev_direct/]
 appends: []
 stubs: []
@@ -78,9 +79,9 @@ class SystemOneResponse:
 
 class JevDirectEngine:
     name: Literal["jev_direct"] = "jev_direct"
-    def __init__(self, *, api_key: str, model_id: str,
-                 client_factory: Callable[[str], SystemOneClient],
-                 max_workers: int = 4) -> None: ...
+    def __init__(self, *, api_key: str | None, model_id: str,
+                 client_factory: Callable[[str], SystemOneClient] | None = None,
+                 max_workers: int = 4, endpoint: str = DEFAULT_ENDPOINT) -> None: ...
     def health(self) -> EngineHealth: ...
     def score_pairs(self, company: str, pairs: Sequence[PairInput],
                     cancel: CancelToken) -> list[PairScore]: ...
@@ -122,20 +123,20 @@ def allocate_tokens(total: int, pair_count: int) -> list[int]: ...
 1. `_SdkClient` 适配器在第一次 `call` 前懒加载 `typesafe_sdk`，按 G0 报告的签名构造 `TypeSafeClient`；`RetryPolicy` 精确使用 §5.3。不得在适配器外再捕获 5xx 重试。
 2. `score_pairs` 先校验：pairs 非空且无重复 `(thesis_id, version, passage_id)`，涉及逻辑不超过 5 条、每个段落非空且 `≤1200` 字符、输入内容哈希非空；调用 `cancel.raise_if_cancelled()`。
 3. 按段落对请求的 pair 分组，只为这些 pair 构造 `state={"company":...,"document":...,"theses":{ref:...}}` 和问题；`PACK_THESES=False` 时每对构造单逻辑状态。请求顺序固定为段落升序、逻辑 ref 字典序。`score_event` 只负责生成全量 pair 后调用同一实现。
-4. 用 `ThreadPoolExecutor(max_workers=len(requests) if <4 else 4)` 提交；每个线程在网络调用前再次检查 cancel。若取消，设置 `threading.Event`，不再发新请求，等待已发请求返回或超时。
+4. 使用最多 max_workers 个有界 daemon 调用槽，不用退出时等待卡死 worker 的 ThreadPoolExecutor。每次调度、SDK 发送、退避与流块检查同一 cancel/stop/deadline。消费者使用 Condition 等待，最多 20 ms 复查结构 token；取消后不再派发，及时抛 CancelledError，不能无限等待已发调用。
 5. 每个响应校验问题名集合等于请求集合；`answers[name]` 必须是有限 float 且 `[0,1]`；任一缺失、多余或越界都抛 `MODEL_ERROR("INCOMPLETE_RESPONSE")`。不得把缺答案填 0。
 6. 同一批所有响应的 `model` 必须相同，且等于配置 `model_id`；否则抛 `MODEL_ERROR("MODEL_MISMATCH")`，避免缓存键漂移。
-7. 全部成功后才组装 `PairScore`；任一请求失败时等待其余请求结束、丢弃所有结果并抛首个错误。`input_tokens` 用 `allocate_tokens` 均分，余数给请求内第一个 pair。
+7. 全部成功后才组装 PairScore；任一请求失败或取消立即停止本批后续派发、丢弃结果并抛首个错误。卡死 in-flight 无法强杀线程，继续占用同一引擎槽位，不能新开线程绕过并发上限；进程退出不等 daemon。input_tokens 用 allocate_tokens 均分，余数按请求内固定顺序依次加 1，总和保持原值。
 8. 证据：校验句子数 `1..40`；构造 06 §5.2 的一个请求；问题名为 `s1..sN`；只读取概率，返回与输入等长的 `EvidenceScore`。句子文字从不来自模型响应。
 9. 异常映射先读 `status`、`request_id` 与 `retry_after_ms`：401 → `UNAUTHENTICATED/INVALID_KEY`；403 → `UNAUTHENTICATED/FORBIDDEN`；404 → `UNAUTHENTICATED/MODEL_NOT_FOUND`；429 → `RATE_LIMITED`；超时 → `TIMEOUT`；5xx/529/连接/响应校验 → `MODEL_ERROR`；400/422 → `INTERNAL`。
-10. 400/422 的 detail 若同时含 `context` 与 `maximum`/`token`，且本请求有至少 2 条逻辑，按创建顺序减半逻辑后重试一次；单逻辑仍失败则 `INTERNAL`。其他 400 不拆分。
+10. 只有 05 指定的上下文超限 400，且本请求有至少 2 条逻辑，才按请求固定顺序拆成两半各执行一次；不是瞬态错误外层重试。两半与原调用共用 60 秒截止，全部 pair 成功才返回；422 和普通 400 不拆分。SDK 是唯一瞬态重试层。
 11. request id 写入 `EngineError.detail` 的结构化文本，`data.requestId` 只用于日志关联；不把完整响应 body 写日志，只写最长 200 字脱敏摘要。
 
 ## 7. 错误与边界情况
 
 | 情形 | 行为 | 错误码 | 用户可见文案（messages 键） |
 |---|---|---|---|
-| 缺 key | 工厂抛错，不发请求 | `CONFIG_REQUIRED` | `error.CONFIG_REQUIRED` |
+| 缺 key | 可构造且 health=unconfigured；score 抛错，不发请求 | `CONFIG_REQUIRED` | `error.CONFIG_REQUIRED` |
 | 401 | 不重试；记 request id | `UNAUTHENTICATED` | `error.UNAUTHENTICATED` |
 | 403/404 | 不重试；reason 区分权限与模型 | `UNAUTHENTICATED` | 同上 |
 | 429 | 用 `ceil(retry_after_ms/1000)` | `RATE_LIMITED` | `error.RATE_LIMITED` |

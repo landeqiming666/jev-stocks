@@ -112,3 +112,11 @@ RefreshFailure 的原三个字段保持兼容，可增加可选 retry_after_sec�
 ## 17. U-01 与 PageFrame 抽屉不重复占位
 
 原型的抽屉根同时承担 l-drawer 布局和 c-drawer 内容，React 的 U-00 已由 PageFrame 承担 l-drawer 第三列。批准 U-01 在覆盖模式 portal 到 body（固定 topbar/statusbar 之间、右侧 400px），推开模式 inline 到 PageFrame aside 插槽，只渲染 c-drawer 内容/dialog；不再套 l-drawer，也不让推开内容 portal 到 body 留空列。组件浏览器验收要真实组合 PageFrame 与 Drawer，两种模式都证明内容可见、几何正确与焦点语义符合要求；不用修改 U-00 或原型。
+
+## 18. S-03 SDK 调度、缺配置与规模
+
+已批准 S-03 规模 L，约 2000 行实现与测试（首轮 1886 行），保留 140 项回归。允许真实 SDK adapter/factory 及显式 endpoint，缺 key 可构造为 unconfigured，评分才 CONFIG_REQUIRED。SDK 自有 retry 是唯一瞬态重试层；锁定 0.7.5 的 sleep seam 在当前实例绑定到可取消 Event，升级 SDK 必须复验。
+
+采用有界 daemon 调用槽；每个获得槽位的逻辑请求有 60 秒总预算，覆盖首次发送、SDK 重试、退避、读取、解析和一次上下文拆分。consumer 可按取消/截止返回，OS 阻塞线程无法强杀、远端请求不保证撤回；旧线程继续占用槽位，不能靠无限新建线程规避。并发应用日志不能被全局 disable，脱敏限定到当前调用线程的 SDK 日志。
+
+SDK 工厂缺配置可用性与 S-02 默认选择文字不一致时，选择器可返回 unconfigured 引擎，组合根/扫描按配置阻断；不把构造失败作为唯一缺 key 行为。任何 mock 响应、NULL 短路或可用 adapter 都不能替代真实 G0 模型闸门。

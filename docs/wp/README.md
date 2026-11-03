@@ -252,7 +252,7 @@ graph LR
 | [D-02](mvp0/D-02-instruments.md) | 美股标的表与搜索 | 数据 | 共享 | M | 3 | C-03, D-01 | 已写 | 待派发 |
 | [D-03](mvp0/D-03-sec-filings.md) | SEC 披露抓取与正文提取 | 数据 | 共享 | L | 3 | C-03, D-01, G1-US | 已写 | 待派发 |
 | [D-04](mvp0/D-04-prices-calendar.md) | 日线行情与交易日历 | 数据 | 共享 | L | 3 | C-03, D-01, G1-US | 已写 | 待派发 |
-| [S-03](mvp0/S-03-jev-direct.md) | Jev 直连引擎 | 语义 | 共享 | M | 3 | S-02, G0-JEV | 已写 | 待派发 |
+| [S-03](mvp0/S-03-jev-direct.md) | Jev 直连引擎 | 语义 | 共享 | L | 3 | S-02, G0-JEV | 已写 | 待派发 |
 | [S-04](mvp0/S-04-jevdb-engine.md) | JEVDB 引擎 | 语义 | 共享 | M | 3 | S-02, G0-JEVDB | 已写 | 待派发 |
 | [U-00](mvp0/U-00-shell.md) | 前端应用外壳、令牌、路由、状态骨架 | 界面 | 共享 | L | 3 | C-05, C-06, WP-00 | 已写 | 待派发 |
 | [W-03](mvp0/W-03-windows-jevdb.md) | Windows 上尝试构建 JEVDB（MSVC） | Windows | Windows | M | 3 | W-01, G0-JEVDB | 已写 | 待派发 |
