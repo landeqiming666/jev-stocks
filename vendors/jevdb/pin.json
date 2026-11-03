@@ -1,0 +1,11 @@
+{
+  "commit": "47a9070cba09012bedcc60f5e47e09ccb5c2c1fe",
+  "source_url": "https://codeload.github.com/PDAIS/JEVDB/tar.gz/47a9070cba09012bedcc60f5e47e09ccb5c2c1fe",
+  "source_sha256": "cd52048a08b54a34409e507373b7b1d48c6885f28ef2d76db4e080a584c1d775",
+  "duckdb_version": "1.4.3",
+  "duckdb_source_id": "d1dc88f950",
+  "duckdb_url": "https://codeload.github.com/duckdb/duckdb/tar.gz/refs/tags/v1.4.3",
+  "duckdb_sha256": "b6a2afd09d9cf07e50d5cd07077df7f7697b61cca2eb00754f5adf89a1ae6c64",
+  "extension_version": "0.1.0",
+  "license": "MIT"
+}
