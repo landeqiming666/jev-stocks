@@ -113,3 +113,9 @@ U-07 的校验上限与 C-04/机器契约保持一致：budget 10000..50000000�
 真实业务页；U-00 的 placeholder/router 与 client 生命周期测试明确使用隔离 fixture，不能
 因为业务页已经交付而失败，也不能把旧任意 app.bootstrap 响应当作所有业务方法的响应。
 另加实际业务页替代 placeholder 的路由焦点回归，不修改页面的生产发现机制。
+
+未配置 key/email 只阻止新扫描，不能隐藏已有缓存的 pending/uncertain/processed 或证据。
+尤其 demo.load 后 bootstrap 默认仍未配置，今日页必须可读预置 3 条 pending/1 条 uncertain，
+在配置横幅下保留列表；空清单才使用配置空状态。清空 key 后同样保留历史结果与本地页面。
+
+P-03 可先对权威 006/007/008 DDL与稳定机器契约独立开发，不依赖 ScanService 实现；测试仅临时库、未交付 DDL 按权威字节搭建明确fixture，最终与 S-05/P-02 联测不能省略。E-01 测试移入 core/tests/unit/demo/，避免默认 testpaths 只扫 tests 而遗漏生产包内的单测。
