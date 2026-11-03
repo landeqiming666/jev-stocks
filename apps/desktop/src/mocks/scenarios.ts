@@ -1,0 +1,61 @@
+import type { MethodName } from "../rpc/generated/methods";
+import type { MOCK_EXAMPLES } from "../rpc/generated/mock-data";
+
+export type ExampleSelection = { [M in MethodName]?: typeof MOCK_EXAMPLES[M][number]["name"] };
+export type MockScenario = { id: string; examples: ExampleSelection };
+
+const selections = {
+  "today.pending": { "app.bootstrap": "ready", "inbox.list": "pending" },
+  "today.empty": { "inbox.list": "empty" },
+  "today.loading": { "inbox.list": "pending" },
+  "today.scanning": { "inbox.list": "pending", "scan.status": "running" },
+  "today.scan_failed": { "inbox.list": "scan_failed", "scan.history": "default" },
+  "today.offline": { "app.bootstrap": "offline", "inbox.list": "offline" },
+  "today.no_holdings": { "inbox.list": "no_holdings" },
+  "today.unconfigured": { "app.bootstrap": "unconfigured", "inbox.list": "never_scanned" },
+  "today.engine_fallback": { "app.bootstrap": "engine_fallback", "inbox.list": "pending" },
+  "today.drawer.overturn": { "decision.get": "overturn" },
+  "today.drawer.weaken": { "decision.get": "weaken" },
+  "today.drawer.uncertain": { "decision.get": "uncertain" },
+  "today.drawer.title_only": { "decision.get": "title_only" },
+  "today.drawer.processed": { "decision.get": "processed" },
+  "today.drawer.not_found": { "decision.get": "not_found" },
+  "holdings.default": { "holdings.list": "default" },
+  "holdings.expanded": { "thesis.list": "zzar" },
+  "holdings.editor-new": { "thesis.list": "zzar" },
+  "holdings.editor-error": { "thesis.list": "zzar", "thesis.create": "empty" },
+  "holdings.editor-too-long": { "thesis.list": "zzar", "thesis.create": "too_long" },
+  "holdings.conflict": { "thesis.list": "zzar", "thesis.update": "conflict" },
+  "holdings.no-theses": { "thesis.list": "empty" },
+  "holdings.search": { "instruments.search": "ze" },
+  "holdings.search-empty": { "instruments.search": "empty" },
+  "holdings.empty": { "holdings.list": "empty" },
+  "trading.default": { "paper.portfolio": "default", "paper.orders": "default" },
+  "trading.new_account": { "paper.portfolio": "new_account" },
+  "trading.no_account": { "paper.accounts": "empty" },
+  "trading.error-cash": { "paper.order.place": "insufficient_cash" },
+  "trading.error-position": { "paper.order.place": "insufficient_position" },
+  "trading.no-price": { "paper.advance": "no_price" },
+  "trading.advanced": { "paper.advance": "filled" },
+  "risk.ok": { "risk.compute": "ok" },
+  "risk.ok-table": { "risk.compute": "ok" },
+  "risk.insufficient": { "risk.compute": "insufficient" },
+  "risk.loading": {},
+  "risk.single": { "risk.compute": "single" },
+  "risk.three-year": { "risk.compute": "three_year" },
+  "scan.default": { "scan.history": "default" },
+  "scan.running": { "scan.history": "running" },
+  "scan.detail": { "scan.history": "default", "scan.detail": "with_failures" },
+  "scan.empty": { "scan.history": "empty" },
+  "scan.budget": { "scan.history": "budget_exhausted", "scan.start": "budget" },
+  "settings.configured": { "settings.get": "configured", "secrets.status": "configured" },
+  "settings.unconfigured": { "settings.get": "unconfigured", "secrets.status": "none", "app.bootstrap": "unconfigured" },
+  "settings.test-ok": { "settings.get": "configured", "settings.testConnection": "ok" },
+  "settings.test-failed": { "settings.get": "configured", "settings.testConnection": "failed" },
+  "settings.invalid-email": { "settings.get": "configured", "settings.update": "invalid_email" },
+  "v1.default": {},
+} satisfies Record<string, ExampleSelection>;
+
+export const SCENARIOS: Readonly<Record<string, MockScenario>> = Object.fromEntries(
+  Object.entries(selections).map(([id, examples]) => [id, { id, examples }]),
+);
