@@ -1,0 +1,8 @@
+.u-feedback-header { display: flex; justify-content: space-between; align-items: center; gap: var(--space-4); }
+.u-feedback-header h1 { margin-top: var(--space-2); }
+.u-feedback-controls { display: flex; flex-wrap: wrap; gap: var(--space-2); margin: var(--space-5) 0; position: relative; }
+.u-feedback-grid { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-5); align-items: start; }
+.u-feedback-grid section > h2 { margin-bottom: var(--space-4); }
+.u-feedback-grid .c-feedback-error { padding: 0; }
+.u-feedback-grid .c-card > p { margin-top: var(--space-4); }
+@media (max-width: 800px) { .u-feedback-grid { grid-template-columns: 1fr; } }
