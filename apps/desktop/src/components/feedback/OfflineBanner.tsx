@@ -8,7 +8,8 @@ import { Banner } from "../ui";
 export function OfflineBanner() {
   const online = useOnline();
   const bootstrapOffline = useAppStore(state => state.bootstrap.value?.offline ?? false);
-  const offline = !online || bootstrapOffline;
+  const dataOffline = useAppStore(state => state.dataStatus?.offline ?? false);
+  const offline = !online || bootstrapOffline || dataOffline;
   const previous = useRef(offline);
   useEffect(() => {
     if (previous.current && !offline) pushToast({ tone: "success", text: feedback.online });

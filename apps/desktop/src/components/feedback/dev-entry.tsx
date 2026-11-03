@@ -76,7 +76,7 @@ function Gallery() {
       <h2 id="feedback-modal-title">{g.modal}</h2><p>{g.subtitle}</p><div className="c-modal__actions">
         <Button onClick={() => setModal(false)}>{g.cancel}</Button><Button onClick={() => setModal(false)}>{g.confirm}</Button></div>
     </Modal>;
-  if (window.location.pathname.endsWith("dev-shell.html")) return <><AppShell>{content}</AppShell>{modalContent}</>;
+  if (window.location.pathname.endsWith("dev-shell.html")) return <><AppShell globalFeedback>{content}</AppShell>{modalContent}</>;
   return <div className="l-app" data-ready={ready}><TopBar /><NavRail route="today" />
     <div className="l-body">{content}</div><StatusBar />{modalContent}</div>;
 }

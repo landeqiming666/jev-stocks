@@ -5,8 +5,18 @@ import { TOAST_EVENT } from "../../app/events";
 import { useAppStore } from "../../app/store";
 import { dismissToast, getToasts } from "../../lib/toast-store";
 import { FeedbackHost } from "./FeedbackHost";
+import { AppShell } from "../../shell/AppShell";
+import bootstrap from "../../app/__fixtures__/bootstrap.json";
+import type { Bootstrap } from "../../rpc";
 
 afterEach(() => { cleanup(); useAppStore.getState().reset(); getToasts().forEach(item => dismissToast(item.id)); });
+test("production_shell_composition_has_one_offline_banner_and_one_portal", () => {
+  useAppStore.setState({ bootstrap: { status: "ready", value: { ...bootstrap, offline: true } as Bootstrap, error: null } });
+  render(<AppShell globalFeedback><FeedbackHost><main><h1>Local page</h1></main></FeedbackHost></AppShell>);
+  expect(screen.getAllByText("当前离线，显示的是上次的结果。")).toHaveLength(1);
+  expect(document.querySelectorAll("#feedback-root")).toHaveLength(1);
+  expect(screen.getByText("Local page")).toBeTruthy();
+});
 test("online_recovery_shows_one_toast", () => {
   render(<FeedbackHost><p>page</p></FeedbackHost>);
   fireEvent(window, new Event("offline"));

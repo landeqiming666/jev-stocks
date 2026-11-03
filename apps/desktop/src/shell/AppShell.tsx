@@ -8,7 +8,7 @@ import { StartupFailure } from "./StartupFailure";
 import { StatusBar } from "./StatusBar";
 import { TopBar } from "./TopBar";
 
-export function AppShell({ children, onRetry }: { children: ReactNode; onRetry?: () => void }) {
+export function AppShell({ children, onRetry, globalFeedback = false }: { children: ReactNode; onRetry?: () => void; globalFeedback?: boolean }) {
   const { route } = useRoute();
   const boot = useAppStore(state => state.bootstrap);
   const market = useAppStore(state => state.dataStatus?.market);
@@ -27,7 +27,7 @@ export function AppShell({ children, onRetry }: { children: ReactNode; onRetry?:
         {boot.status === "ready" && unconfigured && route !== "settings" && <div className="l-notice" role="status">
           <span>{common.configurationRequiredFor(boot.value!.configured)}</span><button className="l-action l-action--secondary" onClick={() => navigate("settings")}>{common.goSettings}</button>
         </div>}
-        {offline && <div className="l-notice" role="status">{common.offlineNotice}</div>}
+        {offline && !globalFeedback && <div className="l-notice" role="status">{common.offlineNotice}</div>}
         {ui.engineNotice && <div className="l-notice" role="status">
           <span>{common.engineChanged}</span><button className="l-action l-action--secondary" onClick={dismiss}>{common.dismiss}</button>
         </div>}

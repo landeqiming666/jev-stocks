@@ -94,7 +94,7 @@ test("clipboard_denial_has_manual_hint_and_diagnostic_has_exact_allowlist", asyn
   await expect(page.getByText(feedback.copyFailed)).toHaveCount(0);
 });
 
-test("real_appshell_host_composition_reuses_root_and_exposes_baseline_offline_duplication", async ({ page }) => {
+test("real_appshell_host_composition_reuses_root_and_shows_one_offline_banner", async ({ page }) => {
   await page.goto("/src/components/feedback/dev-shell.html#/today");
   await expect(page.locator("[data-ready=true]")).toBeVisible();
   await expect(page.locator("#feedback-root")).toHaveCount(1);
@@ -106,9 +106,9 @@ test("real_appshell_host_composition_reuses_root_and_exposes_baseline_offline_du
   await expect(page.getByText(g.failed)).toBeVisible();
   await expect(button(page, g.modal)).toBeFocused();
   await button(page, g.offline).click();
-  await expect(page.locator(".l-banners").getByText(feedback.offline)).toBeVisible();
+  await expect(page.locator(".l-banners").getByText(feedback.offline)).toHaveCount(0);
   await expect(page.locator(".c-feedback-banners").getByText(feedback.offline)).toBeVisible();
-  await expect(page.getByText(feedback.offline, { exact: true })).toHaveCount(2);
+  await expect(page.getByText(feedback.offline, { exact: true })).toHaveCount(1);
   await button(page, g.offline).click();
   await expect(page.getByText(feedback.offline, { exact: true })).toHaveCount(0);
   await expect(page.getByText(feedback.online, { exact: true })).toHaveCount(1);

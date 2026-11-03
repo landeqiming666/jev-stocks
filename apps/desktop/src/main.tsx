@@ -3,6 +3,7 @@ import { createRoot } from "react-dom/client";
 
 import { Application } from "./app/Application";
 import { common } from "./i18n/zh-CN";
+import { feedbackRootOptions } from "./lib/errors";
 import "./styles/tokens.css";
 import "./styles/base.css";
 import "./styles/layout.css";
@@ -15,7 +16,7 @@ if (!container) {
 }
 
 document.documentElement.dataset.platform ??= "macos";
-createRoot(container).render(
+createRoot(container, feedbackRootOptions).render(
   <StrictMode>
     <Application />
   </StrictMode>,

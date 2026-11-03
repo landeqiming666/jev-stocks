@@ -136,3 +136,16 @@ RiskService 在单一 read snapshot 中获取输入，退出读上下文后进�
 短 write 只插入审计；审计输入 SHA 和矩阵保证其可复现，不为计算过程长期占住写锁。
 行情终点为共同可用原 close 的最近日，min(latest) 的内洞可回退到共同日，不能删除权重。
 收缩/奇异阈值拒绝 bool 和非数值。数值样例与零方差资产保留规则不变。
+
+## 11. UI 生产反馈与演示回放推进
+
+主审在 Application 的既有 AppShell 内挂载一次 FeedbackHost，createRoot 采用其安全回调，
+onCoreRetry 复用原 retry/startApp 新客户端流程。AppShell.globalFeedback 模式禁用旧离线
+横幅，保留独立 shell 兼容；反馈同时参考 dataStatus.offline，最终组合只一条离线提示。
+U-00 placeholder 与生命周期 fixture 不随业务页面交付而改变输入语义。
+
+模拟账户没有持仓或历史订单时，如果下一交易日全库具有 US instrument 的行情仍可推进
+现金回放；否则 DATA_INSUFFICIENT。已有 involved 集合仍要求至少一个相关标的目标日行情，
+不得以非 US 或未来 D+2 数据伪造可用。空账户不能永久无法前进（P-05 主审新增回归）。
+所有业务页面可在已有 U-00/U-01 和契约基础上并行，U-02 额外公共 hook 在它主审后复用，
+不复制未交付代码；真正共享通知和事件订阅的组合回归由主 agent 统一补齐。
