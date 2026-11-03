@@ -142,7 +142,7 @@ def main(argv: Sequence[str] | None = None) -> int: ...
 2. **reader**：输入已是 `BinaryIO`，使用 `stdin.readline(MAX_LINE_BYTES + 1)`；超限时丢弃该行余下字节，随后继续读下一完整行，不把残余字节当成新请求。有可校验 `id` 则写 `INVALID_ARGUMENT`，无 `id` 则只记日志。空行跳过。
 3. **ping**：reader 解析 `app.ping` 后直接构造 `{"ok": True, "uptimeMs": int((now - started).total_seconds() * 1000)}`，不经过线程池。
 4. **普通请求**：创建 `CancelToken`，调用 `CancelRegistry.register(id, token, cancellable=spec.cancellable)`，提交固定 4 个 worker 的线程池；提交前将请求状态保存为 `in_flight`。为保证不合作 handler 不阻塞解释器退出，允许使用 daemon worker。ping、cancel、shutdown 属于 reader 直通控制请求。
-5. **分发**：`Dispatcher.lookup` 找不到方法时抛 `UserError("INVALID_ARGUMENT", reason="UNKNOWN_METHOD")`；用 `params_model.model_validate(raw_params)`，`ValidationError` 取第一条错误的点号路径作为 `data.field`。
+5. **分发**：`Dispatcher.lookup` 找不到方法时抛 `UserError("INVALID_ARGUMENT", reason="UNKNOWN_METHOD")`；入参使用 `params_model.model_validate(raw_params, strict=True, extra="forbid", by_alias=True, by_name=False)`，只接受公开字段名，`ValidationError` 取第一条错误的点号路径作为 `data.field`。Python 内部的 snake_case 模型构造与结果验证不受此线上限制影响。
 6. **取消**：reader 收到 `$/cancel` 后解析 `params.id`，调用 `CancelRegistry.cancel`；该方法只在登记项存在且 `cancellable=True` 时置位并返回 `True`，未知或不可取消返回 `False`（不回 `CANCELLED`、不置位）。成功且状态仍未响应时，writer 立即写 `CANCELLED`，状态改为 `responded`；worker 返回时看到 `responded` 就丢弃结果。处理器必须在自己的写事务前调用 `raise_if_cancelled()`；RPC 层无法替处理器回滚已开始的事务。
 7. **错误**：处理器抛 `SentinelError` 时调用 `to_wire(request_id)`；抛 `pydantic.ValidationError` 转为 `INVALID_ARGUMENT`；其他异常包装为 `InternalError("INTERNAL", detail=type(exc).__name__)`，再由 `to_wire(request_id)` 关联错误编号。日志不得写用户正文。
 8. **关闭**：`app.shutdown` 返回 `{"ok": true}` 后设置 `stop_event`；server 停止接受新请求，worker 排空 3 s，writer 冲刷队列，最后关闭线程池。`force=true` 时不等待 worker。

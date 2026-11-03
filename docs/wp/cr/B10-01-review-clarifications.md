@@ -14,6 +14,8 @@
 
 父进程看门狗可使用平台层；基础日志的导入不应被错误归类成业务层。线程池允许固定四个 daemon worker，shutdown 与 ping/cancel 一样由 reader 直通，保证 worker 卡住时仍能关闭。入参验证失败是 `INVALID_ARGUMENT`，handler 返回结果验证失败是 `INTERNAL`。
 
+Pydantic 模型为 Python 内部调用允许 snake_case，但 Dispatcher 验证线上入参必须显式 `by_alias=True, by_name=False`。只有 contracts 定义的 camelCase 字段才能触发业务；非法字段必须在 handler 前拒绝，测试检查实际返回 `INVALID_ARGUMENT` 且数据库不变。结果验证与 Python 服务调用仍允许内部字段名。
+
 ## C-04
 
 密钥先 strip 后校验，拒绝内部空白；测试不能将仅含首尾空白的有效密钥判为非法。此规则以 05 §5.2 与工作包 §6 为准。

@@ -87,7 +87,9 @@ class Dispatcher:
             if not isinstance(raw_params, dict):
                 raise UserError("INVALID_ARGUMENT", field="params")
             try:
-                params = spec.params_model.model_validate(raw_params, strict=True, extra="forbid")
+                params = spec.params_model.model_validate(
+                    raw_params, strict=True, extra="forbid", by_alias=True, by_name=False
+                )
             except ValidationError as exc:
                 field = ".".join(str(part) for part in exc.errors()[0]["loc"])
                 raise UserError("INVALID_ARGUMENT", field=field) from exc

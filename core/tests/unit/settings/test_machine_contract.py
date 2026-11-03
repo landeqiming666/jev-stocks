@@ -2,7 +2,9 @@ import json
 from pathlib import Path
 
 import pytest
-from jsonschema import Draft202012Validator, ValidationError
+from jsonschema import Draft202012Validator
+from jsonschema import ValidationError as SchemaValidationError
+from pydantic import ValidationError as ModelValidationError
 from referencing import Registry, Resource
 from referencing.jsonschema import DRAFT202012
 
@@ -133,10 +135,10 @@ def test_contact_policy_is_shared_by_stored_and_public_settings(
         public = settings.get().model_dump() | {"secContactEmail": value}
         assert Settings.model_validate(public).sec_contact_email == value
     else:
-        with pytest.raises((ValidationError, TypeError, ValueError)):
+        with pytest.raises(ModelValidationError):
             StoredSettings.model_validate({"secContactEmail": value})
         public = settings.get().model_dump() | {"secContactEmail": value}
-        with pytest.raises((ValidationError, TypeError, ValueError)):
+        with pytest.raises(ModelValidationError):
             Settings.model_validate(public)
 
 
@@ -159,7 +161,7 @@ def test_seven_actual_results_and_closed_inputs_match_machine_contract(
     assert "result" in result
     contract.response(result)
     unknown = params | {"unknown": "private-input"}
-    with pytest.raises(ValidationError):
+    with pytest.raises(SchemaValidationError):
         contract.params.validate(unknown)
     rejected = call(dispatcher, method, unknown)
     contract.response(rejected)
@@ -167,15 +169,31 @@ def test_seven_actual_results_and_closed_inputs_match_machine_contract(
 
 
 @pytest.mark.parametrize(
-    "field", ["sec_contact_email", "daily_token_budget", "first_scan_lookback_days"]
+    "field,value,alias",
+    [
+        ("sec_contact_email", "name@example.com", "secContactEmail"),
+        ("daily_token_budget", 10000, "dailyTokenBudget"),
+        ("first_scan_lookback_days", 7, "firstScanLookbackDays"),
+    ],
 )
-def test_contract_schema_rejects_python_field_names(field: str) -> None:
+@pytest.mark.parametrize("include_alias", [False, True])
+def test_wire_params_reject_python_field_names_without_writing(
+    dispatcher: Dispatcher,
+    settings: SettingsService,
+    field: str,
+    value: object,
+    alias: str,
+    include_alias: bool,
+) -> None:
     contract = MachineContract("settings.update")
-    params = {
-        field: "name@example.com" if "email" in field else 7 if "lookback" in field else 10000
-    }
+    params = {field: value}
+    if include_alias:
+        params[alias] = value
     assert not contract.params.is_valid(params)
-    # Internal Pydantic models also accept snake_case; RPC wire names remain camelCase.
-    if field == "first_scan_lookback_days":
-        params[field] = 7
-    assert SettingsPatch.model_validate(params, strict=True, extra="forbid")
+    assert SettingsPatch.model_validate({field: value}, strict=True, extra="forbid")
+    before = settings.get().model_dump(mode="json")
+    response = call(dispatcher, "settings.update", params)
+    contract.response(response)
+    assert response["error"]["code"] == "INVALID_ARGUMENT"
+    assert response["error"]["data"]["field"] == alias
+    assert settings.get().model_dump(mode="json") == before

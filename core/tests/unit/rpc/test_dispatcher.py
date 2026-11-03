@@ -3,7 +3,7 @@ from __future__ import annotations
 from datetime import UTC, datetime
 
 import pytest
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 from sentinel.errors import InternalError, UserError
 from sentinel.rpc import Dispatcher
@@ -116,6 +116,30 @@ def test_result_models_serialize_aliases() -> None:
     assert dispatcher.dispatch(dispatcher.lookup("test.method"), {}, context())["result"] == {
         "requestId": "r-1",
     }
+
+
+@pytest.mark.parametrize("raw", [{"input_value": 7}, {"inputValue": 7, "input_value": 8}])
+def test_wire_params_reject_python_names_before_handler(raw: dict[str, object]) -> None:
+    class Params(BaseModel):
+        model_config = ConfigDict(validate_by_alias=True, validate_by_name=True)
+        input_value: int = Field(default=0, alias="inputValue")
+
+    assert Params(input_value=7).input_value == 7
+    calls: list[int] = []
+
+    def handler(params: BaseModel, ctx: RequestContext) -> dict[str, object]:
+        assert isinstance(params, Params)
+        calls.append(params.input_value)
+        return {"inputValue": params.input_value}
+
+    dispatcher = Dispatcher()
+    dispatcher.register("test.method", handler, Params, Params)
+    accepted = dispatcher.dispatch(dispatcher.lookup("test.method"), {"inputValue": 7}, context())
+    assert accepted["result"] == {"inputValue": 7}
+    assert calls == [7]
+    rejected = dispatcher.dispatch(dispatcher.lookup("test.method"), raw, context())
+    assert rejected["error"] == UserError("INVALID_ARGUMENT", field="input_value").to_wire()
+    assert calls == [7]
 
 
 def test_internal_error_does_not_log_exception_body(caplog: pytest.LogCaptureFixture) -> None:
