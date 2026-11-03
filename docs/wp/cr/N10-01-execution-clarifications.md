@@ -102,3 +102,9 @@ semantic 的模型适配层可以静态调用 security.redact 注册和清理密
 已批准 D-03 与 D-04 规模 L，各约 2000 行实现加测试，保留 193/147 项首轮回归，fixture/DDL另列。D-03 保留披露、文件、段落和判定永久身份，不删除重建已有 event_file；同身份只更新未被段落引用的非键内容，身份变化或已引用正文变化明确 CONFLICT 且整事件回滚。D-03 的部分失败缓存问题必须修复后主审通过，不能把有正文但失败的 EX-99 永久缓存为完整。
 
 批准 D-03 最小补齐策略：索引网络失败/身份冲突或选中文件 failed 时事件 content_status=fetch_failed，成功正文仍保存；该状态阻止消费者误认完整并保留重试机会。再次抓取重新获取索引，只重试缺失/失败文件，复用同身份且 extracted/empty 的成功文件。已存在的旧 full_text 带 failed 行也不能跳过。失败文件恢复后可新增段落，但不能改变已有段落引用的正文或文件身份；失败/取消不推进消费者水位线。无需新增数据库列或修改既有 004 DDL。
+
+## 16. D-04 真实错误结果不能因缺文案参数崩溃
+
+RefreshFailure 的原三个字段保持兼容，可增加可选 retry_after_sec。来源提供有效等待秒数时保留并用 error.RATE_LIMITED 格式化；未知秒数时使用主 agent 注册的 `prices.rate_limited` 固定文案，不猜秒数、不漏异常。wire 仍仅 instrumentId 与 error{code,message}。双来源 429 和未知 Retry-After 必须通过真实公共文案目录及 JSON Schema 测试。
+
+腾讯 envelope 必须含 code=0（不能默认缺失为 0）；港股额外 action 对象与 G1 的实际六个键完全一致，不以任意子集冒充已核实结构。普通无第七字段的六列价格行不受影响。
