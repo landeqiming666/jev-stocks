@@ -1,5 +1,11 @@
 # G0-JEVDB 实施与真实闸门状态
 
+## 主 agent 独立复核
+
+主审完整读取下载、哈希、受限解压、静态构建及隔离探针代码，要求并复验调用方 env 应用于子进程、JEV_ENDPOINT 完整地址安全转换为前缀。37 项专项回归（35 subtests）与全门禁 16/0/1 通过；真实静态扩展从主集成 Python 1.4.3 宿主加载成功，本地三种 overlap 与 NULL 短路一致，32 个统计字段且 requests/retries/input_tokens/errors 全部为 0，原 wheel 未变。
+
+主审 retained artifact 为主集成 `.dev-data/jevdb/verified-static/jevdb.duckdb_extension`，SHA256 `d9f3f1d613847900436af87422f0cc7c3e8e9268934559f207433e6e6d3ffd9a`；源码构建原 lock 和日志已在 ignored 目录保留。主审日志 `/tmp/jev-next10-native-main-review.log`、`/tmp/jev-next10-jevdb-main-probe.log`、`/tmp/jev-next10-jevdb-main-gate.log`。真实 CLI exit 2，call BLOCKED，未配置有效密钥，不将本地 NULL 短路计为真实语义闸门。
+
 > 版本：v1.0 · 2026-11-03 · 状态：已定稿
 
 工作目录：`/Users/lijiaxuan/.codex/worktrees/mac-n10-jevdb/JEV Stocks`。
