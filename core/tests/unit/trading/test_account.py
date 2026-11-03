@@ -147,6 +147,82 @@ def test_advance_does_not_read_future_prices(service):
     assert not rows(service, "SELECT * FROM fill")
 
 
+def test_empty_account_advances_on_target_day_us_prices(service):
+    a = account(service, "10000.1234")
+    entries = rows(service, "SELECT * FROM cash_ledger ORDER BY entry_id")
+    next_day = START + timedelta(days=1)
+    result = service.advance(a.account_id)
+    assert result.clock_date == result.portfolio.as_of == next_day
+    assert result.portfolio.account.clock_date == next_day
+    assert result.trading_day is True
+    assert result.filled == result.rejected == result.portfolio.positions == []
+    assert result.pending_remaining == result.portfolio.pending_orders == 0
+    assert result.portfolio.cash == result.portfolio.available_cash == a.initial_cash
+    assert result.portfolio.equity == a.initial_cash
+    assert result.portfolio.reserved_cash == 0
+    assert service.list_orders(a.account_id).items == []
+    assert not rows(service, "SELECT * FROM fill")
+    assert rows(service, "SELECT * FROM cash_ledger ORDER BY entry_id") == entries
+    assert rows(service, "SELECT * FROM equity_snapshot") == [
+        (a.account_id, next_day, a.initial_cash, Decimal("0.0000"), a.initial_cash)
+    ]
+    with service.db.read() as tx:
+        Ledger().assert_invariants(tx, a.account_id)
+
+
+@pytest.mark.parametrize("remaining", ["none", "non_us", "future_us"])
+def test_empty_account_without_target_day_us_prices_does_not_advance(service, remaining):
+    a = account(service)
+    next_day = START + timedelta(days=1)
+    with service.db.write() as tx:
+        tx.execute("DELETE FROM price_daily")
+        if remaining == "non_us":
+            tx.execute(
+                "INSERT INTO instrument VALUES ('hk:ZZBK', 'hk', 'ZZBK', 'HKEX', "
+                "'Zinc Bay Bancorp', NULL, 'HKD', NULL, TRUE, 'synthetic', ?)",
+                [NOW],
+            )
+        if remaining != "none":
+            instrument_id = "hk:ZZBK" if remaining == "non_us" else "us:ZZAR"
+            day = next_day if remaining == "non_us" else next_day + timedelta(days=1)
+            tx.execute(
+                "INSERT INTO price_daily VALUES (?, ?, 100, 120, 90, 100, 100, "
+                "1000, 'synthetic', ?)",
+                [instrument_id, day, NOW],
+            )
+    before = service.portfolio(a.account_id)
+    entries = rows(service, "SELECT * FROM cash_ledger ORDER BY entry_id")
+    with pytest.raises(UserError, match="DATA_INSUFFICIENT") as caught:
+        service.advance(a.account_id)
+    assert caught.value.params["nextDay"] == next_day.isoformat()
+    assert service.portfolio(a.account_id) == before
+    assert service.list_orders(a.account_id).items == []
+    assert not rows(service, "SELECT * FROM fill")
+    assert not rows(service, "SELECT * FROM equity_snapshot")
+    assert rows(service, "SELECT * FROM cash_ledger ORDER BY entry_id") == entries
+
+
+def test_involved_account_does_not_use_unrelated_target_day_us_prices(service):
+    a = account(service)
+    service.place_order(intent(a))
+    next_day = START + timedelta(days=1)
+    with service.db.write() as tx:
+        tx.execute(
+            "DELETE FROM price_daily WHERE instrument_id='us:ZZAR' AND trade_date=?",
+            [next_day],
+        )
+    assert rows(
+        service, "SELECT instrument_id FROM price_daily WHERE trade_date=?", [next_day]
+    ) == [("us:ZZFD",)]
+    before = service.portfolio(a.account_id)
+    with pytest.raises(UserError, match="DATA_INSUFFICIENT"):
+        service.advance(a.account_id)
+    assert service.portfolio(a.account_id) == before
+    assert service.list_orders(a.account_id).items[0].status == "pending"
+    assert not rows(service, "SELECT * FROM fill")
+    assert not rows(service, "SELECT * FROM equity_snapshot")
+
+
 def test_advance_second_order_failure_rolls_back_all(service, monkeypatch):
     a = account(service)
     for key in ("one", "two", "three"):

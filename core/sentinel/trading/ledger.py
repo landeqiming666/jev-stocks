@@ -178,15 +178,20 @@ class Ledger:
 
     def has_prices_on(self, tx: SqlExecutor, account_id: str, day: date) -> bool:
         # 必须有目标日行情；未来某日的 MAX 日期不能证明目标日可推进。
+        # 空账户以 US 市场数据支持观察回放，有涉及标的时仍只检查关联行情。
         tx.execute(
-            "SELECT COUNT(*) FROM price_daily WHERE trade_date=? AND instrument_id IN ("
+            "WITH involved AS ("
             "SELECT instrument_id FROM position WHERE account_id=? AND quantity>0 UNION "
-            "SELECT instrument_id FROM paper_order WHERE account_id=?)",
-            [day, account_id, account_id],
+            "SELECT instrument_id FROM paper_order WHERE account_id=?) "
+            "SELECT EXISTS (SELECT 1 FROM price_daily p WHERE p.trade_date=? AND ("
+            "p.instrument_id IN (SELECT instrument_id FROM involved) OR ("
+            "NOT EXISTS (SELECT 1 FROM involved) AND EXISTS (SELECT 1 FROM instrument i "
+            "WHERE i.instrument_id=p.instrument_id AND i.market='us'))))",
+            [account_id, account_id, day],
         )
         row = tx.fetchone()
         assert row is not None
-        return cast(int, row[0]) > 0
+        return cast(bool, row[0])
 
     @isolated_decimal
     def order_view(self, tx: SqlExecutor, order: OrderRow) -> PaperOrderView:
