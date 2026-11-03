@@ -91,6 +91,12 @@ def add_decision(
             [key, event_id, seq, key],
         )
         tx.execute(
+            "INSERT INTO event_file VALUES (?, 0, 'synthetic.htm', '8-K', "
+            "'https://example.com/filing', 'extracted', 'Synthetic passage', 17) "
+            "ON CONFLICT DO NOTHING",
+            [event_id],
+        )
+        tx.execute(
             "INSERT INTO decision VALUES (?, ?, ?, ?, ?, 'us:ZZAR', ?, .8, .7, .6, NULL, .2, .7, "
             "'passage', NULL, NULL, 'jev_direct', 'jev-1.14.0', 'test.1', ?, "
             "10, FALSE, 1, 'full_text', ?)",

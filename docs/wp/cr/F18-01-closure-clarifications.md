@@ -171,3 +171,13 @@ paper.createAccount.initialCash 的输入机器契约限定正数、整数最多
 整数。两个先红 contract 回归验证边界；原示例、方法数量、生成客户端字段保持不变。
 Decimal 隔离测试分别以干净及已有 flags 执行，断言调用方 flags 原样保留，而非假定
 全量测试进程的全局 Decimal flags 总为空；不让业务函数清除调用方历史状态。
+
+## 14. 清单与持仓的计数口径
+
+P-03 清单先选代表再校验证据，不能展示评分第一事务已提交但证据未完成的行。
+主审将 P-01 计数同样限定有效代表的原文、偏移、逻辑版本和来源身份；损坏较强代表时
+不得改数为较弱行。21 项同数据库组合及 6 项持仓先红回归覆盖动作、重开、归档与缺证据。
+Holding.pendingCount 仅推翻/削弱，uncertainCount 独立；两者之和才是 Inbox.summary.pendingCount。
+今日页标题 N 仍仅 items.length，乐观动作重算 wire 汇总不得混用标题数量。
+U-02 排序以真实 P-03/04 的关系、headline、event.publishedAt、decisionId 为准，
+修正旧页面文档 createdAt 与服务端排序冲突，不改判定阈值或原型概率。

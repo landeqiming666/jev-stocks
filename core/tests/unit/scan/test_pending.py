@@ -297,6 +297,45 @@ def test_uncertain_is_separate_from_items(db: Database, service: InboxService) -
     validate_type("Inbox", wire(page))
 
 
+@pytest.mark.parametrize(
+    "damage", [None, "missing_evidence", "offset", "file", "version", "holding", "thesis"]
+)
+@pytest.mark.parametrize("response", [None, "ignore", "reopen"])
+def test_portfolio_counts_match_inbox_after_actions_and_incomplete_evidence(
+    db: Database, service: InboxService, damage: str | None, response: str | None
+) -> None:
+    from sentinel.portfolio import PortfolioService
+
+    selected = seed(db, relation="overturn")
+    seed(db, 11, seq=1, relation="weaken")
+    seed(db, 12, event=2, relation="uncertain", headline=0.55)
+    if response is not None:
+        service.act(selected, "ignore", None)
+        if response == "reopen":
+            service.reopen(selected)
+    if damage is not None:
+        changes = {
+            "missing_evidence": "UPDATE decision SET evidence_kind=NULL WHERE decision_id=?",
+            "offset": "UPDATE decision SET evidence_end=999 WHERE decision_id=?",
+            "file": "UPDATE event_file SET text_status='failed', text=NULL",
+            "version": "DELETE FROM thesis_version",
+            "holding": "UPDATE holding SET archived_at=TIMESTAMP '2026-11-02'",
+            "thesis": "UPDATE thesis SET archived_at=TIMESTAMP '2026-11-02'",
+        }
+        with db.write() as tx:
+            tx.execute(
+                changes[damage], [selected] if damage in ("missing_evidence", "offset") else []
+            )
+    inbox = service.list_inbox()
+    holdings = PortfolioService(db).list_holdings()
+    assert sum(item.pending_count for item in holdings) == len(inbox.items)
+    assert sum(item.uncertain_count for item in holdings) == len(inbox.uncertain)
+    assert (
+        sum(item.pending_count + item.uncertain_count for item in holdings)
+        == inbox.summary.pending_count
+    )
+
+
 @pytest.mark.parametrize("relation", ["none", "support"])
 def test_non_alert_relations_never_enter_any_group(
     db: Database, service: InboxService, relation: str

@@ -1,5 +1,7 @@
 from decimal import Decimal
 
+import pytest
+
 from sentinel.portfolio import PortfolioService
 from sentinel.storage import Database
 
@@ -169,6 +171,33 @@ def test_pending_representative_counts_actions_and_archived_theses(
     assert held.status == "unguarded"
     assert len(query(db, "SELECT * FROM decision")) == 6
     assert len(query(db, "SELECT * FROM thesis_action")) == 2
+
+
+@pytest.mark.parametrize(
+    "damage",
+    [
+        "UPDATE decision SET evidence_kind=NULL",
+        "UPDATE decision SET evidence_kind='sentence', evidence_start=0, evidence_end=999",
+        "UPDATE event_file SET text=NULL, text_status='failed'",
+        "DELETE FROM event_doc",
+        "DELETE FROM thesis_version",
+        "UPDATE thesis SET archived_at=TIMESTAMP '2026-11-02'",
+    ],
+)
+def test_pending_counts_exclude_incomplete_representative_without_weaker_fallback(
+    service: PortfolioService, db: Database, damage: str
+) -> None:
+    add_downstream(db)
+    service.upsert_holding("us:ZZAR", Decimal("1"), None, None)
+    thesis = service.create_thesis("us:ZZAR", "First", None)
+    add_decision(db, thesis.thesis_id, "overturn", "strong", seq=0)
+    add_decision(db, thesis.thesis_id, "weaken", "weak", seq=1)
+    with db.write() as tx:
+        if damage.startswith("UPDATE decision"):
+            damage += " WHERE decision_id='strong'"
+        tx.execute(damage)
+    held = service.list_holdings()[0]
+    assert held.pending_count == held.uncertain_count == 0
 
 
 def test_decision_without_action_view_counts_zero_and_exposes_last_decision(
