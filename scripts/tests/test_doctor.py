@@ -68,6 +68,21 @@ class DoctorTests(unittest.TestCase):
         code, _ = run_main(self.root, missing=("cmake",))
         self.assertEqual(code, 0)
 
+    def test_version_probe_uses_resolved_cmd_path(self) -> None:
+        command_path = str(self.root / "pnpm bin" / "pnpm.CMD")
+        commands = []
+
+        def run(argv, **kwargs):
+            commands.append(argv)
+            return FakeResult("12.16.1\n")
+
+        statuses = doctor.collect(
+            run=run,
+            which=lambda name: command_path if name == "pnpm" else None,
+        )
+        self.assertEqual(commands, [[command_path, "--version"]])
+        self.assertEqual(next(item for item in statuses if item.name == "pnpm").version, "12.16.1")
+
     def test_node_major_mismatch_is_warning_only(self) -> None:
         (self.root / ".node-version").write_text("22\n", encoding="utf-8")
         code, output = run_main(self.root, node_version="v26.1.0")

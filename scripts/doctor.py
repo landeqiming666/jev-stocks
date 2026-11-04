@@ -44,12 +44,13 @@ def collect(
     finder = which or shutil.which
     statuses: List[ToolStatus] = []
     for name, command, required, hint in TOOLS:
-        if finder(command[0]) is None:
+        executable = finder(command[0])
+        if executable is None:
             statuses.append(ToolStatus(name, "—", required, False, hint))
             continue
         try:
             result = runner(
-                command,
+                [executable, *command[1:]],
                 stdout=subprocess.PIPE,
                 stderr=subprocess.STDOUT,
                 text=True,
