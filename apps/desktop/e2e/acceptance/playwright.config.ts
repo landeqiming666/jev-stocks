@@ -4,7 +4,7 @@ import { chromiumExecutable } from "../browser";
 export default defineConfig({
   testDir: ".",
   testMatch: ["acceptance.spec.ts"],
-  outputDir: "../../../test-results/acceptance",
+  outputDir: `../../../test-results/acceptance-${Date.now()}`,
   workers: 1,
   fullyParallel: false,
   timeout: 45_000,

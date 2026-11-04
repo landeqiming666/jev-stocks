@@ -5,7 +5,7 @@ export default defineConfig({
   testDir: "./e2e/real-core",
   testMatch: ["*.spec.ts"],
   globalSetup: "./e2e/real-core/global-setup.ts",
-  outputDir: "../../test-results/e2e",
+  outputDir: `../../test-results/e2e-${Date.now()}`,
   workers: 1,
   fullyParallel: false,
   timeout: 30_000,

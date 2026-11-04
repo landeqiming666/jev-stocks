@@ -5,7 +5,7 @@ export default defineConfig({
   testDir: ".",
   testMatch: ["demo-flow.spec.ts", "failures.spec.ts"],
   globalSetup: "./global-setup.ts",
-  outputDir: "../../../test-results/real-core",
+  outputDir: `../../../test-results/real-core-${Date.now()}`,
   workers: 1,
   fullyParallel: false,
   timeout: 30_000,
