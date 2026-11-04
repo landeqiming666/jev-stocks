@@ -1,0 +1,11 @@
+{
+  "code": "ORDER_REJECTED",
+  "message": "资金不足：预计需要 $92,025.99，可用现金 $90,185.10。",
+  "data": {
+    "retryable": false,
+    "reason": "INSUFFICIENT_CASH",
+    "required": "92025.9900",
+    "available": "90185.0950",
+    "orderId": "01JC8Z5V3Q000000000000RD85"
+  }
+}
