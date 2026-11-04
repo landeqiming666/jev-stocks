@@ -4,12 +4,16 @@ from __future__ import annotations
 
 import fcntl
 import os
+import sys
 from collections.abc import Iterator
 from contextlib import contextmanager
 from pathlib import Path
 from typing import Literal
 
 from . import AlreadyRunning
+
+# fcntl 的锁接口只在 POSIX 类型环境中可用。
+assert sys.platform != "win32"
 
 
 def name() -> Literal["macos", "windows"]:
