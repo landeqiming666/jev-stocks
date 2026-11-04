@@ -4,9 +4,14 @@ use std::{path::PathBuf, sync::mpsc, time::Duration};
 
 fn config(mode: &str) -> CoreConfig {
     let root = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../..");
+    let python = ["core/.venv/bin/python", "core/.venv/Scripts/python.exe"]
+        .into_iter()
+        .map(|path| root.join(path))
+        .find(|path| path.is_file())
+        .expect("prepare the project Python environment with scripts/setup");
     CoreConfig {
         argv: vec![
-            root.join("core/.venv/bin/python").to_string_lossy().into(),
+            python.to_string_lossy().into_owned(),
             "-u".into(),
             "-c".into(),
             FAKE.into(),
@@ -35,15 +40,16 @@ mode = sys.argv[1]
 def emit(obj): print(json.dumps(obj), flush=True)
 if mode == 'orphan':
     descendant = subprocess.Popen(['sh','-c','exec sleep 10'], stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+if mode == 'closed': os.close(0)
 if mode != 'startup': emit({'jsonrpc':'2.0','method':'app.ready','params':{'pid':os.getpid(), 'descendant':descendant.pid if mode == 'orphan' else None}})
 if mode == 'crash': sys.exit(2)
 if mode == 'eof': os.close(1); time.sleep(10)
-if mode == 'closed': os.close(0); time.sleep(10)
-if mode == 'blocked': time.sleep(10)
+if mode in ('closed','blocked'): time.sleep(10)
 if mode == 'flood':
-    print('x' * 1048577, flush=True)
-    print('x' * 1048576, flush=True)
-    print('after-flood', flush=True)
+    sys.stdout.buffer.write(b'x' * 1048577 + b'\n')
+    sys.stdout.buffer.write(b'x' * 1048576 + b'\n')
+    sys.stdout.buffer.write(b'after-flood\n')
+    sys.stdout.buffer.flush()
 for line in sys.stdin:
     req = json.loads(line); method = req.get('method'); rid = req.get('id')
     if method == 'app.ping':
@@ -51,6 +57,7 @@ for line in sys.stdin:
         if mode in ('hang','startup','orphan'): continue
         emit({'result':{'ok': True}, 'id':rid, 'jsonrpc':'2.0'})
         emit({'id':'rs-unknown','result':{'ok':True}})
+        if mode == 'filter': emit({'method':'test.heartbeatProcessed'})
     elif method == 'app.shutdown':
         if mode in ('hang','startup','orphan'): continue
         if mode == 'graceful':
@@ -64,16 +71,18 @@ for line in sys.stdin:
 "#;
 fn fast() -> Timings {
     Timings {
-        heartbeat_interval: Duration::from_millis(30),
-        heartbeat_timeout: Duration::from_millis(15),
-        startup_timeout: Duration::from_millis(80),
-        shutdown_grace: Duration::from_millis(30),
+        // A real Windows venv launch can take longer than the Unix fixture's
+        // old startup deadline. Allow it to become ready before testing faults.
+        heartbeat_interval: Duration::from_secs(1),
+        heartbeat_timeout: Duration::from_millis(200),
+        startup_timeout: Duration::from_secs(2),
+        shutdown_grace: Duration::from_millis(500),
         restart_delays: [
-            Duration::from_millis(10),
-            Duration::from_millis(20),
-            Duration::from_millis(40),
+            Duration::from_millis(50),
+            Duration::from_millis(100),
+            Duration::from_millis(200),
         ],
-        write_timeout: Duration::from_millis(100),
+        write_timeout: Duration::from_secs(1),
     }
 }
 fn start(mode: &str) -> (BridgeState, mpsc::Receiver<BridgeEvent>) {
@@ -168,18 +177,15 @@ fn test_late_frontend_can_read_ready_snapshot_without_replayed_status_event() {
 }
 #[test]
 fn test_rs_response_is_not_forwarded() {
-    let (state, rx) = start("healthy");
+    let (state, rx) = start("filter");
     ready(&rx);
+    let heartbeat: serde_json::Value = serde_json::from_str(&message(&rx)).unwrap();
+    assert_eq!(heartbeat["method"], "test.heartbeatProcessed");
     send_line(&state, r#"{"jsonrpc":"2.0","id":"r-1","method":"test"}"#).unwrap();
     let v: serde_json::Value = serde_json::from_str(&message(&rx)).unwrap();
     assert_eq!(v["id"], "r-1");
     assert_eq!(v["result"]["utf8"], "1");
     assert_eq!(v["result"]["encoding"], "utf-8");
-    for _ in 0..5 {
-        if let Ok(BridgeEvent::Message(s)) = rx.recv_timeout(Duration::from_millis(35)) {
-            panic!("leaked: {s}");
-        }
-    }
     assert_eq!(status(&state).state, CoreState::Ready);
     shutdown(&state).unwrap();
 }
