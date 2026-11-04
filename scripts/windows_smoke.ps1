@@ -1,9 +1,9 @@
 ﻿<#
 .SYNOPSIS
-运行 Windows MVP-0 的离线无窗口预检，生成独立的 acceptance.json。
+运行 Windows MVP-0 离线验收，生成独立的 acceptance.json。
 .DESCRIPTION
 在当前工作树执行真实的安装、门禁和可用的专项测试。默认离线。
-本阶段需另行采集 WebView2 窗口、用户故事录屏和凭据管理器证据。
+有可用的业务页面和测试账户时，可启动原生窗口并记录进程退出。
 #>
 [CmdletBinding()]
 param(
@@ -11,6 +11,7 @@ param(
     [switch]$NoLaunch,
     [switch]$SkipInstall,
     [string]$ReportDir = "$PSScriptRoot\..\apps\desktop\e2e\windows\results",
+    [ValidateRange(5, 3600)][int]$WindowCloseTimeoutSeconds = 900,
     [switch]$SelfTest
 )
 
@@ -52,14 +53,18 @@ $report = [ordered]@{
     gitHead = $null
     timestampUtc = [DateTime]::UtcNow.ToString('o')
     offline = $true
-    noLaunch = $true
+    noLaunch = [bool]$NoLaunch
     launchRequested = -not [bool]$NoLaunch
     prerequisites = [ordered]@{}
     dependencies = [ordered]@{}
     checks = $checks
     bridge = New-Outcome -Reason '当前工作树缺少 W-02 测试。'
+    realBridge = New-Outcome -Reason '等待 C-07 提供真实核心入口。'
     credentials = New-Outcome -Reason '当前工作树缺少 W-04 测试。'
     integration = New-Outcome -Reason '当前工作树缺少 I-01 测试、C-07 入口或 E-01 演示加载器。'
+    demo = New-Outcome -Reason '当前工作树缺少 E-01 演示加载器。'
+    browser = New-Outcome -Reason '尚未执行 Windows Edge 外壳测试。'
+    desktop = New-Outcome -Reason '尚未启动本次验收的原生窗口。'
     jevdb = [ordered]@{status = 'not_run'; built = $null; fallback = $null; evidence = $null}
     overall = 'fail'
     exitCode = 2
@@ -86,7 +91,8 @@ $runDir = Join-Path $reportRoot ([DateTime]::UtcNow.ToString('yyyyMMdd-HHmmss') 
 [IO.Directory]::CreateDirectory($runDir) | Out-Null
 
 function Invoke-Recorded {
-    param([string]$Name, [string]$Command, [string[]]$Arguments = @(), [string]$WorkDir = $repo)
+    param([string]$Name, [string]$Command, [string[]]$Arguments = @(), [string]$WorkDir = $repo,
+        [switch]$JsonOutput)
     $log = Join-Path $runDir "$Name.log"
     $consoleEncoding = [Console]::OutputEncoding
     Push-Location -LiteralPath $WorkDir
@@ -100,7 +106,13 @@ function Invoke-Recorded {
             $Command = (Get-Process -Id $PID).Path
         }
         $global:LASTEXITCODE = -1
-        & $Command @Arguments 2>&1 | Out-File -LiteralPath $log -Encoding utf8 -Width 4096
+        if ($JsonOutput) {
+            $stderr = Join-Path $runDir "$Name.stderr.log"
+            & $Command @Arguments 2> $stderr | Out-File -LiteralPath $log -Encoding utf8 -Width 4096
+        }
+        else {
+            & $Command @Arguments 2>&1 | Out-File -LiteralPath $log -Encoding utf8 -Width 4096
+        }
         $exitCode = $LASTEXITCODE
         if ($exitCode -eq 0) {
             return New-Outcome -Status 'pass' -Evidence $log -ExitCode 0
@@ -154,15 +166,101 @@ function Read-JevdbResult {
     }
 }
 
+function Invoke-DemoLoad {
+    $outcome = Invoke-Recorded 'load-demo' 'uv' @(
+        'run', '--offline', '--project', $core, 'python', 'scripts/load_demo.py',
+        '--data-dir', $env:SENTINEL_DATA_DIR, '--json'
+    ) -JsonOutput
+    if ($outcome.status -ne 'pass') { return $outcome }
+    try {
+        $demoResult = Get-Content -LiteralPath $outcome.evidence -Raw -Encoding utf8 | ConvertFrom-Json
+        $counts = if ($null -ne $demoResult.counts) { $demoResult.counts } else { $demoResult }
+        $expected = [ordered]@{instruments = 6; holdings = 5; theses = 6; events = 6; decisions = 12; prices = 1560}
+        foreach ($name in $expected.Keys) {
+            $value = $counts.$name
+            if (($value -isnot [int] -and $value -isnot [long]) -or $value -ne $expected[$name]) {
+                throw "演示数据计数错误：$name。"
+            }
+        }
+        $outcome.counts = $expected
+    }
+    catch {
+        return New-Outcome -Status 'fail' -Reason $_.Exception.Message -Evidence $outcome.evidence -ExitCode 1
+    }
+    return $outcome
+}
+
+function Invoke-NativeDesktop {
+    $collector = Join-Path $repo 'apps/desktop/e2e/windows/collect-evidence.ps1'
+    $devLog = Join-Path $runDir 'native-dev.log'
+    $devErrors = Join-Path $runDir 'native-dev-errors.log'
+    $devArguments = '-NoProfile -File "' + (Join-Path $PSScriptRoot 'dev.ps1') + '" --no-watch'
+    $launch = $null
+    $snapshot = $null
+    $phase = 'WM-2'
+    try {
+        $launch = Start-Process -FilePath (Get-Process -Id $PID).Path -ArgumentList $devArguments `
+            -WorkingDirectory $repo -WindowStyle Hidden -PassThru `
+            -RedirectStandardOutput $devLog -RedirectStandardError $devErrors
+        $snapshot = & $collector -LaunchPid $launch.Id -ReportDir $runDir -WaitSeconds 180
+        if ($snapshot.window.title -cne '投资逻辑哨兵' -or -not $snapshot.window.nativeCaption) {
+            throw '原生窗口的标题或标题栏不符合验收条件。'
+        }
+        $checks['WM-2'] = New-Outcome -Reason '原生标题栏已核验，等待六页截图。' -Evidence $snapshot.evidencePath
+        $phase = 'WM-3'
+        Write-Host "原生窗口已启动，PID $($snapshot.window.pid)。证据目录：$runDir"
+        Write-Host '请完成实机联调清单后关闭窗口。'
+        $exitEvidence = & $collector -BaselinePath $snapshot.evidencePath -ReportDir $runDir -WaitSeconds 5 `
+            -WindowCloseTimeoutSeconds $WindowCloseTimeoutSeconds
+        if (-not $exitEvidence.allObservedExited) {
+            $checks['WM-3'] = New-Outcome -Status 'fail' -Reason '观测到本次启动的进程残留。' `
+                -Evidence $exitEvidence.evidencePath -ExitCode 1
+            return $checks['WM-3']
+        }
+        if ($launch.ExitCode -ne 0) {
+            $checks['WM-3'] = New-Outcome -Status 'fail' -Reason "开发启动器退出 $($launch.ExitCode)。" `
+                -Evidence $devLog -ExitCode $launch.ExitCode
+            return $checks['WM-3']
+        }
+        $checks['WM-3'] = New-Outcome -Reason '已核验观测到的进程退出，等待业务录屏。' -Evidence $exitEvidence.evidencePath
+        $result = New-Outcome -Status 'pass' -Evidence $snapshot.evidencePath -ExitCode 0
+        $result.exitEvidence = $exitEvidence.evidencePath
+        return $result
+    }
+    catch {
+        $evidence = if ($snapshot) { $snapshot.evidencePath } else { $devLog }
+        $checks[$phase] = New-Outcome -Status 'fail' -Reason $_.Exception.Message -Evidence $evidence -ExitCode 1
+        return $checks[$phase]
+    }
+    finally {
+        if ($launch) {
+            if (-not $launch.HasExited) {
+                $ErrorActionPreference = 'Continue'
+                $PSNativeCommandUseErrorActionPreference = $false
+                & "$env:SystemRoot\System32\taskkill.exe" /PID $launch.Id /T /F 2>&1 |
+                    Out-File -LiteralPath (Join-Path $runDir 'native-cleanup.log') -Encoding utf8
+                [void]$launch.WaitForExit(5000)
+            }
+            $launch.Dispose()
+        }
+    }
+}
+
 $environment = [ordered]@{
     UV_OFFLINE = '1'
     CARGO_NET_OFFLINE = 'true'
     npm_config_offline = 'true'
     PYTHONUTF8 = '1'
     PYTHONIOENCODING = 'utf-8'
+    PYTEST_ADDOPTS = $null
     SENTINEL_OFFLINE = $null
+    SENTINEL_CLOCK = $null
     JEV_API_KEY = $null
     TYPESAFE_API_KEY = $null
+    SENTINEL_CORE_CMD = $null
+    VITE_RPC = 'tauri'
+    WEBVIEW2_USER_DATA_FOLDER = (Join-Path $runDir 'webview')
+    SENTINEL_WINDOWS_PLAYWRIGHT_OUTPUT = (Join-Path $runDir 'playwright')
     SENTINEL_DATA_DIR = (Join-Path ([IO.Path]::GetTempPath()) ('sentinel-验收 空格-' + [Guid]::NewGuid().ToString('N')))
 }
 $saved = @{}
@@ -179,8 +277,14 @@ try {
     $report.prerequisites.pathContainsSpaceAndChinese = $pathMatches
     $report.dependencies['I-01'] = Test-Path -LiteralPath (Join-Path $core 'tests\integration\test_core_lifecycle.py') -PathType Leaf
     $report.dependencies['C-07'] = (Test-Path -LiteralPath (Join-Path $core 'sentinel\__main__.py') -PathType Leaf) -and
-        (Test-Path -LiteralPath (Join-Path $core 'sentinel\app') -PathType Container)
+        (Test-Path -LiteralPath (Join-Path $core 'sentinel\app\main.py') -PathType Leaf)
     $report.dependencies['E-01'] = Test-Path -LiteralPath (Join-Path $PSScriptRoot 'load_demo.py') -PathType Leaf
+    $report.prerequisites.disposableProfileConfirmed = $env:SENTINEL_WINDOWS_DISPOSABLE_PROFILE -ceq '1'
+    $missingPages = @('today', 'holdings', 'trading', 'risk', 'scan', 'settings' | Where-Object {
+        -not (Test-Path -LiteralPath (Join-Path $repo "apps/desktop/src/pages/$_/index.tsx") -PathType Leaf)
+    })
+    $report.dependencies['businessPages'] = $missingPages.Count -eq 0
+    $report.missingBusinessPages = $missingPages
     if ([int]$windows.CurrentBuildNumber -lt 22000 -or $report.architecture -ne 'X64' -or -not $pathMatches) {
         throw '前置环境需要 Windows 11 x64 和包含中文、空格的仓库路径。'
     }
@@ -206,12 +310,24 @@ try {
         $report.prerequisites.setup = New-Outcome -Reason '按 -SkipInstall 使用现有本地依赖。'
     }
 
-    $report.checks['WM-1'] = Invoke-Recorded 'check' (Join-Path $PSScriptRoot 'check.ps1')
+    $env:PYTEST_ADDOPTS = '-m "not integration and not network"'
+    try { $report.checks['WM-1'] = Invoke-Recorded 'check' (Join-Path $PSScriptRoot 'check.ps1') }
+    finally { Remove-Item Env:PYTEST_ADDOPTS }
     $tauri = Join-Path $repo 'apps\desktop\src-tauri'
     if (Test-Path -LiteralPath (Join-Path $tauri 'tests\bridge_windows.rs') -PathType Leaf) {
         $report.bridge = Invoke-Recorded 'bridge' 'cargo' @('test', '--offline', '--test', 'bridge_windows') $tauri
+        if ($report.dependencies['C-07'] -and $report.prerequisites.disposableProfileConfirmed) {
+            $report.realBridge = Invoke-Recorded 'bridge-real' 'cargo' @(
+                'test', '--locked', '--offline', '--test', 'bridge_windows',
+                'test_real_core_accepts_bootstrap_on_windows', '--', '--ignored', '--exact'
+            ) $tauri
+        }
+        elseif ($report.dependencies['C-07']) {
+            $report.realBridge.reason = '真实核心测试需要专用 Windows 测试账户。'
+        }
     }
-    if ($report.dependencies['I-01'] -and $report.dependencies['C-07'] -and $report.dependencies['E-01']) {
+    if ($report.dependencies['I-01'] -and $report.dependencies['C-07'] -and $report.dependencies['E-01'] -and
+        $report.prerequisites.disposableProfileConfirmed) {
         # Unit tests exercise mocked transports. The real-core suite uses offline mode.
         $env:SENTINEL_OFFLINE = '1'
         try {
@@ -223,6 +339,30 @@ try {
             Remove-Item Env:SENTINEL_OFFLINE
         }
     }
+    elseif ($report.dependencies['I-01'] -and $report.dependencies['C-07'] -and $report.dependencies['E-01']) {
+        $report.integration.reason = '请在专用 Windows 测试账户中确认凭据隔离后运行真实核心验收。'
+    }
+    if ($report.checks['WM-1'].status -eq 'pass') {
+        if ($report.dependencies['E-01']) {
+            $env:SENTINEL_OFFLINE = '1'
+            $env:SENTINEL_CLOCK = '2026-11-02T08:35:00Z'
+            $env:SENTINEL_DATA_DIR = Join-Path $runDir 'demo-cli'
+            try {
+                $report.demo = Invoke-DemoLoad
+                $report.demo.dataDir = $env:SENTINEL_DATA_DIR
+            }
+            finally {
+                Remove-Item Env:SENTINEL_OFFLINE
+                Remove-Item Env:SENTINEL_CLOCK
+                $env:SENTINEL_DATA_DIR = $environment.SENTINEL_DATA_DIR
+            }
+        }
+        $report.browser = Invoke-Recorded 'playwright' 'pnpm.cmd' @(
+            '--dir', 'apps/desktop', 'exec', 'playwright', 'test',
+            '--config', 'e2e/windows/playwright.config.ts'
+        )
+        $report.browser.artifacts = $env:SENTINEL_WINDOWS_PLAYWRIGHT_OUTPUT
+    }
     if ((Test-Path -LiteralPath (Join-Path $core 'tests\unit\secrets\test_windows_backend.py') -PathType Leaf) -and
         (Test-Path -LiteralPath (Join-Path $core 'sentinel\secrets\windows_backend.py') -PathType Leaf)) {
         $report.credentials = Invoke-Recorded 'credentials' 'uv' @(
@@ -230,7 +370,7 @@ try {
         ) $core
         if ($report.credentials.status -eq 'pass') {
             $probeCode = 'import json; from dataclasses import asdict; from sentinel.secrets.windows_backend import WindowsCredentialBackend; print(json.dumps(asdict(WindowsCredentialBackend().probe())))'
-            $probe = Invoke-Recorded 'credential-probe' 'uv' @('run', '--offline', '--no-sync', 'python', '-c', $probeCode) $core
+            $probe = Invoke-Recorded 'credential-probe' 'uv' @('run', '--offline', '--no-sync', 'python', '-c', $probeCode) $core -JsonOutput
             $report.credentials.probe = $probe
             $checks['WM-4'] = New-Outcome -Reason 'WinVault 自动项通过，等待凭据管理器人工查看。' -Evidence $probe.evidence
             try {
@@ -257,7 +397,32 @@ try {
         }
     }
     Read-JevdbResult
-    $outcomes = @($checks.Values) + @($report.bridge, $report.integration, $report.credentials)
+    $unfinished = @(
+        @($report.checks['WM-1'], $report.bridge, $report.realBridge, $report.integration,
+            $report.demo, $report.browser, $report.credentials) |
+            Where-Object { $_.status -ne 'pass' }
+    )
+    if ($NoLaunch) {
+        $report.desktop.reason = '按 -NoLaunch 跳过原生窗口。'
+    }
+    elseif (-not [Environment]::UserInteractive) {
+        $report.desktop.reason = '当前会话没有交互式桌面。'
+    }
+    elseif (-not $report.dependencies['businessPages'] -or $unfinished.Count -gt 0 -or
+        $checks['WM-4'].status -eq 'fail' -or $checks['WM-5'].status -eq 'fail') {
+        $report.desktop.reason = '等待真实核心、演示数据、业务页面和自动检查就绪。'
+    }
+    else {
+        $env:SENTINEL_OFFLINE = '1'
+        $env:SENTINEL_CLOCK = '2026-11-02T08:35:00Z'
+        $env:SENTINEL_DATA_DIR = Join-Path $runDir 'desktop-data'
+        $report.desktop = Invoke-NativeDesktop
+        $report.desktop.dataDir = $env:SENTINEL_DATA_DIR
+    }
+    $outcomes = @($checks.Values) + @(
+        $report.bridge, $report.realBridge, $report.integration, $report.demo, $report.browser,
+        $report.credentials, $report.desktop
+    )
     $report.exitCode = Get-AcceptanceExitCode -Outcomes $outcomes
     if ($report.exitCode -eq 0) { $report.overall = 'pass' }
 }

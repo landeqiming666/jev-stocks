@@ -34,7 +34,7 @@ def main(
         print("找不到 pnpm，运行 scripts/doctor.py 查看缺什么")
         return 1
 
-    result = run([executable, "tauri", "dev"], cwd=str(base / "apps" / "desktop"))
+    result = run([executable, "tauri", "dev", *(argv or ())], cwd=str(base / "apps" / "desktop"))
     return int(getattr(result, "returncode", 1))
 
 

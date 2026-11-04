@@ -7,7 +7,7 @@ const baseURL = `http://127.0.0.1:${port}`;
 export default defineConfig({
   testDir: ".",
   testMatch: "windows-ui.spec.ts",
-  outputDir: "results/playwright",
+  outputDir: process.env.SENTINEL_WINDOWS_PLAYWRIGHT_OUTPUT ?? "results/playwright",
   workers: 1,
   webServer: {
     cwd: resolve(import.meta.dirname, "../.."),
