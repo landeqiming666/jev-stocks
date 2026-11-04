@@ -3,3 +3,4 @@
 /core/sentinel/storage/migrations/*.sql text eol=lf
 /core/tests/fixtures/markets/probe/*.json text eol=lf
 /design/prototype/data/mock.js text eol=lf
+/docs/04-数据模型.md text eol=lf
