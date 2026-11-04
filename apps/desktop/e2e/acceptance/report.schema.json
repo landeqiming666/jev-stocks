@@ -1,0 +1,31 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Thesis Sentinel MVP-0 acceptance report",
+  "type": "object",
+  "required": ["schemaVersion", "platform", "mode", "startedAt", "finishedAt", "checks", "overall"],
+  "additionalProperties": false,
+  "properties": {
+    "schemaVersion": { "const": "1" },
+    "platform": { "enum": ["macos", "windows"] },
+    "mode": { "enum": ["offline", "full"] },
+    "startedAt": { "type": "string", "pattern": "Z$" },
+    "finishedAt": { "type": "string", "pattern": "Z$" },
+    "workDir": { "type": "string" },
+    "checks": {
+      "type": "array",
+      "minItems": 8,
+      "items": {
+        "type": "object",
+        "required": ["id", "status", "evidence"],
+        "additionalProperties": false,
+        "properties": {
+          "id": { "enum": ["M-1", "M-2", "M-3", "M-4", "M-5", "M-6", "M-7", "M-8"] },
+          "status": { "enum": ["pass", "fail", "not_run"] },
+          "evidence": { "type": "array", "items": { "type": "string" } },
+          "detail": { "type": "string" }
+        }
+      }
+    },
+    "overall": { "enum": ["pass", "fail"] }
+  }
+}
