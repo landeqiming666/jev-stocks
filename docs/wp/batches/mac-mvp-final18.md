@@ -32,4 +32,8 @@
 - 全量门禁：`scripts/check.sh --e2e` **17 通过 / 0 失败 / 0 跳过**（e2e 10 个真实核心用例）。
 - 真实进程联调：`core/tests/integration` 20 passed、1 skipped；`pnpm e2e` 10 passed。
 - 验收脚本：`python3 scripts/acceptance.py --offline` 7/8，M-8 = not_run（无真实 JEVDB 与密钥）。
+- 桌面应用：`pnpm tauri dev` 编译并启动 `sentinel-desktop`，Rust 桥按契约注入
+  `--data-dir ~/Library/Application Support/org.thesissentinel.desktop --parent-pid … --resource-dir …/resources`，
+  核心创建 `sentinel.duckdb` 后随应用退出被回收；本会话无法截屏（黑屏），GUI 点击流程改由
+  Chrome + 真实核心的 10 个 e2e 用例覆盖。
 - 外部闸门：真实 JEVDB 推理、SEC 网络、正式人工标注、真实 cassette 均 NOT_RUN/BLOCKED。
