@@ -84,6 +84,8 @@ def _is_allowed(relative: str) -> bool:
 
 
 def _is_fixture_guard(relative: str, line: str) -> bool:
+    if relative == "apps/desktop/src-tauri/tests/bridge_windows.rs":
+        return line.strip() == "#![cfg(windows)]"
     return relative == "apps/desktop/src-tauri/tests/bridge.rs" and bool(
         re.fullmatch(r"\s*#\[cfg\(unix\)\]\s*", line)
     )

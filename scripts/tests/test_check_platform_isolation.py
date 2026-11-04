@@ -79,6 +79,16 @@ class ScanTests(unittest.TestCase):
             self.write(path, "#[cfg(unix)]\nfn a() {}\n")
         self.assertEqual(len(isolation.scan(self.root)), 2)
 
+    def test_windows_bridge_exception_is_only_the_test_crate_guard(self) -> None:
+        bridge_test = "apps/desktop/src-tauri/tests/bridge_windows.rs"
+        other_test = "apps/desktop/src-tauri/tests/other.rs"
+        self.write(bridge_test, "#![cfg(windows)]\nfn probe() { cfg!(windows); }\n")
+        self.write(other_test, "#![cfg(windows)]\n")
+        self.assertEqual(
+            {(item.path, item.line) for item in isolation.scan(self.root)},
+            {(bridge_test, 2), (other_test, 1)},
+        )
+
     def test_ts_process_platform_is_reported(self) -> None:
         self.write("apps/desktop/src/x.ts", "const p = process.platform;\n")
         self.assertEqual(len(isolation.scan(self.root)), 1)
