@@ -92,7 +92,7 @@ def execute_order(tx: WriteTx, order: OrderRow, next_day: date,
 - `PaperService` 的 8 个 handler 全部以 `cancellable=False` 注册（C-01 §5.1）：账本写入不接受 `$/cancel`，避免“已成交但客户端收到 CANCELLED”。
 - `place_order` 对参数错误不保存订单；对 `NO_PRICE`、`INSUFFICIENT_CASH`、`INSUFFICIENT_POSITION` 保存 `rejected` 订单并抛 `ORDER_REJECTED`，`data.orderId` 指向该行。
 - `advance` 整次推进一个事务：成交、拒单、资金、持仓、时钟与快照一起提交；程序错误全部回滚。
-- `reset` 删除前必须先成功备份；确认文字必须与账户名完全一致。
+- `reset` 删除前必须先成功备份；确认文字必须与账户名完全一致。用 `db.exclusive()` 包围确认、备份及删除事务，不直接引用存储私有锁。
 - 所有 SQL 参数绑定；所有现金运算用 `Decimal`；数量用 `int`。
 - 列表分页按 `created_at DESC, order_id DESC`，limit 默认 50、最大 200。
 ### 5.2 数据结构

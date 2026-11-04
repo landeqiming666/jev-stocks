@@ -1,9 +1,9 @@
 import httpx
 import pytest
-from conftest import FakeClock
 
 from sentinel.errors import SourceError
 from sentinel.http import HttpClient
+from tests.unit.http.conftest import FakeClock
 
 
 def test_retry_stops_after_three_attempts(clock: FakeClock) -> None:

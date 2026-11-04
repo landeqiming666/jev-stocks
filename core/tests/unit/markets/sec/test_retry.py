@@ -41,7 +41,7 @@ def test_failed_to_recovered_preserves_referenced_main_and_decision(stack, db, l
     with db.read() as reader:
         reader.execute("SELECT text FROM event_passage")
         assert reader.fetchall() == [("Initial",)]
-        reader.execute("SELECT * FROM decision")
+        reader.execute("SELECT decision_id, passage_id FROM decision")
         assert reader.fetchall() == [("decision", "passage")]
     client.calls.clear()
     client.index_calls.clear()
@@ -185,5 +185,5 @@ def test_late_retry_cannot_overwrite_concurrently_recovered_success(
     assert error.value.reason == "SEC_FILE_CONTENT"
     assert repo.get(make_ref()).files == [main, winner]
     with db.read() as reader:
-        reader.execute("SELECT * FROM decision")
+        reader.execute("SELECT decision_id, passage_id FROM decision")
         assert reader.fetchall() == [("decision", "passage")]

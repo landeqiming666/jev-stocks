@@ -4,10 +4,10 @@ from pathlib import Path
 
 import httpx
 import pytest
-from conftest import FakeClock
 
 from sentinel.errors import CancelledError, SourceError
 from sentinel.http import HttpClient
+from tests.unit.http.conftest import FakeClock
 
 
 @dataclass

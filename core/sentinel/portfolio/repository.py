@@ -152,15 +152,55 @@ class PortfolioRepository:
                                 d.headline DESC, p.seq ASC, d.decision_id ASC
                      ) AS rk
               FROM decision d
-              JOIN event_passage p ON p.passage_id = d.passage_id
+              LEFT JOIN event_passage p ON p.passage_id = d.passage_id
               JOIN thesis t ON t.thesis_id = d.thesis_id AND t.status = 'active'
+                            AND t.archived_at IS NULL
               WHERE d.relation IN ('overturn', 'weaken', 'uncertain')
             ), pending AS (
               SELECT r.instrument_id,
                      count(*) FILTER (WHERE r.relation IN ('overturn', 'weaken')) AS pending_count,
                      count(*) FILTER (WHERE r.relation = 'uncertain') AS uncertain_count
-              FROM ranked r LEFT JOIN v_last_action la ON la.decision_id = r.decision_id
+              FROM ranked r
+              JOIN decision d ON d.decision_id = r.decision_id
+              JOIN thesis t ON t.thesis_id = d.thesis_id
+              JOIN thesis_version tv ON tv.thesis_id = d.thesis_id
+                                     AND tv.version = d.thesis_version
+              JOIN event_passage p ON p.passage_id = d.passage_id AND p.event_id = d.event_id
+              JOIN event_doc e ON e.event_id = d.event_id AND e.instrument_id = d.instrument_id
+              LEFT JOIN event_file f ON f.event_id = p.event_id AND f.seq = p.file_seq
+              LEFT JOIN v_last_action la ON la.decision_id = r.decision_id
               WHERE r.rk = 1 AND (la.action IS NULL OR la.action = 'reopen')
+                AND d.instrument_id = t.instrument_id AND d.content_status = e.content_status
+                AND d.thesis_version >= 1 AND t.current_version >= 1
+                AND length(trim(tv.statement)) BETWEEN 1 AND 500
+                AND (tv.kill_condition IS NULL OR length(tv.kill_condition) <= 300)
+                AND isfinite(d.headline) AND d.headline BETWEEN 0 AND 1
+                AND isfinite(d.p_relevant) AND d.p_relevant BETWEEN 0 AND 1
+                AND isfinite(d.p_against) AND d.p_against BETWEEN 0 AND 1
+                AND isfinite(d.p_contradicts) AND d.p_contradicts BETWEEN 0 AND 1
+                AND isfinite(d.p_supports) AND d.p_supports BETWEEN 0 AND 1
+                AND (d.p_kill_met IS NULL OR
+                     (isfinite(d.p_kill_met) AND d.p_kill_met BETWEEN 0 AND 1))
+                AND length(trim(p.text)) > 0
+                AND (
+                  (d.evidence_kind = 'title' AND p.file_seq = -1
+                   AND d.content_status = 'title_only' AND p.text = e.title
+                   AND d.evidence_start IS NULL AND d.evidence_end IS NULL)
+                  OR
+                  (p.file_seq >= 0 AND d.content_status = 'full_text'
+                   AND f.text_status = 'extracted' AND length(trim(f.text)) > 0
+                   AND length(trim(f.doc_type)) > 0
+                   AND (
+                     (d.evidence_kind = 'passage'
+                      AND d.evidence_start IS NULL AND d.evidence_end IS NULL)
+                     OR
+                     (d.evidence_kind = 'sentence' AND d.evidence_start >= 0
+                      AND d.evidence_end > d.evidence_start
+                      AND d.evidence_end <= length(p.text)
+                      AND length(trim(substr(p.text, d.evidence_start + 1,
+                                               d.evidence_end - d.evidence_start))) > 0)
+                   ))
+                )
               GROUP BY r.instrument_id
             )
             """
@@ -170,7 +210,8 @@ class PortfolioRepository:
             pending_cte + "SELECT h.*, i.instrument_id, i.market, i.symbol, i.exchange, i.name, "
             "i.name_zh, i.currency, i.cik, i.is_active, " + price_columns + ", "
             "(SELECT count(*) FROM thesis t "
-            "WHERE t.instrument_id = h.instrument_id AND t.status = 'active'), "
+            "WHERE t.instrument_id = h.instrument_id AND t.status = 'active' "
+            "AND t.archived_at IS NULL), "
             + pending_columns
             + " FROM holding h JOIN instrument i ON i.instrument_id = h.instrument_id "
             + price_join

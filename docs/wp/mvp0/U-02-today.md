@@ -125,7 +125,7 @@ function deriveTodayState(inbox: Inbox | null, boot: Bootstrap): TodayState;
 1. 挂载时调用 `inbox.list`；加载中显示 3 张无动画骨架卡。页面获得焦点或用户点“刷新”时重新调用，禁止定时轮询。
 2. 订阅 `inbox.updated`：收到后调用 `inbox.list`，不直接拼接通知里的计数；订阅 `scan.progress` 更新页头进度，`scan.finished` 后刷新清单与“上次扫描”。
 3. 标题规则：`items.length` 为 N 时显示“今天有 N 件事需要你看一眼”；N=0 且无待确认时显示“今天没有需要处理的变化”，并写“已检查 X 只标的、Y 份披露、Z 个段落，上次扫描 …”。
-4. 排序：先按关系 `overturn` 在 `weaken` 前，再按 `headline` 降序，再按 `createdAt` 降序。前 5 条渲染完整卡片，其余用“其余 M 条”按钮展开。
+4. 排序：保留 P-03 服务端规则：关系严重度、`headline` 降序、`event.publishedAt` 降序、`decisionId` 升序。乐观操作也按此规则恢复；不按评分返回时间重排披露。前 5 条渲染完整卡片，其余用“其余 M 条”按钮展开。
 5. 卡片必须包含：市场徽标、代码/名称、判定标签、两位小数概率、“你写过：”单行摘要、“证据：”两行摘要、`8-K · 时间 · 标题`、四个操作。`thesisCurrentVersion > thesisVersion` 时在标题行加“逻辑已更新”。
 6. 操作：`查看原文` 打开抽屉并记录触发元素；`仍然成立` 直接 `act("still_valid")`；`修正逻辑` 先 `navigate("holdings",{thesis:item.thesisId})`；`⋯` 菜单含 `准备卖出`、`忽略`。处理成功后焦点移到下一条卡片标题。
 7. `scan_failed`：清单保留上次成功结果；顶部 danger 提示条显示 `lastScan.error.message`，按钮“重试”调用 `scan.start`；页头写“上次扫描失败 {时间}”，状态栏的“最近扫描”仍取最近成功。

@@ -115,8 +115,15 @@ def seed_reference(db):
             "INSERT INTO event_passage VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
             ["passage", make_ref().event_id, 0, 0, "Initial", 0, 7, "hash"],
         )
-        tx.execute("CREATE TABLE decision (decision_id VARCHAR PRIMARY KEY, passage_id VARCHAR)")
-        tx.execute("INSERT INTO decision VALUES (?, ?)", ["decision", "passage"])
+        tx.execute(
+            "INSERT INTO decision (decision_id, thesis_id, thesis_version, passage_id, "
+            "event_id, instrument_id, relation, p_relevant, p_against, p_contradicts, "
+            "p_supports, headline, engine, model_id, question_set_version, cache_key, "
+            "content_status, created_at) VALUES (?, ?, 1, ?, ?, ?, 'none', "
+            "0.1, 0.1, 0.1, 0.1, 0.1, 'jev_direct', 'jev-1.14.0', 'sec-fixture', "
+            "'sec-reference-fixture', 'full_text', ?)",
+            ["decision", "sec-fixture-thesis", "passage", make_ref().event_id, "us:ZZAR", NOW],
+        )
 
 
 def test_existing_passages_decisions_survive_retry_and_rejection(db):
@@ -132,7 +139,7 @@ def test_existing_passages_decisions_survive_retry_and_rejection(db):
     with db.read() as reader:
         reader.execute("SELECT text FROM event_passage")
         assert reader.fetchall() == [("Initial",)]
-        reader.execute("SELECT * FROM decision")
+        reader.execute("SELECT decision_id, passage_id FROM decision")
         assert reader.fetchall() == [("decision", "passage")]
 
 

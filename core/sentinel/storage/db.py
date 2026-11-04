@@ -206,6 +206,14 @@ class Database:
         return self._connection
 
     @contextmanager
+    def exclusive(self) -> Iterator[None]:
+        """保护备份与后续写事务的完整序列，不暴露连接或隐式开启事务。"""
+        with self._gate.lock:
+            self._gate.require_idle()
+            self._require_open()
+            yield
+
+    @contextmanager
     def read(self) -> Iterator[SqlExecutor]:
         with self._gate.lock:
             cursor = self._require_open().cursor()

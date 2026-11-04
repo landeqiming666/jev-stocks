@@ -149,3 +149,35 @@ U-00 placeholder 与生命周期 fixture 不随业务页面交付而改变输入
 不得以非 US 或未来 D+2 数据伪造可用。空账户不能永久无法前进（P-05 主审新增回归）。
 所有业务页面可在已有 U-00/U-01 和契约基础上并行，U-02 额外公共 hook 在它主审后复用，
 不复制未交付代码；真正共享通知和事件订阅的组合回归由主 agent 统一补齐。
+
+## 12. 全量测试加载
+
+S-05 与 D-01 均拥有不同目录的 test_cache.py；默认 pytest prepend 模式将其作为同名
+顶层模块导入而发生 collection mismatch。主审将 core 的 addopts 改为 importlib 模式，
+保留全部文件、testpaths、测试名与回归数量，不删缓存或排除测试来制造通过。
+相应跨测试引用改为 tests.unit.* 包限定导入。D-03 的 decision 两列测试占位在真实
+006 到来后移除，以实际判定 DDL 插入显式 synthetic 引用保护行，不改生产抓取逻辑。
+
+## 13. 破坏性操作的公共备份互斥
+
+P-05 reset 需要跨备份和删除的同一路径共享互斥，不能直接引用 Database._gate。
+主审为 C-03 增加 exclusive() 公共上下文：只持路径共享 RLock，不暴露原始连接或事务；
+拒绝从活动读写上下文进入，内部允许依次 read/backup/write。五个先红回归覆盖跨句柄
+阻塞直到整个序列结束、备份内容、异常释放、事务嵌套及未打开数据库。
+P-05 必须改用公共方法；依旧先确认、成功完成备份后才开始删除事务。
+
+paper.createAccount.initialCash 的输入机器契约限定正数、整数最多 14 位、小数最多 4 位，
+与 DECIMAL(18,4) 和实际 Python validator 一致；不能接受输出与数据库无法容纳的 15 位
+整数。两个先红 contract 回归验证边界；原示例、方法数量、生成客户端字段保持不变。
+Decimal 隔离测试分别以干净及已有 flags 执行，断言调用方 flags 原样保留，而非假定
+全量测试进程的全局 Decimal flags 总为空；不让业务函数清除调用方历史状态。
+
+## 14. 清单与持仓的计数口径
+
+P-03 清单先选代表再校验证据，不能展示评分第一事务已提交但证据未完成的行。
+主审将 P-01 计数同样限定有效代表的原文、偏移、逻辑版本和来源身份；损坏较强代表时
+不得改数为较弱行。21 项同数据库组合及 6 项持仓先红回归覆盖动作、重开、归档与缺证据。
+Holding.pendingCount 仅推翻/削弱，uncertainCount 独立；两者之和才是 Inbox.summary.pendingCount。
+今日页标题 N 仍仅 items.length，乐观动作重算 wire 汇总不得混用标题数量。
+U-02 排序以真实 P-03/04 的关系、headline、event.publishedAt、decisionId 为准，
+修正旧页面文档 createdAt 与服务端排序冲突，不改判定阈值或原型概率。
