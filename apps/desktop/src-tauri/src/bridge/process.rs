@@ -133,12 +133,14 @@ pub(crate) enum Event {
     Wake,
 }
 fn read_lines(reader: impl Read, mut line: impl FnMut(String)) {
+    // Retain one possible CR until the following LF proves it is a delimiter.
+    const MAX_BUFFERED_BYTES: usize = MAX_LINE_BYTES + 1;
     let mut reader = BufReader::new(reader);
     let mut bytes = Vec::new();
     let mut oversized = false;
     while let Ok(buf) = reader.fill_buf() {
         if buf.is_empty() {
-            if !oversized && !bytes.is_empty() {
+            if !oversized && !bytes.is_empty() && bytes.len() <= MAX_LINE_BYTES {
                 if let Ok(s) = String::from_utf8(bytes) {
                     line(s);
                 }
@@ -149,32 +151,38 @@ fn read_lines(reader: impl Read, mut line: impl FnMut(String)) {
         let n = end.map_or(buf.len(), |n| n + 1);
         let content = end.unwrap_or(n);
         if !oversized {
-            if bytes.len() + content > MAX_LINE_BYTES {
+            let buffered_len = bytes.len() + content;
+            if buffered_len > MAX_BUFFERED_BYTES {
                 bytes.clear();
                 oversized = true;
             } else {
+                if buffered_len > bytes.capacity() {
+                    let capacity = (bytes.capacity() * 2)
+                        .max(buffered_len)
+                        .min(MAX_BUFFERED_BYTES);
+                    bytes.reserve_exact(capacity - bytes.len());
+                }
                 bytes.extend_from_slice(&buf[..content]);
             }
         }
         reader.consume(n);
         if end.is_some() {
-            if !oversized {
-                if bytes.last() == Some(&b'\r') {
-                    bytes.pop();
-                }
-                if !bytes.is_empty() {
-                    if let Ok(s) = String::from_utf8(std::mem::take(&mut bytes)) {
-                        line(s);
-                    }
-                }
-            } else {
+            if bytes.last() == Some(&b'\r') {
+                bytes.pop();
+            }
+            if oversized || bytes.len() > MAX_LINE_BYTES {
                 eprintln!("{{\"level\":\"warn\",\"module\":\"bridge\",\"error_code\":\"LINE_TOO_LARGE\"}}");
+            } else if !bytes.is_empty() {
+                if let Ok(s) = String::from_utf8(std::mem::take(&mut bytes)) {
+                    line(s);
+                }
             }
             bytes.clear();
             oversized = false;
         }
     }
 }
+
 fn attach(shared: &Arc<Shared>, child: &mut Child, generation: u64) -> Vec<thread::JoinHandle<()>> {
     let mut handles = Vec::new();
     let (tx, rx) = mpsc::sync_channel::<Write>(32);
@@ -396,4 +404,28 @@ pub(crate) fn supervise(
         transition(&shared, CoreState::Starting, attempt);
     }
     transition(&shared, CoreState::Failed, attempt);
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{read_lines, MAX_LINE_BYTES};
+
+    #[test]
+    fn read_lines_enforces_payload_limit_after_crlf() {
+        let mut input = vec![b'a'; MAX_LINE_BYTES + 1];
+        input.extend_from_slice(b"\r\n");
+        input.resize(input.len() + MAX_LINE_BYTES, b'b');
+        input.extend_from_slice(b"\r\n");
+        input.resize(input.len() + MAX_LINE_BYTES + 1, b'c');
+        input.extend_from_slice(b"\nnext\n");
+        input.resize(input.len() + MAX_LINE_BYTES, b'd');
+        input.push(b'\r'); // A lone CR at EOF is payload, not a delimiter.
+
+        let mut lines = Vec::new();
+        read_lines(input.as_slice(), |line| lines.push(line));
+        assert_eq!(lines.len(), 2);
+        assert_eq!(lines[0].len(), MAX_LINE_BYTES);
+        assert!(lines[0].bytes().all(|byte| byte == b'b'));
+        assert_eq!(lines[1], "next");
+    }
 }
