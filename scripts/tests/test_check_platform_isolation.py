@@ -137,6 +137,14 @@ class ScanTests(unittest.TestCase):
         self.assertEqual(len(findings), 1)
         self.assertIn("b.sh", findings[0].message)
 
+    def test_documented_windows_only_tools_do_not_need_shell_wrappers(self) -> None:
+        for name in ("build_jevdb_msvc", "windows_smoke", "windows_smoke_extra"):
+            self.write(f"scripts/{name}.ps1", "exit 0\n")
+        self.assertEqual(
+            [finding.path for finding in isolation.scan(self.root)],
+            ["scripts/windows_smoke_extra.ps1"],
+        )
+
     def test_non_utf8_file_is_reported_not_skipped(self) -> None:
         path = self.root / "core" / "bad.py"
         path.parent.mkdir(parents=True, exist_ok=True)

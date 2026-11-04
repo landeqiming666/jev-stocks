@@ -105,7 +105,7 @@ def _script_pair_findings(root: Path) -> List[Finding]:
                 Finding(path.relative_to(root).as_posix(), 0, "缺少成对脚本: %s" % counterpart.name)
             )
     for path in sorted(scripts.glob("*.ps1")):
-        if path.stem.startswith("_"):
+        if path.stem.startswith("_") or path.name in {"build_jevdb_msvc.ps1", "windows_smoke.ps1"}:
             continue
         counterpart = path.with_suffix(".sh")
         if not counterpart.exists():

@@ -128,10 +128,9 @@ class PowerShellWrapperTests(unittest.TestCase):
                     self.assertEqual(payload["argv"], ["含 空格 参数"])
 
     def test_every_ps1_wrapper_has_a_sh_pair(self) -> None:
-        for path in sorted(SCRIPTS.glob("*.ps1")):
-            if not path.stem.startswith("_"):
-                with self.subTest(wrapper=path.name):
-                    self.assertTrue(path.with_suffix(".sh").is_file())
+        for name in WRAPPERS:
+            with self.subTest(wrapper=name):
+                self.assertTrue((SCRIPTS / (name + ".sh")).is_file())
 
     def test_ps1_files_have_utf8_bom_and_crlf(self) -> None:
         for name in (*WRAPPERS, "_py"):
