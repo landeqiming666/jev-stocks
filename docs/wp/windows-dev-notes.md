@@ -199,3 +199,17 @@ Python 检查与 Node 原型回归在这个环境中通过。代码页 936 与 P
 
 当前记录没有验证 Windows 凭据管理器读写、完整子进程树退出、安装包、JEVDB 构建或真实模型调用。这些结果留给 W-01 及后续对应工作包填写；现有骨架检查不替代这些验收。
 
+## 7. PowerShell 脚本用法
+
+从仓库根目录运行 `.\scripts\doctor.ps1`、`.\scripts\setup.ps1`、`.\scripts\check.ps1`、`.\scripts\dev.ps1`。Windows PowerShell 5.1 和 PowerShell 7 均已测试。包装器按 `py -3`、`python`、`python3` 选择可用的 Python 3.9 或以上版本，保留参数与退出码。
+
+如执行策略阻止脚本，先用 `Get-ExecutionPolicy -List` 查看来源，也可用可用的 Python 直接运行同名脚本。离线复现可先加载工作区已有工具链，并设置 `UV_OFFLINE=1`、`CARGO_NET_OFFLINE=true` 和 `npm_config_offline=true`。
+
+## 8. W-01 实测注意事项
+
+- Windows PowerShell 5.1 的旧式原生参数绑定需要逐项处理空值、引号和尾随反斜杠。PowerShell 7.3 起在调用内使用 Standard 参数绑定。
+- 受限执行环境可能无法读取 Windows PowerShell 的执行策略或运行 `taskkill`。W-01 在正常本机 Windows 会话复验了双宿主和进程树清理。
+- 进程测试通过标准输入让持锁解释器退出，兼容 Windows 虚拟环境的启动器。项目数据宜放在本地磁盘，锁测试在自有临时目录运行。
+- 目录 ACL 仅替换指定目标，新子项继承当前用户授权。已有子项若需要收紧，应由调用方逐一处理。
+- 骨架窗口的本机结果、测试数和共享修复见 [W-01 完成报告](status/W-01.md)。
+
