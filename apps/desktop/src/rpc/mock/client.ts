@@ -42,7 +42,14 @@ export function createMockRpcClient(options: { scenario?: string; delayMs?: numb
       if (!example) throw new RpcError("INVALID_ARGUMENT", RPC_MESSAGES.invalid);
       const respond = () => {
         timers.delete(request.id);
-        emit({ jsonrpc: "2.0", id: request.id, ...("error" in example ? { error: example.error } : { result: example.result }) });
+        let result = example.result;
+        const platform = method === "app.bootstrap"
+          ? globalThis.document?.documentElement?.dataset.platform
+          : undefined;
+        if ((platform === "windows" || platform === "macos") && result && typeof result === "object") {
+          result = { ...result, platform };
+        }
+        emit({ jsonrpc: "2.0", id: request.id, ...("error" in example ? { error: example.error } : { result }) });
       };
       if (delayMs) timers.set(request.id, setTimeout(respond, delayMs)); else respond();
     },

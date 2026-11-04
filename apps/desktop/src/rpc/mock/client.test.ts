@@ -13,6 +13,30 @@ test("mock_today_pending_returns_inbox_pending", async () => {
   client.dispose();
 });
 
+test.each([
+  ["windows", "windows"],
+  ["macos", "macos"],
+  ["unexpected", "macos"],
+  [undefined, "macos"],
+] as const)("mock_bootstrap_respects_valid_dom_platform_%s", async (marker, expected) => {
+  const { createMockRpcClient } = await import("./client");
+  const client = createMockRpcClient({ scenario: "today.pending" });
+  const { dataset } = document.documentElement;
+  const original = dataset.platform;
+  const fixture = MOCK_EXAMPLES["app.bootstrap"][0].result;
+  const before = { ...fixture };
+  try {
+    if (marker === undefined) delete dataset.platform;
+    else dataset.platform = marker;
+    expect(await client.call("app.bootstrap", {})).toEqual({ ...before, platform: expected });
+    expect(fixture).toEqual(before);
+  } finally {
+    if (original === undefined) delete dataset.platform;
+    else dataset.platform = original;
+    client.dispose();
+  }
+});
+
 test("known_method_without_scenario_mapping_uses_first_success", async () => {
   const { createMockRpcClient } = await import("./client");
   const warn = vi.fn(), client = createMockRpcClient({ scenario: "today.pending", warn });
