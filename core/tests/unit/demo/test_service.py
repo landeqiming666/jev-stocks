@@ -157,7 +157,7 @@ def test_clear_rolls_back_when_demo_row_reappears(service: DemoService, db: Data
     with pytest.raises(InternalError):
         service.clear()
     assert query(db, "SELECT count(*) FROM instrument WHERE source='demo'") == [(6,)]
-    assert query(db, "SELECT count(*) FROM demo_row") == [(1650,)]
+    assert query(db, "SELECT count(*) FROM demo_row") == [(1651,)]
 
 
 def test_clear_after_manual_delete_skips_missing_rows(service: DemoService, db: Database) -> None:

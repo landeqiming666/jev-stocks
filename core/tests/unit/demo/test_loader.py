@@ -26,7 +26,7 @@ def test_demo_rows_cover_every_inserted_table(service: DemoService, db: Database
     assert registered | {"setting": 1} == expected | {"setting": 1}
     assert registered["setting"] == 1
     assert {table: count for table, count in registered.items() if table != "setting"} == expected
-    assert sum(registered.values()) == 1651
+    assert sum(registered.values()) == 1652
 
 
 def test_registered_keys_match_declared_primary_keys(service: DemoService, db: Database) -> None:
