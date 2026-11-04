@@ -4,9 +4,10 @@ title: 全局反馈：Toast、错误边界、核心状态与离线横幅
 phase: mvp0
 platform: shared
 lane: ui
-deps: [U-02]
-size: S
-owns: [apps/desktop/src/components/feedback/, apps/desktop/src/lib/]
+deps: [U-00, U-01]
+size: L
+size_approval: cr/F18-01-closure-clarifications.md
+owns: [apps/desktop/src/components/feedback/, apps/desktop/src/lib/, apps/desktop/src/i18n/zh-CN/feedback.ts]
 appends: []
 stubs: []
 ---
@@ -53,7 +54,7 @@ stubs: []
 
 ## 3. 前置条件
 
-- U-02 已交付 `PageFrame`、`app/events.ts`（`sentinel:toast` 事件）和 `#feedback-root` 挂载点。
+- U-00 已交付 `PageFrame`、`app/events.ts`（`sentinel:toast` 事件）；本包创建或复用 `#feedback-root`，生产挂载由集成根完成，不要求 U-02 先实现。
 - U-01 已交付 `Toast`、`Banner`、`Button` 组件。
 - C-02 已定义 `core://status` 的事件负载；本包只消费，不修改 Rust。
 

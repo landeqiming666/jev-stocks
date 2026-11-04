@@ -5,8 +5,9 @@ phase: mvp0
 platform: shared
 lane: core
 deps: [C-01, C-03]
-size: M
-owns: [core/sentinel/settings/__init__.py, core/sentinel/settings/models.py, core/sentinel/settings/repository.py, core/sentinel/settings/service.py, core/sentinel/settings/rpc.py, core/sentinel/secrets/__init__.py, core/sentinel/secrets/store.py, core/sentinel/secrets/service.py, core/tests/unit/settings/, core/tests/unit/secrets/test_secrets.py]
+size: L
+size_approval: cr/B10-01-review-clarifications.md
+owns: [core/sentinel/settings/__init__.py, core/sentinel/settings/models.py, core/sentinel/settings/repository.py, core/sentinel/settings/service.py, core/sentinel/settings/rpc.py, core/sentinel/secrets/__init__.py, core/sentinel/secrets/store.py, core/sentinel/secrets/service.py, core/sentinel/messages/settings.py, core/sentinel/platform/keyring_store.py, core/sentinel/platform/macos_keychain.py, core/tests/platform/test_keyring_store.py, core/tests/platform/test_macos_keychain.py, core/tests/unit/settings/, core/tests/unit/secrets/test_secrets.py]
 appends: []
 stubs: []
 ---
@@ -57,10 +58,14 @@ stubs: []
 | `core/sentinel/settings/rpc.py` | 新建 | 7 个 RPC 处理器与 `register()` |
 | `core/sentinel/secrets/__init__.py` | 新建 | 导出 `SecretStore`、`SecretsService` |
 | `core/sentinel/secrets/store.py` | 新建 | `KeyringSecretStore` 与 `MemorySecretStore` |
+| `core/sentinel/platform/keyring_store.py` | 新建 | 默认 Mac backend 的原子写路由与可注入 backend 协议 |
+| `core/sentinel/platform/macos_keychain.py` | 新建 | Security.framework 原子 update / 缺失时 add；不 delete 旧密钥 |
 | `core/sentinel/secrets/service.py` | 新建 | 单向写入、清除、脱敏登记、状态 |
+| `core/sentinel/messages/settings.py` | 新建 | 设置、密钥与连接状态文案；由协调者加入公共文案目录 |
 | `core/tests/unit/settings/test_settings.py` | 新建 | 设置与 bootstrap 测试 |
 | `core/tests/unit/settings/test_rpc.py` | 新建 | 7 个处理器注册与 wire 字段 |
 | `core/tests/unit/secrets/test_secrets.py` | 新建 | 密钥测试 |
+| `core/tests/platform/test_keyring_store.py`、`core/tests/platform/test_macos_keychain.py` | 新建 | 原子失败保留、CF 引用释放与平台路由测试；不写用户钥匙串 |
 ## 5. 接口规格
 ### 5.1 公开接口
 ```python
@@ -74,7 +79,8 @@ class EngineSnapshot:
     active: Literal["jevdb", "jev_direct"] | None
     jevdb_available: bool
 class SettingsService:
-    def __init__(self, repo: SettingsRepository, clock: Callable[[], datetime]) -> None: ...
+    def __init__(self, repo: SettingsRepository, clock: Callable[[], datetime], *,
+                 allowed_domains: Callable[[], Sequence[Mapping[str,str]]] | None = None) -> None: ...
     def get(self) -> Settings: ...
     def update(self, patch: SettingsPatch) -> Settings: ...
     def bootstrap(self, engine: EngineSnapshot, secrets: "SecretsService",
@@ -96,16 +102,18 @@ class ConnectionProbe(Protocol):
     def check_sec(self, email: str) -> ProbeResult: ...
     def check_jevdb(self) -> ProbeResult: ...
 def register(dispatcher: Dispatcher, settings: SettingsService, secrets: SecretsService,
-             db: Database, platform_name: str, engine: EngineSnapshot,
-             probe: ConnectionProbe) -> None: ...
+             db: Database, platform_name: str, engine: EngineSnapshot | Callable[[], EngineSnapshot],
+             probe: ConnectionProbe, *, before_change: Callable[[], None] | None = None) -> None: ...
 ```
 `SettingsPatch` 的字段只有 `engine`、`secContactEmail`、`dailyTokenBudget`、`firstScanLookbackDays`；`extra="forbid"`。`update` 先校验完整 patch，再在一个 `Database.write()` 中写入变化的键；未知字段、超范围值和非法邮箱都抛 `UserError("INVALID_ARGUMENT")`，`data.field` 指向第一个字段。`bootstrap` 只读，不写数据库。`get_jev_key` 仅供核心进程内部调用，不能注册成 RPC。
+
+Python 属性使用 snake_case 与 camelCase alias，wire 和 setting 表键不变。`KeyringSecretStore` 可注入 `PasswordBackend`，测试必须使用 fake backend；默认 Mac provider 的写入走 `SecItemUpdate`，不存在才 `SecItemAdd`，重复竞态再试一次 update。`AtomicWriteError` 不触发补偿写，避免更新未发生时不安全地重写旧值。其他 provider 的异常补偿为 best-effort，真实 provider 验收交 I-01。引擎 requested 来自当前设置，active/available 来自实际注入快照；C-04 不猜测或构造引擎。
 ### 5.2 数据结构
 | 结构 | 字段 | 类型 | 必填 | 约束 | 含义 |
 |---|---|---|---|---|---|
 | `Settings` | `engine` | str | 是 | `auto`/`jevdb`/`jev_direct` | 请求引擎 |
 | | `modelId` | str | 是 | 固定 `jev-1.14.0` | 模型版本 |
-| | `secContactEmail` | str/null | 是 | ≤120，合法邮箱或 null | SEC 联系邮箱 |
+| | `secContactEmail` | str/null | 是 | ≤120，常用 ASCII 邮箱或 null；local ≤64 | SEC 联系邮箱 |
 | | `dailyTokenBudget` | int | 是 | 10,000–50,000,000 | 每日 token 限额 |
 | | `firstScanLookbackDays` | int | 是 | 1–30 | 首次回看天数 |
 | | `demoDataLoaded` | bool | 是 | 只读 | 演示数据状态 |
@@ -134,10 +142,10 @@ def register(dispatcher: Dispatcher, settings: SettingsService, secrets: Secrets
 ## 6. 实现步骤
 1. **默认设置**：键不存在时返回 [04] §5 的默认值；`modelId`、`demoDataLoaded` 只从常量/数据库读取；`allowedDomains` 按 [02] §1 返回 5 条，`modelId` 缺省为 `jev-1.14.0`。
 2. **读取**：一次 `db.read()` 查出全部 `setting` 行，用 `json.loads(value_json)`；JSON 损坏时抛 `InternalError("INTERNAL", detail="setting:<key>")`，不猜测默认值。
-3. **校验 patch**：`engine` 只允许三个枚举；邮箱用 `^[^@\s]+@[^@\s]+\.[^@\s]+$`，去首尾空白，空串转 `null`；预算 10,000–50,000,000；回看 1–30。失败立即返回，不写任何键。
+3. **校验 patch**：`engine` 只允许三个枚举，不额外 strip 枚举；邮箱去首尾 Python 空白，空串转 `null`，其余用 `domain.contact.is_valid_sec_email`：ASCII 可打印、总长 ≤120、dot-atom local ≤64、域名标签合法、字母 TLD 2–63。不支持 EAI/非 ASCII 邮箱，避免合法设置无法编码进 HTTP User-Agent。预算 10,000–50,000,000；回看 1–30。失败立即返回，不写任何键。
 4. **原子更新**：把变化的键序列化为 `json.dumps(value, ensure_ascii=False, separators=(",",":"))`；同一事务 `INSERT ... ON CONFLICT DO UPDATE`，`updated_at` 使用同一个 `clock.now()`；提交后重新 `get()`。
 5. **密钥写入**：`value.strip()` 后长度 1–512，且 `re.search(r"\s", value)` 必须为 `None`；否则 `INVALID_ARGUMENT`。调用 `store.set("typesafe_api_key", value)`，再 `register_secret(value)`；成功响应只有 `{ok:true}`。
-6. **密钥清除**：`store.delete`，`clear_secrets()`；重复清除仍返回 `{ok:true}`。`status()` 只调用 `store.get` 判断非空，不把值返回给 RPC 层。
+6. **密钥清除**：`store.delete`；重复清除仍返回 `{ok:true}`。不清空本进程脱敏登记，防止正在执行的旧请求在清除后泄漏旧密钥；屏蔽记录随进程结束释放。`status()` 只调用 `store.get` 判断非空，读取现有密钥时也登记脱敏，不把值返回给 RPC 层。
 7. **连接测试**：先检查密钥和邮箱；缺失抛 `CONFIG_REQUIRED`，`data.missing` 按 `jevKey`、`secEmail` 顺序。否则依次调用 `check_jev(MODEL_ID)`、`check_sec(email)`、`check_jevdb()`，固定返回三项 `{name, ok, latencyMs, message}`；`ok = jev.ok and sec.ok and engine.active is not None`。
 8. **bootstrap**：读取设置和 `secrets.status()`，构造 [05] §4 的 `Bootstrap`；数据库版本用 `db.schema_version`；平台用参数；`offline` 只由环境变量 `SENTINEL_OFFLINE == "1"` 决定；`now` 用 `clock.now()`。没有密钥时 `engine.active` 强制为 `null`。
 9. **注册**：`register()` 依次注册 `app.bootstrap`（30 s）、`settings.get`、`settings.update`、`settings.testConnection`（20 s）、`secrets.set`、`secrets.clear`、`secrets.status`；重复注册不允许，参数模型全部 `extra="forbid"`。
@@ -163,7 +171,7 @@ def register(dispatcher: Dispatcher, settings: SettingsService, secrets: Secrets
 | `test_unknown_patch_field_is_rejected` | 同上 | `{"modelId":"x"}` | `INVALID_ARGUMENT`，没有任何写入 |
 | `test_budget_out_of_range_is_rejected` | 同上 | `10000` 与 `50000001` | 后者 `INVALID_ARGUMENT` |
 | `test_secret_is_never_returned` | `test_secrets.py` | `set_jev_key("<secret>")` 后 `status()` | `{"jevKey":True}`，响应不含 `<secret>` |
-| `test_secret_rejects_whitespace` | 同上 | `" sk-test "` | `INVALID_ARGUMENT`，钥匙串没有写入 |
+| `test_secret_rejects_whitespace` | 同上 | `"sk test"`（密钥内部空白） | `INVALID_ARGUMENT`，钥匙串没有写入；首尾空白按 05 §5.2 先 strip 后校验 |
 | `test_bootstrap_fields_match_contract` | `test_settings.py` | 已配置、`engine=auto/active=jev_direct`、db version 1 | 10 个字段与 [05] §4 示例名 `ready` 一致 |
 | `test_bootstrap_unconfigured_has_no_active_engine` | 同上 | 无密钥 | `configured.jevKey is False`，`engine.active is None` |
 | `test_connection_ok_when_jevdb_missing` | 同上 | Jev 412 ms、SEC 236 ms、JEVDB false | `ok is True`，检查顺序 `Jev,SEC,JEVDB` |

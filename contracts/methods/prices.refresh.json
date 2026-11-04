@@ -1,0 +1,119 @@
+{
+  "method": "prices.refresh",
+  "summary": "刷新收盘行情",
+  "owner": "D-04",
+  "phase": "mvp0",
+  "timeoutMs": 30000,
+  "params": {
+    "type": "object",
+    "required": [],
+    "properties": {
+      "instrumentIds": {
+        "type": "array",
+        "items": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "additionalProperties": false
+  },
+  "result": {
+    "type": "object",
+    "required": [
+      "updated",
+      "failed",
+      "asOf"
+    ],
+    "properties": {
+      "updated": {
+        "type": "integer",
+        "minimum": 0
+      },
+      "failed": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "required": [
+            "instrumentId",
+            "error"
+          ],
+          "properties": {
+            "instrumentId": {
+              "type": "string",
+              "minLength": 1
+            },
+            "error": {
+              "type": "object",
+              "required": [
+                "code",
+                "message"
+              ],
+              "properties": {
+                "code": {
+                  "type": "string",
+                  "enum": [
+                    "INVALID_ARGUMENT",
+                    "NOT_FOUND",
+                    "CONFLICT",
+                    "CONFIG_REQUIRED",
+                    "UNAUTHENTICATED",
+                    "ENGINE_UNAVAILABLE",
+                    "SOURCE_UNAVAILABLE",
+                    "RATE_LIMITED",
+                    "MODEL_ERROR",
+                    "BUDGET_EXCEEDED",
+                    "DATA_INSUFFICIENT",
+                    "ORDER_REJECTED",
+                    "TIMEOUT",
+                    "CANCELLED",
+                    "INTERNAL"
+                  ]
+                },
+                "message": {
+                  "type": "string"
+                }
+              },
+              "additionalProperties": false
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "asOf": {
+        "$ref": "types.schema.json#/$defs/IsoDate"
+      }
+    },
+    "additionalProperties": false
+  },
+  "errors": [
+    "SOURCE_UNAVAILABLE",
+    "RATE_LIMITED"
+  ],
+  "examples": [
+    {
+      "name": "ok",
+      "params": {
+        "instrumentIds": [
+          "us:ZZAR"
+        ]
+      },
+      "result": {
+        "updated": 1,
+        "failed": [],
+        "asOf": "2026-10-30"
+      }
+    },
+    {
+      "name": "offline",
+      "params": {},
+      "error": {
+        "code": "SOURCE_UNAVAILABLE",
+        "message": "行情源暂时无法访问，已使用 10 月 30 日的收盘价。",
+        "data": {
+          "retryable": true
+        }
+      }
+    }
+  ]
+}

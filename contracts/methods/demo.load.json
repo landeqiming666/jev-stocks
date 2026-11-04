@@ -1,0 +1,85 @@
+{
+  "method": "demo.load",
+  "summary": "载入虚构演示数据",
+  "owner": "E-01",
+  "phase": "mvp0",
+  "timeoutMs": 30000,
+  "params": {
+    "type": "object",
+    "required": [],
+    "properties": {},
+    "additionalProperties": false
+  },
+  "result": {
+    "type": "object",
+    "required": [
+      "loaded",
+      "counts"
+    ],
+    "properties": {
+      "loaded": {
+        "type": "boolean",
+        "const": true
+      },
+      "counts": {
+        "type": "object",
+        "required": [
+          "instruments",
+          "holdings",
+          "theses",
+          "events",
+          "decisions",
+          "prices"
+        ],
+        "properties": {
+          "instruments": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "holdings": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "theses": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "events": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "decisions": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "prices": {
+            "type": "integer",
+            "minimum": 0
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    "additionalProperties": false
+  },
+  "errors": [
+    "CONFLICT"
+  ],
+  "examples": [
+    {
+      "name": "ok",
+      "params": {},
+      "result": {
+        "loaded": true,
+        "counts": {
+          "instruments": 6,
+          "holdings": 6,
+          "theses": 5,
+          "events": 6,
+          "decisions": 6,
+          "prices": 1500
+        }
+      }
+    }
+  ]
+}

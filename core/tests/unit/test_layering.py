@@ -8,18 +8,19 @@ from pathlib import Path
 ALWAYS_ALLOWED = {"ids", "clock", "errors", "messages", "logging_setup"}
 
 LAYER_RULES: dict[str, set[str]] = {
+    "logging_setup": {"security"},
     "domain": set(),
     "storage": {"domain"},
     "http": {"domain"},
     "security": {"domain"},
     "platform": {"domain"},
     "markets": {"domain", "storage", "http"},
-    "semantic": {"domain", "storage", "http"},
+    "semantic": {"domain", "storage", "http", "security"},
     "quant": {"domain", "storage", "markets", "rpc"},
     "trading": {"domain", "storage", "markets", "rpc"},
     "portfolio": {"domain", "storage", "markets", "rpc"},
-    "rpc": {"domain"},
-    "settings": {"domain", "storage", "security", "secrets"},
+    "rpc": {"domain", "platform"},
+    "settings": {"domain", "storage", "security", "secrets", "rpc"},
     "secrets": {"domain", "security", "platform"},
     "scan": {"domain", "storage", "markets", "semantic", "rpc"},
     "app": {"*"},
@@ -66,7 +67,7 @@ def imported_layers(source: str, module_path: str) -> set[str]:
                     if alias.name in LAYER_RULES or alias.name in ALWAYS_ALLOWED:
                         layers.add(alias.name)
 
-    return {layer for layer in layers if layer in LAYER_RULES}
+    return {layer for layer in layers if layer in LAYER_RULES and layer not in ALWAYS_ALLOWED}
 
 
 def violations(source: str, module_path: str) -> set[str]:
@@ -103,3 +104,34 @@ def test_repository_respects_layer_rules() -> None:
 def test_domain_layer_has_no_internal_dependencies() -> None:
     source = "from sentinel.storage import db\n"
     assert violations(source, "sentinel.domain.x") == {"storage"}
+
+
+def test_logging_can_import_redaction_but_not_business_services() -> None:
+    assert (
+        violations("from .security.redact import redact_obj\n", "sentinel.logging_setup") == set()
+    )
+    assert violations("from .storage import Database\n", "sentinel.logging_setup") == {"storage"}
+
+
+def test_business_layers_can_use_foundation_logging() -> None:
+    assert (
+        imported_layers("from sentinel.logging_setup import get_logger\n", "sentinel.rpc.server")
+        == set()
+    )
+    assert (
+        violations("from sentinel.platform import is_process_alive\n", "sentinel.rpc.server")
+        == set()
+    )
+
+
+def test_settings_can_register_handlers_without_moving_business_into_rpc() -> None:
+    assert violations("from sentinel.rpc import Dispatcher\n", "sentinel.settings.rpc") == set()
+    assert violations("from sentinel.settings import SettingsService\n", "sentinel.rpc.server") == {
+        "settings"
+    }
+
+
+def test_semantic_adapters_can_redact_secrets_without_relaxing_domain_layer() -> None:
+    source = "from sentinel.security.redact import redact_text\n"
+    assert violations(source, "sentinel.semantic.engines.jev_direct") == set()
+    assert violations(source, "sentinel.domain.classify") == {"security"}

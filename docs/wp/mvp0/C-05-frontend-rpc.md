@@ -5,8 +5,9 @@ phase: mvp0
 platform: shared
 lane: core
 deps: [C-06, WP-00]
-size: M
-owns: [apps/desktop/src/rpc/, apps/desktop/src/mocks/, scripts/gen_ts_types.py]
+size: L
+size_approval: cr/N10-01-execution-clarifications.md
+owns: [apps/desktop/src/rpc/, apps/desktop/src/mocks/, scripts/gen_ts_types.py, scripts/tests/test_gen_ts_types.py]
 appends: []
 stubs: []
 ---
@@ -90,11 +91,15 @@ export interface RpcClient {
     name: N, handler: (params: ParamsOfNotification<N>) => void,
   ): () => void;
   status(): "starting" | "ready" | "restarting" | "failed";
+  whenReady(options?: { timeoutMs?: number; signal?: AbortSignal }): Promise<void>;
+  dispose(): void;
 }
 export function createRpcClient(options?: RpcClientOptions): RpcClient;
 export function createMockRpcClient(options: { scenario?: string }): RpcClient;
 ```
-`createRpcClient` 通过 `invoke("rpc_send", { line })` 发送紧凑 JSON，通过 `listen("core://message", ...)` 接收响应/通知，通过 `listen("core://status", ...)` 更新状态。`call` 的默认超时为 30,000 ms；`settings.testConnection` 为 20,000 ms；导出方法为 60,000 ms。`scan.start` 使用默认值，立即返回 `runId`，后续靠通知。
+`createRpcClient` 通过 `invoke("rpc_send", { line })` 发送紧凑 JSON，通过 `listen("core://message", ...)` 接收响应/通知，通过 `listen("core://status", ...)` 更新状态；监听建立后只读一次 `core_status`。`call` 默认使用生成的 `METHOD_TIMEOUTS`，调用方 `timeoutMs` 可覆盖：普通方法 30,000 ms、`settings.testConnection` 20,000 ms、`scan.retryBatch` 60,000 ms、`app.ping` 2,000 ms、`app.shutdown` 5,000 ms。`scan.start` 立即返回 `runId`，后续靠通知。
+
+`whenReady` 不轮询，等待监听与快照初始化后实际进入 ready；取消、失败、dispose 或等待超时均拒绝。`dispose` 释放监听、所有 pending 和就绪等待者，重复调用安全。U-00 的握手使用两步合计 30 秒预算，不能分别等待两次 30 秒。
 
 ### 5.2 数据结构
 | 结构 | 字段 | 类型 | 必填 | 约束 | 含义 |
@@ -135,7 +140,7 @@ export function createMockRpcClient(options: { scenario?: string }): RpcClient;
 | 情形 | 行为 | 错误码 | 用户文案 |
 |---|---|---|---|
 | 核心未就绪 | 不发送，返回可重试错误 | `INTERNAL` | “核心进程尚未就绪，请稍后重试。” |
-| wire error 的 code 未知 | 保留 code，`retryable=false` | `INTERNAL` | “发生了意外错误，请重试。” |
+| wire error 的 code 未知 | 公共 code 归一为 INTERNAL；原值仅安全诊断，`retryable=false` | `INTERNAL` | “发生了意外错误，请重试。” |
 | 请求超时 | 删除 pending，保留请求在核心侧的自然取消 | `TIMEOUT` | “请求超时，请重试。” |
 | abort 已发生 | 先 reject，不发请求 | `CANCELLED` | “已取消” |
 | `core://message` 不是 JSON | 忽略并记录一次 | — | 不显示 |
@@ -154,7 +159,7 @@ export function createMockRpcClient(options: { scenario?: string }): RpcClient;
 | `subscribe_receives_scan_progress` | 同上 | `core://message` 无 id 通知 | handler 收到 `{runId:"run-1",done:9,total:17}` |
 | `mock_today_pending_returns_inbox_pending` | `mock/client.test.ts` | `scenario:"today.pending"` 调 `inbox.list` | `summary.pendingCount === 3` |
 | `mock_settings_configured_returns_configured_email` | 同上 | `scenario:"settings.configured"` | `secContactEmail === "name@example.com"` |
-| `mock_unknown_method_rejects_invalid_argument` | 同上 | 调一个场景未定义方法 | `RpcError.code === "INVALID_ARGUMENT"` |
+| `mock_unknown_method_rejects_invalid_argument` | 同上 | 调一个不属于 MethodMap 的未知方法 | `RpcError.code === "INVALID_ARGUMENT"`；已知方法缺场景映射仍按第 6 节回退 |
 
 ### 8.2 Fixture
 | 路径 | 内容与来源 | 怎么得到 |

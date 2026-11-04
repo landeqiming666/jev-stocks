@@ -5,8 +5,9 @@ phase: mvp0
 platform: shared
 lane: semantic
 deps: [P-02]
-size: M
-owns: [core/sentinel/scan/pending.py, core/sentinel/storage/migrations/007_action.sql, core/tests/unit/scan/test_pending.py]
+size: L
+size_approval: cr/F18-01-closure-clarifications.md
+owns: [core/sentinel/scan/pending.py, core/sentinel/storage/migrations/007_action.sql, core/tests/unit/scan/test_pending.py, core/sentinel/messages/inbox.py]
 appends: []
 stubs: []
 ---

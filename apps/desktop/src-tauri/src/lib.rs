@@ -1,10 +1,11 @@
+pub mod bridge;
 mod platform;
 
 use platform::Platform;
 use tauri::{Manager, WebviewUrl, WebviewWindowBuilder};
 
 pub fn run() {
-    tauri::Builder::default()
+    let builder = tauri::Builder::default()
         .plugin(tauri_plugin_single_instance::init(|app, _argv, _cwd| {
             if let Some(w) = app.get_webview_window("main") {
                 let _ = w.set_focus();
@@ -19,7 +20,12 @@ pub fn run() {
                 .initialization_script(p.init_script());
             p.configure_window(builder).build()?;
             Ok(())
-        })
-        .run(tauri::generate_context!())
+        });
+    bridge::install(builder)
+        .run(runtime_context())
         .expect("error while running tauri application");
+}
+
+pub fn runtime_context() -> tauri::Context<tauri::Wry> {
+    bridge::security::secure_context(tauri::generate_context!())
 }

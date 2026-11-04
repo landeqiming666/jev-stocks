@@ -5,7 +5,8 @@ phase: mvp0
 platform: shared
 lane: integration
 deps: [C-02, C-07, P-03, P-05, P-06, E-01, U-03, U-04, U-05, U-06, U-07, U-08]
-size: M
+size: L
+size_approval: cr/F18-01-closure-clarifications.md
 owns: [core/tests/integration/, apps/desktop/e2e/real-core/]
 appends: []
 stubs: []
@@ -90,7 +91,7 @@ class CoreHarness:
 ### 5.2 IPC 模拟字段
 | 字段/函数 | 类型 | 必填 | 约束 | 含义 |
 |---|---|---|---|---|
-| `window.__TAURI_INTERNALS__.invoke` | function | 是 | 只接受 `rpc_send`、`plugin:event|listen/unlisten` | 模拟 Tauri 命令 |
+| `window.__TAURI_INTERNALS__.invoke` | function | 是 | 只接受 `rpc_send`、只读 `core_status`、`plugin:event|listen/unlisten` | 模拟 Tauri 命令；状态快照返回真实 harness 当前状态 |
 | `window.__SENTINEL_TEST_EMIT__` | function | 是 | 参数 `{event,payload}` | Node 向页面派发核心行 |
 | `window.__sentinelSend` | function | 是 | 返回 Promise<void> | 页面把一行写给 Python |
 | `core://message.payload` | string | 是 | 一行 JSON，≤ 1 MB | 核心响应或通知 |
@@ -143,7 +144,7 @@ class CoreHarness:
 | `test_spaces_and_chinese_path` | 同上 | `含 空格 目录` | 启动成功，日志文件存在 |
 | `test_demo_inbox_exact_counts` | `test_demo_flow.py` | `demo.load` | `3` 待处理、`1` 待确认 |
 | `test_decision_act_and_reopen` | 同上 | 第一条判定 | 处理后 2，重开后 3 |
-| `test_paper_advance_moves_clock_exactly_one_day` | `test_paper_risk_flow.py` | 演示账户 | `2026-10-30 → 2026-11-02` |
+| `test_paper_advance_moves_clock_exactly_one_day` | `test_paper_risk_flow.py` | 演示账户 | `2026-10-29 → 2026-10-30` |
 | `test_risk_has_60_observations` | 同上 | 6M、USD | `observations ≥ 60`，对角 `1.0` |
 | `test_offline_scan_fails_without_losing_inbox` | 同上 | `scan.start` | `SOURCE_UNAVAILABLE`，清单仍 3 |
 | `test_real_core_six_pages_have_data` | `demo-flow.spec.ts` | 1440 与 1024 | 六页有内容，无控制台错误 |

@@ -1,0 +1,47 @@
+{
+  "method": "thesis.archive",
+  "summary": "归档投资逻辑",
+  "owner": "P-01",
+  "phase": "mvp0",
+  "timeoutMs": 30000,
+  "params": {
+    "type": "object",
+    "required": [
+      "thesisId"
+    ],
+    "properties": {
+      "thesisId": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "additionalProperties": false
+  },
+  "result": {
+    "type": "object",
+    "required": [
+      "ok"
+    ],
+    "properties": {
+      "ok": {
+        "type": "boolean",
+        "const": true
+      }
+    },
+    "additionalProperties": false
+  },
+  "errors": [
+    "NOT_FOUND"
+  ],
+  "examples": [
+    {
+      "name": "ok",
+      "params": {
+        "thesisId": "01JC8Z5V3Q00000000000063A2"
+      },
+      "result": {
+        "ok": true
+      }
+    }
+  ]
+}

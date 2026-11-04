@@ -1,0 +1,40 @@
+{
+  "method": "app.shutdown",
+  "summary": "退出核心进程",
+  "owner": "C-01",
+  "phase": "mvp0",
+  "timeoutMs": 5000,
+  "params": {
+    "type": "object",
+    "required": [],
+    "properties": {
+      "force": {
+        "type": "boolean"
+      }
+    },
+    "additionalProperties": false
+  },
+  "result": {
+    "type": "object",
+    "required": [
+      "ok"
+    ],
+    "properties": {
+      "ok": {
+        "type": "boolean",
+        "const": true
+      }
+    },
+    "additionalProperties": false
+  },
+  "errors": [],
+  "examples": [
+    {
+      "name": "ok",
+      "params": {},
+      "result": {
+        "ok": true
+      }
+    }
+  ]
+}

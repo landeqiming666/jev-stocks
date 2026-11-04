@@ -5,7 +5,8 @@ phase: mvp0
 platform: macos
 lane: semantic
 deps: [WP-00]
-size: M
+size: L
+size_approval: cr/N10-01-execution-clarifications.md
 owns: [scripts/probe_jevdb.py, scripts/build_jevdb.sh, scripts/build_jevdb.ps1, scripts/tests/test_probe_jevdb.py, scripts/tests/test_build_jevdb.py, vendors/jevdb/]
 appends: []
 stubs: []
@@ -67,7 +68,7 @@ PyPI `jevdb 0.1.0` 只有 Linux x86-64 wheel，macOS 必须从源码编译。JEV
 | `scripts/tests/test_probe_jevdb.py` | 新建 | 用假连接测 SQL、设置、错误映射与报告 |
 | `vendors/jevdb/README.md` | 新建 | 上游来源、MIT 许可证、构建边界、复现命令 |
 | `vendors/jevdb/pin.json` | 新建 | `commit=47a9070cba09012bedcc60f5e47e09ccb5c2c1fe`、DuckDB 1.4.3、源码 URL |
-| `vendors/jevdb/build.lock.json` | 生成 | 扩展 SHA256、OpenSSL 路径、构建时刻、工具版本 |
+| `.dev-data/jevdb/build.lock.json` | 生成，不提交 | 扩展 SHA256、OpenSSL 路径、构建时刻、工具版本 |
 
 ## 5. 接口规格
 
@@ -112,14 +113,14 @@ def main(argv: Sequence[str] | None = None) -> int: ...
 ## 6. 实现步骤
 
 1. `build_jevdb.sh` 检查 `uname -sm == Darwin arm64`、`cmake`、`ninja`、`git`、`cc`、`duckdb` Python 版本和 OpenSSL 静态库；任一缺失打印安装建议并返回 3，不自行安装。
-2. 在 `.dev-data/jevdb/` 下创建 `dependencies/`、`src/`、`logs/`。若源码不存在，下载 `https://codeload.github.com/PDAIS/JEVDB/tar.gz/47a9070cba09012bedcc60f5e47e09ccb5c2c1fe`，解压后断言 `LICENSE` 的 SPDX 是 MIT。
+2. 在 `.dev-data/jevdb/` 下创建 `dependencies/`、`src/`、`logs/`。若源码不存在，下载 `https://codeload.github.com/PDAIS/JEVDB/tar.gz/47a9070cba09012bedcc60f5e47e09ccb5c2c1fe`，核对固定哈希并验证标准 MIT 许可证文本；上游 LICENSE 没有 SPDX 行。
 3. 下载 `https://codeload.github.com/duckdb/duckdb/tar.gz/refs/tags/v1.4.3` 到 `build/dependencies/duckdb-v1.4.3.tar.gz`，校验解压目录名为 `duckdb-1.4.3`。
-4. 调用上游 `bash scripts/build.sh -DOPENSSL_ROOT_DIR=<prefix> -DOPENSSL_USE_STATIC_LIBS=ON`，stdout/stderr 写 `logs/build.log`；只接受产物 `build/release/extension/jevdb/jevdb.duckdb_extension`。
+4. 使用固定上游脚本的等价 CMake 配置和产物路径，显式 `--parallel 2`，OpenSSL 静态链接；日志写 `logs/build.log`。默认动态扩展在 Python wheel 缺少 C++ 导出时不可加载；N10-01 允许使用同一 DuckDB 1.4.3 的 `EXTENSION_STATIC_BUILD=ON`、`BUILD_EXTENSIONS_ONLY=OFF` 构建自包含扩展，不替换已安装 wheel。只接受产物 `build/release/extension/jevdb/jevdb.duckdb_extension`。
 5. 记录 `shasum -a 256`、`cmake --version` 首行、`ninja --version`、`cc --version` 首行、OpenSSL 路径到 `build.lock.json`；文件所有者只读权限 `0o600`。
 6. `probe_jevdb.py` 校验 Python `duckdb.__version__ == 1.4.3`，创建 `duckdb.connect(":memory:", config={"allow_unsigned_extensions": "true"})`。
 7. 执行 `LOAD '<绝对路径>'`。路径用绑定参数不支持 `LOAD`，所以先断言路径不含 `'`、换行和 NUL；以单引号转义后执行。加载失败按 4 退出。
-8. 执行 `CREATE SECRET jev (TYPE jev, PROVIDER env)`，只建临时 secret；依次设置 `jevdb_backend=jev`、`jevdb_model=jev-1.14.0`、`jevdb_threads=4`、`jevdb_max_retries=3`、`jevdb_retry_max_delay=30`、`jevdb_on_error=error`、`jevdb_timeout=60`、`threads=1`。
-9. 执行虚构查询：`SELECT jev_probability(?, ?), jev_keys_overlap(?, ?)`，用户文本全部绑定；期望概率在 `[0,1]`，重叠布尔为 true。401/403 记 BLOCKED，429/5xx 记 FAILED，不能转成 false。
+8. 仅在隔离子进程应用调用方传入的密钥、离线开关及必要 CA 环境配置，不修改父环境；`CREATE SECRET jev (TYPE jev, PROVIDER env)` 读取该子进程配置。验证同一个完整 HTTPS `JEV_ENDPOINT` 后去掉末尾 `systemone`，通过绑定参数设置 `jevdb_endpoint` 的 `/v1/` 前缀；不把完整路径再拼成 `/systemone/systemone`，拒绝凭据、query、fragment 与非法 host。依次设置 `jevdb_backend=jev`、`jevdb_model=jev-1.14.0`、`jevdb_threads=4`、`jevdb_max_retries=3`、`jevdb_retry_max_delay=30`、`jevdb_on_error=error`、`jevdb_timeout=60`、`threads=1`。
+9. 分别执行概率查询和 `jev_keys_overlap(VARCHAR[], VARCHAR[])` 查询；前者的固定 condition 必须可折叠，用户文本使用参数绑定。未配置 key 时仅允许本地重叠、统计和 NULL 短路核实，真实概率为 BLOCKED；有 key 时概率必须是 `[0,1]` 有限数，401/403 为 BLOCKED，429/5xx 为 FAILED，不能转成 false。
 10. 在 `finally` 中查询 `jevdb_stats()` 写报告，再 `DROP SECRET jev` 并关闭连接；报告不含 key、Authorization、请求正文。
 
 ## 7. 错误与边界情况
@@ -141,7 +142,7 @@ def main(argv: Sequence[str] | None = None) -> int: ...
 |---|---|---|---|
 | `test_pin_rejects_non_mvp0_duckdb_version` | `scripts/tests/test_build_jevdb.py` | `1.4.2` | `ValueError` |
 | `test_build_plan_uses_static_openssl_and_unsigned_extension` | 同上 | 固定 pin/prefix | 参数含 `OPENSSL_USE_STATIC_LIBS=ON`；产物路径固定 |
-| `test_build_plan_rejects_space_and_quote_in_extension_path` | 同上 | `a'b/c.duckdb_extension` | `ValueError` |
+| `test_build_plan_rejects_quote_in_extension_path` | 同上 | `a'b/c.duckdb_extension` | `ValueError`；普通空格允许，另测含空格仓库路径 |
 | `test_probe_sets_required_jevdb_settings` | `scripts/tests/test_probe_jevdb.py` | 假连接 | 7 条 `SET` 全部执行，`jevdb_on_error='error'` |
 | `test_probe_401_is_blocked_not_passed` | 同上 | 假连接抛 401 | exit 2；`call.status=BLOCKED` |
 | `test_probe_query_error_is_not_treated_as_false` | 同上 | 假连接抛 `MODEL_ERROR` | 不返回 false/NULL；`call.status=FAILED` |

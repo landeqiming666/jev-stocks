@@ -1,0 +1,22 @@
+{
+  "protocolVersion": "1.0",
+  "appVersion": "0.1.0",
+  "dbSchemaVersion": 1,
+  "platform": "macos",
+  "engine": {
+    "requested": "auto",
+    "active": "jev_direct",
+    "modelId": "jev-1.14.0",
+    "jevdbAvailable": false
+  },
+  "markets": [
+    "us"
+  ],
+  "configured": {
+    "jevKey": false,
+    "secEmail": false
+  },
+  "demoDataLoaded": false,
+  "offline": false,
+  "now": "2026-11-02T00:35:00Z"
+}

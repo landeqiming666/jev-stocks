@@ -1,0 +1,4 @@
+{
+  "first": {"status": 200, "headers": {"ETag": "\"fixture-one\""}, "body": "synthetic-body"},
+  "second": {"status": 304, "headers": {"ETag": "\"fixture-one\""}}
+}

@@ -1,0 +1,67 @@
+{
+  "_provenance": {
+    "mode": "synthetic",
+    "url": null,
+    "fetchedAt": null,
+    "purpose": "Isolated boundary tests; no rows in this file were received from a public source"
+  },
+  "tickers": {
+    "fields": [
+      "cik",
+      "name",
+      "ticker",
+      "exchange"
+    ],
+    "data": [
+      [
+        1,
+        "Zenith Arc Robotics Inc.",
+        "ZZAR",
+        "Nasdaq"
+      ],
+      [
+        2,
+        "Zenith Arc Robotics Inc.",
+        "ZZAR",
+        "NYSE"
+      ],
+      [
+        3,
+        "Zephyr Foods Corp.",
+        "ZZ FD",
+        "NYSE"
+      ],
+      [
+        4,
+        "Zinc Bay Bancorp",
+        "ZZBK",
+        "OTC"
+      ]
+    ]
+  },
+  "invalidPrices": [
+    [
+      "2026-10-30",
+      "NaN",
+      "10",
+      "11",
+      "9",
+      "100"
+    ],
+    [
+      "2026-10-30",
+      "10",
+      "10",
+      "11",
+      "9",
+      "-1"
+    ],
+    [
+      "2026-10-30",
+      "10",
+      "10",
+      "11",
+      "9"
+    ]
+  ]
+}

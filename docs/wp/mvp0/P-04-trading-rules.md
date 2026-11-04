@@ -6,7 +6,7 @@ platform: shared
 lane: data
 deps: [C-00]
 size: S
-owns: [core/sentinel/trading/rules.py, core/sentinel/trading/fees.py, core/tests/unit/trading/test_rules.py, core/tests/unit/trading/test_fees.py]
+owns: [core/sentinel/trading/rules.py, core/sentinel/trading/fees.py, core/sentinel/messages/trading.py, core/tests/unit/trading/test_rules.py, core/tests/unit/trading/test_fees.py]
 appends: []
 stubs: []
 ---
@@ -55,6 +55,7 @@ stubs: []
 |---|---|---|
 | `core/sentinel/trading/rules.py` | 新建 | `MarketRules`、`load_market_rules`、参数与业务前置校验、买入预估、请求哈希 |
 | `core/sentinel/trading/fees.py` | 新建 | `FeeConfig`、`FeeBreakdown`、`calculate_fees`、`match_at_open` |
+| `core/sentinel/messages/trading.py` | 新建 | 拒单与不支持订单类型文案；由协调者加入公共文案目录 |
 | `core/tests/unit/trading/test_rules.py` | 新建 | 配置、预检、预估、哈希测试 |
 | `core/tests/unit/trading/test_fees.py` | 新建 | 费用数值、舍入、撮合和拒单测试 |
 

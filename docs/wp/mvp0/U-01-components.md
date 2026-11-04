@@ -5,7 +5,8 @@ phase: mvp0
 platform: shared
 lane: ui
 deps: [U-00]
-size: M
+size: L
+size_approval: cr/N10-01-execution-clarifications.md
 owns: [apps/desktop/src/components/ui/]
 appends: []
 stubs: []
@@ -17,7 +18,7 @@ stubs: []
 
 - **目标**：实现 [03](../../03-界面设计规范.md) §5 的全部基础组件，DOM 与类名和 `design/prototype/js/render-ui.js` 一致，供六个页面复用。
 - **完成后解锁**：U-02～U-08；页面只组合组件，不再写按钮、输入框、标签和抽屉的样式。
-- **预计规模**：约 24 个组件文件、12 个测试文件，代码加测试 780 行以内。
+- **预计规模**：25 个公开组件及其回归，已按 N10-01 §19 批准 L，约 2600 行实现、复制 CSS、开发陈列与测试；不得删除测试或压缩格式降低计数。
 
 ## 1. 背景与边界
 
@@ -101,13 +102,13 @@ interface BannerProps { tone: "info"|"warn"|"danger"; text: string; action?: Rea
 interface ToastProps { tone: "success"|"error"; text: string; onClose: () => void; }
 interface EmptyStateProps { title:string; text?:string; action?:React.ReactNode; display?:boolean; }
 interface ProgressProps { value:number; max:number; label:string; }
-interface CardProps { children: React.ReactNode; } interface TableProps { children: React.ReactNode; label: string; } interface MenuProps { items: {id:string;label:string;icon?:IconName;danger?:boolean;disabled?:boolean}[]; onSelect:(id:string)=>void; triggerRef: React.RefObject<HTMLButtonElement>; } type SearchInputProps = InputProps & { expanded?: boolean }; type RadioProps = {name:string;value:string;checked:boolean;label:string;hint?:string;onChange:(v:string)=>void}; type TextareaProps = React.TextareaHTMLAttributes<HTMLTextAreaElement> & {invalid?:boolean}; interface SkeletonProps { rows?: number; }
+interface CardProps { children: React.ReactNode; } interface TableProps { children: React.ReactNode; label: string; } interface MenuProps { items: {id:string;label:string;icon?:IconName;danger?:boolean;disabled?:boolean}[]; onSelect:(id:string)=>void; onClose:()=>void; triggerRef: React.RefObject<HTMLButtonElement | null>; } type SearchInputProps = InputProps & { expanded?: boolean }; type RadioProps = {name:string;value:string;checked:boolean;label:string;hint?:string;onChange:(v:string)=>void}; type TextareaProps = React.TextareaHTMLAttributes<HTMLTextAreaElement> & {invalid?:boolean}; interface SkeletonProps { rows?: number; }
 interface DrawerProps { open: boolean; titleId: string; overlay: boolean; onClose: () => void; children: React.ReactNode; }
 interface ModalProps { open: boolean; titleId: string; onClose: () => void; children: React.ReactNode; }
 interface HeatmapProps { symbols: string[]; matrix: (number|null)[][]; label: string; }
 interface BarListProps { items: {label:string;value:number}[]; label: string; }
 ```
-所有组件 `forwardRef` 转发到最外层可聚焦元素；`Button` 默认 `type="button"`；`loading` 时保留文字、加 12px `refresh-cw` 与 `aria-busy="true"`；`disabled` 且有 `disabledReason` 时写 `title`。`Drawer` 在 `overlay=true` 时启用焦点陷阱与 `aria-modal="true"`，否则不陷阱、`aria-modal="false"`。`Menu` 的 `ArrowDown/ArrowUp/Home/End` 移动焦点，`Esc` 关闭并把焦点还给触发按钮。
+所有组件 forwardRef：交互组件到实际控件，非交互标签/图表到原型根元素，不额外增加 Tab 停靠点；Field/Segmented/Menu/Drawer/Modal 到其根，Table 到 table 本体。Button 默认 type=button；loading 保留文字、加 refresh-cw 与 aria-busy=true；disabledReason 写 title。Drawer 仅 overlay=true 启用焦点陷阱与 aria-modal=true，推开模式不陷阱。Menu 的方向键/Home/End 移动焦点，Esc 调用 onClose 并归还触发焦点。
 
 ### 5.2 数据结构
 | 字段 | 类型 | 必填 | 约束 | 含义 |
@@ -131,11 +132,11 @@ interface BarListProps { items: {label:string;value:number}[]; label: string; }
 
 1. 从 `icons.js` 复制每个图标的 `viewBox="0 0 24 24"` 路径；`Icon` 设置 `stroke="currentColor"`、`stroke-width="1.5"`、`fill="none"`；无 `aria-label` 时加 `aria-hidden="true"`。
 2. `Button` 输出 `class="c-button c-button--{variant}"`；图标按钮必须有 `aria-label`；加载时图标不旋转；按下用 `transform:translateY(1px)`。
-3. `Field` 用 `useId` 生成错误与帮助 id；错误时输入加 `aria-invalid="true"`，错误文本 `role="alert"`；计数用去首尾空白后的 `Array.from(text).length`。
+3. Field 用 useId 生成错误与帮助 id，合并子控件已有的 aria-describedby；错误时 aria-invalid=true、错误文本 role=alert。count 保留 number 签名：单一子控件提供 string value/defaultValue 时按 trim 后 Unicode 码点计数，否则用调用方 count.value；不新增 text/max props。
 4. `SegmentedControl` 用 `role="radiogroup"`，每项 `role="radio"` 与 `aria-checked`；左右方向键切换并聚焦；禁用项不参与。
 5. `VerdictChip` 映射：推翻/`alert-triangle`/`over`，削弱/`arrow-down`/`weak`，支持/`check`/`hold`，无关/`minus`/`none`，待确认/`help-circle`/`unsure`。
 6. `Table` 只负责 `<table class="c-table">`、`thead`、`tbody`、`tr`；数值列由页面传 `className="c-table__num"`；行悬停色用 `color-mix`，不得写十六进制。
-7. `Drawer` 用 `createPortal` 挂到 `document.body`；打开时记录 `document.activeElement`，聚焦标题；关闭时恢复焦点；覆盖模式 Tab 在首尾循环。
+7. `Drawer` 在 overlay=true 时用 createPortal 挂到 document.body，固定于顶栏与状态栏之间的右侧，宽 400px，遮罩与焦点陷阱启用。overlay=false 时 inline 渲染 c-drawer/dialog 内容到 PageFrame 的 aside 插槽，由 PageFrame 的 l-drawer 承担第三列；不得再造一层 l-drawer 或 body portal，避免重复占位。打开时记录原焦点并聚焦标题；关闭时恢复；只在覆盖模式 Tab 首尾循环。
 8. `Modal` 最大宽 480px，只用于破坏性确认；打开时焦点落到第一个输入或取消按钮；`Esc` 与遮罩点击都调用 `onClose`。
 9. `Heatmap` 计算 `k = Math.round(Math.abs(rho) * 70)`，正值混 `--heat-pos`，负值混 `--heat-neg`；对角线 `--surface-2`；每格加 `title="{a} 与 {b}：{rho.toFixed(2)}"`。
 10. `BarList` 只允许 `style={{"--w": `${Math.round(value*100)}%`}}`；颜色固定 `--ink-2`；无动画。
@@ -166,6 +167,8 @@ interface BarListProps { items: {label:string;value:number}[]; label: string; }
 | `drawer_push_does_not_trap` | 同上 | `overlay=false` | `aria-modal=false`，Tab 可离开 |
 | `menu_escape_closes_and_restores_focus` | `Menu.test.tsx` | 打开后按 Esc | `onClose` 调用，触发按钮聚焦 |
 | `heatmap_uses_max_70_percent_mix` | `Heatmap.test.tsx` | `rho=1` | 单元格样式含 `70%` |
+| `modal_escape_and_overlay_close` | `Modal.test.tsx` | 打开后按 Esc 或点遮罩 | 每次调用 onClose；关闭后焦点回到触发元素 |
+| `bar_list_nonfinite_value_is_safe` | `BarList.test.tsx` | value 为 NaN | 该行显示 `0%`，没有 NaN 样式或未捕获异常 |
 
 ### 8.2 Fixture
 无新增 fixture；所有数据在测试内构造，图标快照以 `icons.js` 为准。

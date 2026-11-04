@@ -5,8 +5,9 @@ phase: mvp0
 platform: shared
 lane: ui
 deps: [C-05, C-06, WP-00]
-size: M
-owns: [apps/desktop/src/main.tsx, apps/desktop/src/Hello.tsx, apps/desktop/src/Hello.test.tsx, apps/desktop/src/shell/, apps/desktop/src/router/, apps/desktop/src/styles/tokens.css, apps/desktop/src/styles/base.css, apps/desktop/src/styles/layout.css, apps/desktop/src/app/, apps/desktop/src/i18n/]
+size: L
+size_approval: cr/N10-01-execution-clarifications.md
+owns: [apps/desktop/src/main.tsx, apps/desktop/src/Hello.tsx, apps/desktop/src/Hello.test.tsx, apps/desktop/src/shell/, apps/desktop/src/router/, apps/desktop/src/styles/tokens.css, apps/desktop/src/styles/tokens.test.ts, apps/desktop/src/styles/base.css, apps/desktop/src/styles/layout.css, apps/desktop/src/app/, apps/desktop/src/i18n/index.ts, apps/desktop/src/i18n/zh-CN/index.ts, apps/desktop/src/i18n/zh-CN/common.ts]
 appends: []
 stubs: []
 ---
@@ -103,7 +104,7 @@ function useAppStore(): AppState;
 ```
 - `parseHash` 对未知路由返回 `today`；空 hash 返回 `today`；保留未知 query 参数但不解释。
 - `navigate` 默认 `pushState`，`replace` 为真时替换当前历史；切换路由后滚动到顶部。
-- `bootstrapApp` 在 30 秒后抛 `TIMEOUT`；`protocolVersion` 不以 `1.` 开头时抛前端本地错误，映射为 `INTERNAL` 且 `data.reason="PROTOCOL_MISMATCH"`。
+- `bootstrapApp` 先 `whenReady` 再调用 `app.bootstrap`，两步合计 30 秒后抛 `TIMEOUT`；`protocolVersion` 不以 `1.` 开头时抛前端本地错误，映射为 `INTERNAL` 且 `data.reason="PROTOCOL_MISMATCH"`。卸载时 dispose 客户端及通知订阅。
 - `PageFrame` 在 `asideOpen` 为真时渲染 `<aside class="l-drawer" aria-label={asideLabel}>`；否则不渲染该元素。
 
 ### 5.2 数据结构
@@ -132,13 +133,15 @@ function useAppStore(): AppState;
 1. 删除 `Hello.tsx`、`Hello.test.tsx`；`main.tsx` 用 `createRoot` 挂载 `<AppShell><RouterView/></AppShell>`，并把 `document.documentElement.dataset.platform` 设为 `bootstrap.platform`（启动前按平台预置 `macos` 或 `windows`）。
 2. 把 §2.1–§2.4 的颜色、字体、字号、间距、圆角、阴影、层级、动效逐项抄入 `tokens.css` 的第一个 `:root`。不得改值：`--accent:#C4472D`、`--accent-text:#A93A22`、`--radius-card:10px`、`--radius-input:6px`、`--dur-in:180ms`；末尾写 `[data-market="us"]{--up:#1E7A5A;--down:#C0392B}` 与 `[data-market="cn"],[data-market="hk"]{--up:#C0392B;--down:#1E7A5A}`。
 3. `base.css` 设置 `box-sizing:border-box`、`html,body,#root{height:100%}`、`body{background:var(--paper);color:var(--ink);font:var(--text-body) var(--font-sans)}`；焦点统一 `outline:2px solid var(--focus-ring);outline-offset:1px`；在 `prefers-reduced-motion:reduce` 下禁用动画与过渡。
-4. `layout.css` 用 grid：`.l-app{display:grid;grid-template-rows:56px minmax(0,1fr) 28px;height:100vh}`；`.l-body{display:grid;grid-template-columns:68px minmax(0,1fr)}`；`.l-content{display:grid;grid-template-columns:minmax(0,1fr)}`，`asideOpen` 且宽度 ≥1200 时加 `400px` 第二列。
+4. `layout.css` 沿用原型 grid-area：`.l-app` 为 68px 导航列与可伸缩内容列、56px/可伸缩/28px 三行，区域为 `top top / nav body / status status`；`.l-body` 承载横幅和 PageFrame，`.l-content` 为 `minmax(0,1fr)`，`asideOpen` 且宽度 ≥1200 时加 `400px` 第二列。两种结构文字冲突由 N10-01 裁定为保留原型区域和类名。
 5. `AppShell` 把 `dataStatus.market` 写入 `document.documentElement.dataset.market`；`TopBar` 左留 `padding-left:var(--titlebar-inset-left)`，中段显示市场状态，右段显示 `EngineBadge` 与离线标签；市场状态由 `DataStatus` 计算：`open`→“开盘中”，`closed`→“已收盘 · 下次开盘 …”，`holiday`→“休市”。
 6. `NavRail` 渲染 `今天/持仓/交易/风险/扫描`，底部 `设置`；当前项加 `aria-current="page"`、`is-active`、左缘 2px `--accent`；宽度 <1080 时只显示图标，并保留 `title` 与 `aria-label`。
 7. `StatusBar` 左侧依次显示 `数据截至 {日期}`、`最近扫描 {时间}`、`今日 {used} / {limit} tokens`；右侧在扫描时显示 `扫描中 {done} / {total}`，否则显示固定声明“仅记录与提醒，不构成投资建议。”
 8. `RouterView` 用 `import.meta.glob("../pages/*/index.tsx", { eager: true })` 建立页面表；没有页面模块时渲染 `PageFrame` + 空状态“页面正在搭建”，不得让路由崩溃。页面模块必须默认导出 `Page` 组件。
 9. 路由切换后把焦点移到 `main` 内第一个 `h1`（`tabIndex=-1`）；`Esc` 由页面处理，外壳只提供 `useEscape` 工具，不越权关闭业务抽屉。
 10. `bootstrapApp` 成功后写入 store，并订阅 `engine.changed`、`source.degraded`、`budget.updated`；未知通知忽略。失败时由 `AppShell` 渲染启动失败页，提供“重试启动”和“复制错误详情”，不显示堆栈给普通用户。
+
+`Bootstrap` 的实际契约不包含 DataStatus、扫描统计或已用预算。框架初始值为未知或空，不从本机时间或示例虚构市场状态、成功扫描和零用量；后续页面取到真实 Inbox/DataStatus 后更新共享 store。只允许本包的 bootstrap 与框架通知，不为填顶栏私自增加业务 RPC。mock 模式始终显示可见的“界面预览 · 示例数据”标识，不能把 fixture 的 JEVDB 标签当真实模型连接。
 
 ## 7. 错误与边界情况
 

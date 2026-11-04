@@ -1,0 +1,37 @@
+{
+  "code": 0,
+  "msg": "",
+  "data": {
+    "usAAPL": {
+      "day": [
+        [
+          "2011-06-02",
+          "346.220",
+          "346.220",
+          "347.840",
+          "344.530",
+          "16780815.000"
+        ],
+        [
+          "2026-11-02",
+          "342.67",
+          "338.32",
+          "343.80",
+          "335.82",
+          "64757691"
+        ]
+      ]
+    }
+  },
+  "_provenance": {
+    "mode": "live",
+    "url": "https://web.ifzq.gtimg.cn/appstock/app/fqkline/get?param=usAAPL,day,,,30,qfq",
+    "requestedAt": "2026-11-03T03:43:02.098691Z",
+    "fetchedAt": "2026-11-03T03:43:25.610088Z",
+    "httpStatus": 200,
+    "elapsedMs": 23511,
+    "contentType": "text/html; charset=UTF-8",
+    "httpDate": "Tue, 03 Nov 2026 03:43:02 GMT",
+    "responseSha256": "67c6f60b9c2fd3c86b5427375718127ccac79f74446b88a3627684d9cdb013d4"
+  }
+}

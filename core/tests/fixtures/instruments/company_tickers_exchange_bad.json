@@ -1,0 +1,25 @@
+{
+  "empty": {
+    "fields": [
+      "cik",
+      "name",
+      "ticker",
+      "exchange"
+    ],
+    "data": []
+  },
+  "missing_field": {
+    "fields": [
+      "cik",
+      "name",
+      "ticker"
+    ],
+    "data": []
+  },
+  "rate_limited": {
+    "status": 429,
+    "headers": {
+      "Retry-After": "2"
+    }
+  }
+}

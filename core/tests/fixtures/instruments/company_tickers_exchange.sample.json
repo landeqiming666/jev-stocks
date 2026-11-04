@@ -1,0 +1,160 @@
+{
+  "fields": [
+    "cik",
+    "name",
+    "ticker",
+    "exchange"
+  ],
+  "data": [
+    [
+      1045810,
+      "NVIDIA CORP",
+      "NVDA",
+      "Nasdaq"
+    ],
+    [
+      320193,
+      "Apple Inc.",
+      "AAPL",
+      "Nasdaq"
+    ],
+    [
+      789019,
+      "MICROSOFT CORP",
+      "MSFT",
+      "Nasdaq"
+    ],
+    [
+      1652044,
+      "Alphabet Inc.",
+      "GOOGL",
+      "Nasdaq"
+    ],
+    [
+      1018724,
+      "AMAZON COM INC",
+      "AMZN",
+      "Nasdaq"
+    ],
+    [
+      1730168,
+      "Broadcom Inc.",
+      "AVGO",
+      "Nasdaq"
+    ],
+    [
+      1326801,
+      "Meta Platforms, Inc.",
+      "META",
+      "Nasdaq"
+    ],
+    [
+      1318605,
+      "Tesla, Inc.",
+      "TSLA",
+      "Nasdaq"
+    ],
+    [
+      59478,
+      "ELI LILLY & Co",
+      "LLY",
+      "NYSE"
+    ],
+    [
+      723125,
+      "MICRON TECHNOLOGY INC",
+      "MU",
+      "Nasdaq"
+    ],
+    [
+      1067983,
+      "Berkshire Hathaway Inc",
+      "BRK-B",
+      "NYSE"
+    ],
+    [
+      1,
+      "Berkshire minimum fixture",
+      "BRK-B",
+      "NYSE"
+    ],
+    [
+      9999999999,
+      "CIK maximum fixture",
+      "MAXCIK",
+      "NYSE American"
+    ],
+    [
+      2,
+      "CBOE fixture",
+      "CBEX",
+      "CBOE"
+    ],
+    [
+      3,
+      "OTC fixture",
+      "OTCX",
+      "OTC"
+    ],
+    [
+      4,
+      "Unknown exchange fixture",
+      "BADX",
+      "Unknown"
+    ],
+    [
+      5,
+      "Invalid symbol fixture",
+      "A B",
+      "NYSE"
+    ],
+    [
+      5,
+      "Invalid symbol fixture",
+      "A%",
+      "NYSE"
+    ],
+    [
+      5,
+      "Invalid symbol fixture",
+      "A_",
+      "NYSE"
+    ],
+    [
+      5,
+      "Invalid symbol fixture",
+      "A'",
+      "NYSE"
+    ],
+    [
+      5,
+      "Invalid symbol fixture",
+      ".X",
+      "NYSE"
+    ],
+    [
+      5,
+      "Invalid symbol fixture",
+      "X.",
+      "NYSE"
+    ],
+    [
+      5,
+      "Invalid symbol fixture",
+      "X..Y",
+      "NYSE"
+    ],
+    [
+      true,
+      "Boolean CIK fixture",
+      "BOOL",
+      "NYSE"
+    ],
+    [
+      10000000000,
+      "Overflow CIK fixture",
+      "OVER",
+      "NYSE"
+    ]
+  ]
+}

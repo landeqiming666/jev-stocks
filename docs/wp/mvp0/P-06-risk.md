@@ -5,8 +5,9 @@ phase: mvp0
 platform: shared
 lane: data
 deps: [C-03, D-04, C-01]
-size: M
-owns: [core/sentinel/quant/, core/sentinel/storage/migrations/011_risk.sql, core/tests/unit/quant/]
+size: L
+size_approval: cr/F18-01-closure-clarifications.md
+owns: [core/sentinel/quant/, core/sentinel/storage/migrations/011_risk.sql, core/tests/unit/quant/, core/sentinel/messages/risk.py]
 appends: []
 stubs: []
 ---
@@ -48,7 +49,7 @@ stubs: []
 - C-03 提供 `Database.read()`、`Database.write()` 和 `new_id()`。
 - D-04 提供前复权行情 `adj_close`、原始 `close` 和交易日历读取能力。
 - C-01 提供 `risk.compute` 参数模型与 `register`。
-- `011_risk.sql` 必须已存在；缺失时停止并提 CR。
+- 本包创建 `011_risk.sql`，迁移前须核对 04 §3.11 权威 DDL。
 - 依赖 `numpy` 已由 WP-00 锁定；本包不新增第三方库。
 
 ## 4. 交付物清单
@@ -76,7 +77,7 @@ class PricePoint:
 class HoldingPoint:
     instrument_id: str
     symbol: str
-    quantity: int
+    quantity: Decimal | int
 @dataclass(frozen=True)
 class RiskInput:
     symbols: list[str]
@@ -99,7 +100,7 @@ def register_handlers(registrar: HandlerRegistrar, service: RiskService) -> None
 ```
 - `min_observations` 的生产调用固定为 60；单元测试可传 4 复现文档小样本。
 - `compute_risk` 是纯函数，不读数据库、不读时钟、不写文件；输入数组必须是有限 `float64`。
-- `build_risk_input` 负责剔除无持仓、零方差和缺价标的，并保持 `symbols` 与矩阵列一一对应。
+- `build_risk_input` 负责剔除无持仓和无有效基线标的；零方差资产保留，日内缺价按有效一日收益交集处理，并保持 `symbols` 与矩阵列一一对应。
 - `RiskService.compute` 只接受 `scope="holdings"`、`window` 三选一、`currency="USD"`；其他值 `INVALID_ARGUMENT`。
 ### 5.2 数据结构
 | 结构 | 字段 | 类型 | 必填 | 约束 | 含义 |
@@ -130,7 +131,7 @@ def register_handlers(registrar: HandlerRegistrar, service: RiskService) -> None
 | `MAX_EXPLAINED_COMPONENTS` | `5` | `risk.py` | 解释方差与载荷上限 |
 
 ## 6. 实现步骤
-1. **窗口终点**：每只参与标的取 `price_daily.trade_date <= clock.now()` 的最大日期；终点是所有最大日期的最小值。起点用日历月回退：6/12/36 个月，目标月无该日时取月末。
+1. **窗口终点**：行情不超过已收盘市场日；终点为所有参与标的共同具有有效原 close 的最近交易日。通常等于 min(latest)，该上界存在内洞则退到共同日但保留资产权重。起点用日历月回退：6/12/36 个月，目标月无该日时取月末。
 2. **价格基线**：窗口内所有参与标的的 `adj_close` 均非空时使用 `adj_close`；任一缺失时全部使用 `close`，并加“价格未复权”警告。
 3. **逐只收益**：按市场交易日历对每只标的计算相邻交易日的简单收益 `P_t/P_{t-1}-1`；任一端点缺失或非有限值，该日收益无效。禁止先删除缺价日再计算，避免把多日收益压成日收益。
 4. **有效交集与门槛**：取所有标的都拥有有效一日收益的日期交集，升序排列，`T = len(intersection)`；`T < 60` 抛 `DATA_INSUFFICIENT(data.observations=T, required=60)`。
@@ -190,7 +191,7 @@ scripts/check.sh
 - [ ] 第 4 节全部文件存在，`owns` 外无改动
 - [ ] `011_risk.sql` 与 04 §3.11 逐字一致
 - [ ] 数值样例误差不超过 `1e-9`
-- [ ] 年化使用 `T / 窗口年数`，不是实际日历天数
+- [ ] 年化固定使用 `252`，不随窗口标签或历史年数变化
 - [ ] `T < 60` 不返回任何指标数字
 - [ ] 已写 `docs/wp/status/P-06.md`
 

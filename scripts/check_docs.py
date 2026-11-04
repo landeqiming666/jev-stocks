@@ -275,6 +275,25 @@ def _find_cycles(graph: Dict[str, List[str]]) -> List[List[str]]:
     return cycles
 
 
+def _approved_large_package(root: Path, wp_id: str, meta: FrontMatter) -> bool:
+    approval = str(meta.get("size_approval", ""))
+    if not re.fullmatch(r"cr/[A-Za-z0-9_-]+\.md", approval):
+        return False
+    folder = (root / "docs" / "wp" / "cr").resolve()
+    path = (root / "docs" / "wp" / approval).resolve()
+    if folder not in path.parents:
+        return False
+    try:
+        text = path.read_text(encoding="utf-8")
+    except (OSError, UnicodeError):
+        return False
+    return bool(
+        re.search(r"\b" + re.escape(wp_id) + r"\b", text)
+        and "已批准" in text
+        and "规模" in text
+    )
+
+
 def check_work_packages(root: Path, files: List[Path], report: Report, strict: bool) -> None:
     wp_root = root / "docs" / "wp"
     paths: List[Path] = []
@@ -318,7 +337,9 @@ def check_work_packages(root: Path, files: List[Path], report: Report, strict: b
             report.errors.append(
                 "%s: phase 为 %s，但文件位于 %s 目录" % (name, phase, path.parent.name)
             )
-        elif str(meta["size"]) not in WP_SIZES[phase]:
+        elif str(meta["size"]) not in WP_SIZES[phase] and not (
+            phase == "mvp0" and str(meta["size"]) == "L" and _approved_large_package(root, wp_id, meta)
+        ):
             report.errors.append(
                 '%s: size 必须是 %s 之一，当前为 "%s"'
                 % (name, "/".join(WP_SIZES[phase]), meta["size"])

@@ -1,0 +1,196 @@
+{
+  "method": "holdings.list",
+  "summary": "读取持仓与关注标的",
+  "owner": "P-01",
+  "phase": "mvp0",
+  "timeoutMs": 30000,
+  "params": {
+    "type": "object",
+    "required": [],
+    "properties": {},
+    "additionalProperties": false
+  },
+  "result": {
+    "type": "object",
+    "required": [
+      "items",
+      "asOf"
+    ],
+    "properties": {
+      "items": {
+        "type": "array",
+        "items": {
+          "$ref": "types.schema.json#/$defs/Holding"
+        }
+      },
+      "asOf": {
+        "$ref": "types.schema.json#/$defs/IsoTime"
+      }
+    },
+    "additionalProperties": false
+  },
+  "errors": [],
+  "examples": [
+    {
+      "name": "default",
+      "params": {},
+      "result": {
+        "items": [
+          {
+            "holdingId": "01JC8Z5V3Q00000000000032BJ",
+            "instrument": {
+              "instrumentId": "us:ZZAR",
+              "market": "us",
+              "symbol": "ZZAR",
+              "name": "Zenith Arc Robotics Inc.",
+              "nameZh": "天顶弧机器人",
+              "exchange": "NASDAQ",
+              "currency": "USD",
+              "isActive": true
+            },
+            "quantity": "120.0000",
+            "avgCost": "48.2000",
+            "note": "核心仓位",
+            "lastClose": 52.38,
+            "lastCloseDate": "2026-10-30",
+            "dayChangePct": 0.012,
+            "marketValue": "6285.6000",
+            "thesisCount": 2,
+            "pendingCount": 2,
+            "uncertainCount": 0,
+            "status": "attention"
+          },
+          {
+            "holdingId": "01JC8Z5V3Q00000000000032KW",
+            "instrument": {
+              "instrumentId": "us:ZZFD",
+              "market": "us",
+              "symbol": "ZZFD",
+              "name": "Zephyr Foods Corp.",
+              "nameZh": "和风食品",
+              "exchange": "NYSE",
+              "currency": "USD",
+              "isActive": true
+            },
+            "quantity": "300.0000",
+            "avgCost": "22.1000",
+            "note": null,
+            "lastClose": 23.4,
+            "lastCloseDate": "2026-10-30",
+            "dayChangePct": -0.004,
+            "marketValue": "7020.0000",
+            "thesisCount": 1,
+            "pendingCount": 0,
+            "uncertainCount": 1,
+            "status": "guarded"
+          },
+          {
+            "holdingId": "01JC8Z5V3Q00000000000031W4",
+            "instrument": {
+              "instrumentId": "us:ZZCL",
+              "market": "us",
+              "symbol": "ZZCL",
+              "name": "Zhongzhi Cloud Ltd.",
+              "nameZh": "众智云",
+              "exchange": "NASDAQ",
+              "currency": "USD",
+              "isActive": true
+            },
+            "quantity": "150.0000",
+            "avgCost": "31.7500",
+            "note": null,
+            "lastClose": 27.95,
+            "lastCloseDate": "2026-10-30",
+            "dayChangePct": -0.031,
+            "marketValue": "4192.5000",
+            "thesisCount": 1,
+            "pendingCount": 1,
+            "uncertainCount": 1,
+            "status": "attention"
+          },
+          {
+            "holdingId": "01JC8Z5V3Q00000000000032KB",
+            "instrument": {
+              "instrumentId": "us:ZZBK",
+              "market": "us",
+              "symbol": "ZZBK",
+              "name": "Zinc Bay Bancorp",
+              "nameZh": "锌湾银行",
+              "exchange": "NASDAQ",
+              "currency": "USD",
+              "isActive": true
+            },
+            "quantity": "200.0000",
+            "avgCost": "17.9000",
+            "note": null,
+            "lastClose": 18.62,
+            "lastCloseDate": "2026-10-30",
+            "dayChangePct": 0.006,
+            "marketValue": "3724.0000",
+            "thesisCount": 1,
+            "pendingCount": 0,
+            "uncertainCount": 0,
+            "status": "guarded"
+          },
+          {
+            "holdingId": "01JC8Z5V3Q00000000000032C6",
+            "instrument": {
+              "instrumentId": "us:ZZEN",
+              "market": "us",
+              "symbol": "ZZEN",
+              "name": "Zeta Energy Partners",
+              "nameZh": "泽塔能源",
+              "exchange": "NYSE",
+              "currency": "USD",
+              "isActive": true
+            },
+            "quantity": "100.0000",
+            "avgCost": "38.5000",
+            "note": null,
+            "lastClose": 40.1,
+            "lastCloseDate": "2026-10-30",
+            "dayChangePct": 0.009,
+            "marketValue": "4010.0000",
+            "thesisCount": 0,
+            "pendingCount": 0,
+            "uncertainCount": 0,
+            "status": "unguarded"
+          },
+          {
+            "holdingId": "01JC8Z5V3Q00000000000032DC",
+            "instrument": {
+              "instrumentId": "us:ZZMD",
+              "market": "us",
+              "symbol": "ZZMD",
+              "name": "Zenmed Diagnostics Inc.",
+              "nameZh": "泽美诊断",
+              "exchange": "NASDAQ",
+              "currency": "USD",
+              "isActive": true
+            },
+            "quantity": "0.0000",
+            "avgCost": null,
+            "note": "只关注",
+            "lastClose": 64.2,
+            "lastCloseDate": "2026-10-30",
+            "dayChangePct": -0.002,
+            "marketValue": "0.0000",
+            "thesisCount": 0,
+            "pendingCount": 0,
+            "uncertainCount": 0,
+            "status": "unguarded"
+          }
+        ],
+        "asOf": "2026-11-02T00:35:00Z"
+      }
+    },
+    {
+      "name": "empty",
+      "params": {},
+      "result": {
+        "items": [],
+        "asOf": "2026-11-02T00:35:00Z"
+      }
+    }
+  ]
+}

@@ -1,0 +1,46 @@
+{
+  "sources": [
+    {
+      "source": "yahoo",
+      "url": "https://query1.finance.yahoo.com/v8/finance/chart/AAPL?range=1mo&interval=1d",
+      "httpStatus": 429,
+      "elapsedMs": 654,
+      "mode": "live",
+      "requestedAt": "2026-11-03T03:43:54.794399Z",
+      "fetchedAt": "2026-11-03T03:43:55.448283Z",
+      "contentType": "text/html",
+      "httpDate": "Tue, 03 Nov 2026 03:43:55 GMT",
+      "responseSha256": "0d24c98db98d3b4a87b9626a026e7d72c99754ab6bd88211a17bc372350b7d89",
+      "available": false,
+      "summary": "Edge: Too Many Requests"
+    },
+    {
+      "source": "stooq",
+      "url": "https://stooq.com/q/d/l/?s=aapl.us&i=d",
+      "httpStatus": 404,
+      "elapsedMs": 931,
+      "mode": "live",
+      "requestedAt": "2026-11-03T03:43:55.799027Z",
+      "fetchedAt": "2026-11-03T03:43:56.729732Z",
+      "contentType": "text/html",
+      "httpDate": "Tue, 03 Nov 2026 03:43:56 GMT",
+      "responseSha256": "03fa6d7ffcac125ba680b7558912f278abec5a5685a4fee3c26a023b32354115",
+      "available": false,
+      "summary": "<meta charset=utf-8><title>Stooq</title><center style=font-family:arial;margin-top:50px><p><a href=/><img src=//static.stooq.com/stooq.svg height=68></a><p style=font-size:x-large>The page you request"
+    },
+    {
+      "source": "eastmoney",
+      "url": "https://push2his.eastmoney.com/api/qt/stock/kline/get?secid=105.AAPL&klt=101&fqt=1&lmt=30&end=20500101&fields1=f1,f2,f3,f4,f5,f6&fields2=f51,f52,f53,f54,f55,f56,f57,f58,f59,f60,f61",
+      "httpStatus": 200,
+      "elapsedMs": 392,
+      "mode": "live",
+      "requestedAt": "2026-11-03T03:43:56.804032Z",
+      "fetchedAt": "2026-11-03T03:43:57.195900Z",
+      "contentType": "application/json; charset=UTF-8",
+      "httpDate": "Tue, 03 Nov 2026 03:43:56 GMT",
+      "responseSha256": "1c21331494022797759a3d4d715fc6c3c499625f753c0f8bef35ca81141d02dd",
+      "available": true,
+      "summary": "{\"rc\":0,\"rt\":17,\"svr\":177617938,\"lt\":1,\"full\":0,\"dlmkts\":\"\",\"dsc\":\"0\",\"data\":{\"code\":\"AAPL\",\"market\":105,\"name\":\"\u82f9\u679c\",\"decimal\":3,\"dktotal\":10622,\"preKPrice\":338.98,\"klines\":[\"2026-09-22,340.135,339.75"
+    }
+  ]
+}

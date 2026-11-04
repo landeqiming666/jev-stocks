@@ -210,6 +210,12 @@
 - 决策：`paper.advance` 的成交、正常拒单、资金、持仓、时钟与权益快照在一个事务提交；程序错误整次回滚。前端在一次下单意图开始时生成幂等键，超时或重试复用同一键；服务端支持按键查询已提交结果。
 - 后果：单次推进的锁时间变长，但状态一致；ADR-013 的“单笔订单原子”仍然适用于 `paper.order.place`，`advance` 以整次推进为原子单位。
 
+## ADR-022 · 判定缓存必须绑定逻辑版本与段落实体
+
+- 决策：cache_key 在 engine/model/question set/两个文本哈希后加入 thesis_id、thesis_version、passage_id。
+- 原因：decision 行永久绑定实体且键唯一，内容相同的另一个逻辑/事件不能直接复用其实体行；文字改回旧内容也必须记录新的版本。
+- 后果：同实体重复扫描继续零请求；MVP-0 不共享跨实体语义分数，需独立模型调用。006 DDL 不变，算法在首次交付前修正，问题文字与阈值不变。细节见 F18-01。
+
 ## ADR-021 · 恢复 Windows 环境摸底，正式实现逐门推进
 
 - 日期：2026-11-02 · 状态：现行 · 修订 ADR-017
@@ -225,12 +231,12 @@
 
 | 项 | 结果 |
 |---|---|
-| 从源码构建 JEVDB 扩展（DuckDB 1.4.3、OpenSSL 静态链接） | 待测 |
-| 以 `allow_unsigned_extensions` 加载 | 待测 |
-| `jev_holds`、`jev_probability`、`jev_keys_overlap` 各调用一次 | 待测 |
-| 加载耗时、扩展 SHA256 | 待测 |
+| 从源码构建 JEVDB 扩展（DuckDB 1.4.3、OpenSSL 静态链接） | 2026-11-03 真机构建通过；使用同版本 DuckDB 静态扩展，原 Python wheel 未变 |
+| 以 `allow_unsigned_extensions` 加载 | 主 agent 从主集成宿主独立 LOAD 通过 |
+| `jev_holds`、`jev_probability`、`jev_keys_overlap` 各调用一次 | keys overlap 三项通过；holds/probability 仅 NULL 短路核实，非 NULL 真实语义调用待有效密钥 |
+| 加载耗时、扩展 SHA256 | 主审 CLI 1101 ms；`d9f3f1d613847900436af87422f0cc7c3e8e9268934559f207433e6e6d3ffd9a` |
 
-结论：待测。失败时开发期可临时使用 `jev_direct`，但最终验收按 ADR-018 保持 BLOCKED，并在此记录原因。
+结论：构建、加载与本地函数通过，真实语义调用未验证（缺有效密钥），G0 与 M-8 按 ADR-018 保持 BLOCKED。证据见 [G0-JEVDB 状态](wp/status/G0-JEVDB.md)，不能以 NULL 短路或 SDK 直连替代最终验收。
 
 ### G0-JEV（工作包 G0-JEV）
 

@@ -5,8 +5,9 @@ phase: mvp0
 platform: shared
 lane: semantic
 deps: [S-01, S-03, C-03]
-size: M
-owns: [core/sentinel/semantic/pipeline.py, core/sentinel/semantic/evidence.py, core/sentinel/semantic/cache.py, core/sentinel/storage/migrations/006_decision.sql, core/tests/unit/semantic/test_pipeline.py, core/tests/unit/semantic/test_evidence.py, core/tests/unit/semantic/test_cache.py]
+size: L
+size_approval: cr/F18-01-closure-clarifications.md
+owns: [core/sentinel/semantic/pipeline.py, core/sentinel/semantic/evidence.py, core/sentinel/semantic/cache.py, core/sentinel/storage/migrations/006_decision.sql, core/tests/unit/semantic/test_pipeline.py, core/tests/unit/semantic/test_evidence.py, core/tests/unit/semantic/test_cache.py, core/sentinel/messages/semantic.py]
 appends: []
 stubs: []
 ---
@@ -86,7 +87,8 @@ def norm_text(value: str) -> str: ...
 def thesis_content_hash(statement: str, kill_condition: str | None) -> str: ...
 def passage_content_hash(text: str) -> str: ...
 def decision_cache_key(engine: str, model_id: str, question_set_version: str,
-                       thesis_hash: str, passage_hash: str) -> str: ...
+                       thesis_hash: str, passage_hash: str, *,
+                       thesis_id: str, thesis_version: int, passage_id: str) -> str: ...
 def select_representative(rows: Sequence[DecisionRow]) -> DecisionRow | None: ...
 
 class DecisionPipeline:
@@ -117,10 +119,10 @@ class DecisionPipeline:
 | `EVIDENCE_MIN_PROBABILITY` | `0.3` | 同上 | 低于该值回退整段 |
 | `RELATION_RANK` | `overturn=0, weaken=1, uncertain=2` | 同上 | 代表判定严重度 |
 | `QUESTION_SET_VERSION` | 从 `questions.py` 导入 | `cache.py` | 缓存键一部分 |
-| `TOKEN_SOFT_LIMIT_RATIO` | `0.9` | `pipeline.py` | 批前预留后不足 10% 仍拒绝 |
+| 预算边界 | `used + reserve_tokens(raw) <= daily_budget` | `pipeline.py` | 与 06 §7.2 相同；只保留 20% 估算余量，无第二个 90% 门槛 |
 
 ## 6. 实现步骤
-1. `norm_text` 按 04 §4：NFC、CRLF/CR→LF、去首尾空白，内部空白原样。逻辑哈希 `sha256(norm(statement)+"\n---\n"+norm(kill or ""))`；段落哈希 `sha256(norm(text))`；缓存键 `sha256(engine|model_id|question_set_version|thesis_hash|passage_hash)`，全部 64 位小写十六进制。
+1. `norm_text` 按 04 §4：NFC、CRLF/CR→LF、去首尾空白，内部空白原样。逻辑哈希 `sha256(norm(statement)+"\n---\n"+norm(kill or ""))`；段落哈希 `sha256(norm(text))`；缓存键 `sha256(engine|model_id|question_set_version|thesis_hash|passage_hash|thesis_id|thesis_version|passage_id)`，全部 64 位小写十六进制。
 2. 校验段落 `len(text)<=1200`，否则 `ValueError`；超过 60 段按 `seq` 升序截断，记录 warn。按 `(thesis_id,thesis_version,passage_id)` 排序以稳定输出。
 3. 用读事务查询所有 cache key。命中行直接转 `DecisionRow`；缺失对组成 pair keys。**缓存命中不发请求、不写 usage**。
 4. 预估缺失请求：`raw = sum(estimate_tokens(len(thesis)+len(kill or "")+len(document)+question_chars))`；`reserved=reserve_tokens(raw)`。读取今日 `usage_daily`，`used+reserved>daily_budget` 时抛 `BUDGET_EXCEEDED`，不调用引擎。

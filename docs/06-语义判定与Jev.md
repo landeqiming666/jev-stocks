@@ -77,7 +77,7 @@
 ### 3.1 位置与版本
 
 - 代码位置：`core/sentinel/semantic/questions.py`（S-02 创建）。**问题文本和阈值只允许出现在这个文件里。**
-- 版本号常量 `QUESTION_SET_VERSION = "qs-2026-11-02.1"`。**任何文字、`criteria`、阈值的改动都必须升版本号**，并重跑评测（[09](09-测试与评测.md) 第 9 节）。版本号是判定缓存键的一部分，所以升版本等于让旧缓存全部失效。
+- 版本号常量 `QUESTION_SET_VERSION = "qs-2026-11-02.2"`（R05/R09 修订，与 S-02 和契约一致）。**任何文字、`criteria`、阈值的改动都必须升版本号**，并重跑评测（[09](09-测试与评测.md) 第 9 节）。版本号是判定缓存键的一部分，所以升版本等于让旧缓存全部失效。
 - 本文第 3.3 节的英文文本是**初稿，需要人工审阅**（尤其是 `against` 与 `contradicts` 的边界）。审阅通过后，以 `questions.py` 为准，本文随变更申请更新。
 
 ### 3.2 `state` 的结构
@@ -417,7 +417,7 @@ JOIN wanted w ON th.ref = w.ref AND ps.pid = w.pid;
 
 ### 6.5 缓存
 
-- 判定缓存键见 [04](04-数据模型.md) 第 4 节：`(engine, model_id, question_set_version, thesis_content_hash, passage_content_hash)`。
+- 判定缓存键见 [04](04-数据模型.md) 第 4 节：`(engine, model_id, question_set_version, thesis_content_hash, passage_content_hash, thesis_id, thesis_version, passage_id)`。
 - 一个批开始前，先查出已有缓存的（逻辑，段落）对，只对缺失的对发请求。`PairScore` 与缓存命中的判定一起组成批结果；运行统计里 `cachedDecisions` 计命中数。
 - 同一（逻辑，段落）对在缓存命中时**不产生请求、不产生费用**（M-4 与 04 的 `decision.cache_key` 唯一约束）。
 - 逻辑被编辑后 `content_hash` 变化，旧缓存自然不再命中；旧判定仍在库里（对应旧版本）。

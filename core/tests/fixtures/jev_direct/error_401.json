@@ -1,0 +1,13 @@
+{
+  "synthetic": true,
+  "source": "Hand-authored S-03 unit-test data based on installed typesafe-sdk 0.7.5 wire schema; no remote request or cassette.",
+  "response": {
+    "status": 401,
+    "body": {
+      "message": "Synthetic denied response"
+    },
+    "headers": {
+      "x-typesafe-request-id": "synthetic-401"
+    }
+  }
+}

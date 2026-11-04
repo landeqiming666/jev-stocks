@@ -29,12 +29,12 @@ def put(method, name, value):
 
 # ---- 生命周期 -------------------------------------------------------
 put("app.ping", "ok", ok({}, {"ok": True, "uptimeMs": 183420}))
-put("app.shutdown", "ok", ok({}, {"ok": True}))
 put("app.bootstrap", "ready", ok({}, m.BOOTSTRAP_READY))
 put("app.bootstrap", "unconfigured", ok({}, m.bootstrap(configured={"jevKey": False, "secEmail": False}, demoDataLoaded=False)))
 put("app.bootstrap", "engine_fallback", ok({}, m.bootstrap(engine={"requested": "jevdb", "active": "jev_direct", "modelId": d.MODEL_ID, "jevdbAvailable": False})))
 put("app.bootstrap", "offline", ok({}, m.bootstrap(offline=True)))
 put("app.bootstrap", "windows", ok({}, m.bootstrap(platform="windows")))
+put("app.shutdown", "ok", ok({}, {"ok": True}))
 
 # ---- 设置与密钥 -----------------------------------------------------
 put("settings.get", "configured", ok({}, m.SETTINGS))
@@ -115,10 +115,10 @@ put("scan.start", "budget", err({"market": "us"}, "BUDGET_EXCEEDED", "今日预�
 put("scan.cancel", "ok", ok({"runId": d.RUNNING["runId"]}, {"ok": True}))
 put("scan.status", "running", ok({"runId": d.RUNNING["runId"]}, d.RUNNING))
 put("scan.status", "done", ok({"runId": d.R1["runId"]}, d.R1))
-put("scan.history", "default", ok({"limit": 20}, {"items": [d.R1, d.R2, d.R3, d.R4], "budget": m.DATA_STATUS_OK["budget"]}))
-put("scan.history", "empty", ok({"limit": 20}, {"items": [], "budget": m.DATA_STATUS_OK["budget"]}))
-put("scan.history", "budget_exhausted", ok({"limit": 20}, {"items": [d.R1, d.R2], "budget": {"usedTokens": 2000000, "limitTokens": 2000000, "resetAt": "2026-11-03T00:00:00Z"}}))
-put("scan.history", "running", ok({"limit": 20}, {"items": [d.RUNNING, d.R1, d.R2, d.R3, d.R4], "budget": m.DATA_STATUS_OK["budget"]}))
+put("scan.history", "default", ok({"limit": 20}, {"items": [d.R1, d.R2, d.R3, d.R4], "nextCursor": None, "budget": m.DATA_STATUS_OK["budget"]}))
+put("scan.history", "empty", ok({"limit": 20}, {"items": [], "nextCursor": None, "budget": m.DATA_STATUS_OK["budget"]}))
+put("scan.history", "budget_exhausted", ok({"limit": 20}, {"items": [d.R1, d.R2], "nextCursor": None, "budget": {"usedTokens": 2000000, "limitTokens": 2000000, "resetAt": "2026-11-03T00:00:00Z"}}))
+put("scan.history", "running", ok({"limit": 20}, {"items": [d.RUNNING, d.R1, d.R2, d.R3, d.R4], "nextCursor": None, "budget": m.DATA_STATUS_OK["budget"]}))
 put("scan.detail", "with_failures", ok({"runId": d.R2["runId"]}, {"run": d.R2, "batches": d.BATCHES_R2}))
 put("scan.retryBatch", "ok", ok({"batchId": d.BATCHES_R2[2]["batchId"]}, dict(d.BATCHES_R2[2], status="succeeded", attempts=4, error=None, decisions=1, inputTokens=1000)))
 
@@ -131,14 +131,16 @@ put("paper.portfolio", "new_account", ok({"accountId": m.PORTFOLIO_NEW["account"
 put("paper.order.place", "pending", ok(
     {"accountId": m.ACCOUNT["accountId"], "instrumentId": "us:ZZCL", "side": "buy", "quantity": 100, "orderType": "market_open", "idempotencyKey": "idem-004"},
     m.O4))
+# Reserved fictional identity for rejected idem-005; absent from the four-row history.
+REJECTED_CASH_ORDER_ID = d.ulid(5, 8)
 put("paper.order.place", "insufficient_cash", err(
     {"accountId": m.ACCOUNT["accountId"], "instrumentId": "us:ZZAR", "side": "buy", "quantity": 1800, "orderType": "market_open", "idempotencyKey": "idem-005"},
-    "ORDER_REJECTED", m.ORDER_ERR_CASH["message"], **{k: v for k, v in m.ORDER_ERR_CASH["data"].items() if k != "retryable"}))
+    "ORDER_REJECTED", m.ORDER_ERR_CASH["message"], **{k: v for k, v in m.ORDER_ERR_CASH["data"].items() if k != "retryable"}, orderId=REJECTED_CASH_ORDER_ID))
 put("paper.order.place", "insufficient_position", err(
     {"accountId": m.ACCOUNT["accountId"], "instrumentId": "us:ZZCL", "side": "sell", "quantity": 500, "orderType": "market_open", "idempotencyKey": "idem-003"},
-    "ORDER_REJECTED", "可卖数量不足：持仓 0 股，要卖出 500 股。", reason="INSUFFICIENT_POSITION", held=0, requested=500))
+    "ORDER_REJECTED", "可卖数量不足：持仓 0 股，要卖出 500 股。", reason="INSUFFICIENT_POSITION", held=0, requested=500, orderId=m.O3["orderId"]))
 put("paper.order.cancel", "ok", ok({"orderId": m.O4["orderId"]}, dict(m.O4, status="cancelled", reservedCash=None)))
-put("paper.orders", "default", ok({"accountId": m.ACCOUNT["accountId"], "limit": 50}, {"items": [m.O4, m.O3, m.O2, m.O1]}))
+put("paper.orders", "default", ok({"accountId": m.ACCOUNT["accountId"], "limit": 50}, {"items": [m.O4, m.O3, m.O2, m.O1], "nextCursor": None}))
 put("paper.advance", "filled", ok({"accountId": m.ACCOUNT["accountId"]}, m.ADVANCE_RESULT))
 put("paper.advance", "no_price", err({"accountId": m.ACCOUNT["accountId"]}, "DATA_INSUFFICIENT", "没有 2026-10-16 的行情。请先刷新行情，或选择更早的回放日期。", nextDay="2026-10-16"))
 put("paper.reset", "ok", ok({"accountId": m.ACCOUNT["accountId"], "confirmText": "回放账户 A"}, {"ok": True}))

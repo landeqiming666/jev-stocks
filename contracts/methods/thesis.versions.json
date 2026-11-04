@@ -1,0 +1,62 @@
+{
+  "method": "thesis.versions",
+  "summary": "读取投资逻辑版本历史",
+  "owner": "P-01",
+  "phase": "mvp0",
+  "timeoutMs": 30000,
+  "params": {
+    "type": "object",
+    "required": [
+      "thesisId"
+    ],
+    "properties": {
+      "thesisId": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "additionalProperties": false
+  },
+  "result": {
+    "type": "object",
+    "required": [
+      "items"
+    ],
+    "properties": {
+      "items": {
+        "type": "array",
+        "items": {
+          "$ref": "types.schema.json#/$defs/ThesisVersionItem"
+        }
+      }
+    },
+    "additionalProperties": false
+  },
+  "errors": [
+    "NOT_FOUND"
+  ],
+  "examples": [
+    {
+      "name": "default",
+      "params": {
+        "thesisId": "01JC8Z5V3Q00000000000063A1"
+      },
+      "result": {
+        "items": [
+          {
+            "version": 2,
+            "statement": "控股股东长期持股，不会大幅减持",
+            "killCondition": "控股股东减持超过 2%",
+            "createdAt": "2026-10-12T11:03:00Z"
+          },
+          {
+            "version": 1,
+            "statement": "控股股东长期持股",
+            "killCondition": null,
+            "createdAt": "2026-09-02T02:10:00Z"
+          }
+        ]
+      }
+    }
+  ]
+}

@@ -1,0 +1,16 @@
+.u-ui-header { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); }
+.u-ui-subtitle { margin-top: var(--space-1); margin-bottom: var(--space-5); }
+.u-ui-heading { font-size: var(--text-small-size); font-weight: 600; color: var(--ink-2); }
+.u-ui-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-5); }
+.u-ui-section { display: flex; flex-direction: column; gap: var(--space-2); min-width: 0; }
+.u-ui-charts { grid-column: 1 / -1; border-top: 1px solid var(--line); padding-top: var(--space-4); }
+.u-ui-wrap { display: flex; flex-wrap: wrap; gap: var(--space-2); }
+.u-ui-menu { position: relative; }
+.u-ui-menu .c-menu { right: 0; top: 36px; }
+.u-ui-grid .c-barlist { justify-content: center; }
+.u-ui-matrix { max-width: 200px; }
+.u-ui-data-title { margin-top: var(--space-2); }
+@media (max-width: 700px) {
+  .u-ui-grid { grid-template-columns: minmax(0, 1fr); }
+  .u-ui-header { flex-wrap: wrap; }
+}

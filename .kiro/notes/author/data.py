@@ -15,7 +15,7 @@ NOW = "2026-11-02T00:35:00Z"          # 原型的"当前时间"：北京时间 2
 LAST_SCAN_END = "2026-11-02T00:31:12Z"
 LAST_TRADING_DAY = "2026-10-30"       # 周五；美东 11-01 已转冬令时
 MODEL_ID = "jev-1.14.0"
-QSET = "qs-2026-11-02.1"
+QSET = "qs-2026-11-02.2"
 
 _B32 = "0123456789ABCDEFGHJKMNPQRSTVWXYZ"
 
@@ -95,7 +95,7 @@ def event(n, symbol, title, form, published, fname):
 
 
 EV = {
-    "E1": event(1, "ZZAR", "8-K: Other Events — Notice of proposed sale by controlling stockholder", "8-K", "2026-10-30T20:12:00Z", "zzar-8k.htm"),
+    "E1": event(1, "ZZAR", "8-K: Other Events — Completed sale by controlling stockholder", "8-K", "2026-10-30T20:12:00Z", "zzar-8k.htm"),
     "E2": event(2, "ZZCL", "6-K: Zhongzhi Cloud Reports Third Quarter 2026 Results", "6-K", "2026-10-30T11:30:00Z", "zzcl-ex991.htm"),
     "E3": event(3, "ZZAR", "8-K: Results of Operations — Third Quarter 2026", "8-K", "2026-10-29T20:05:00Z", "zzar-ex991.htm"),
     "E4": event(4, "ZZFD", "8-K: Quarterly dividend and share repurchase update", "8-K", "2026-10-29T13:02:00Z", "zzfd-8k.htm"),
@@ -104,7 +104,7 @@ EV = {
 }
 
 PASS = {
-    "E1": 'Item 8.01 Other Events. On October 29, 2026, Zenith Arc Robotics Inc. (the "Company") was notified by Atlas Holdings LP, its controlling stockholder, that Atlas intends to sell up to 4.5% of the Company\'s outstanding common stock in a registered secondary offering during the next sixty days. Following the proposed sale, Atlas would continue to hold approximately 31.0% of the outstanding common stock. The Company will not receive any proceeds from the sale.',
+    "E1": 'Item 8.01 Other Events. On October 29, 2026, Zenith Arc Robotics Inc. (the "Company") was notified by Atlas Holdings LP, its controlling stockholder, that Atlas completed the sale of 4.5% of the Company\'s outstanding common stock in a registered secondary offering. Following the sale, Atlas continues to hold approximately 31.0% of the outstanding common stock. The Company did not receive any proceeds from the sale.',
     "E2": "Zhongzhi Cloud Ltd. today announced unaudited financial results for the third quarter ended September 30, 2026. Cloud services revenue was RMB 1,284 million, an increase of 8.6% year-over-year, compared with an increase of 14.2% in the second quarter. Total revenue was RMB 2,031 million, an increase of 11.3% year-over-year. The Company expects cloud services revenue growth to remain in the single digits for the fourth quarter as it completes the migration of legacy customers.",
     "E3": "Zenith Arc Robotics reported third quarter revenue of $214.6 million, up 9% from a year earlier. Research and development expenses were $28.8 million, or 13.4% of revenue, compared with $31.9 million, or 16.1% of revenue, in the prior-year quarter. The Company said it is prioritizing near-term profitability and has paused two early-stage programs.",
     "E4": "The Board of Directors of Zephyr Foods Corp. declared a quarterly cash dividend of $0.20 per share, unchanged from the prior quarter, payable on December 15, 2026 to stockholders of record on November 30, 2026. During the quarter the Company repurchased 0.4 million shares, compared with 1.1 million shares in the prior quarter. The Company said the pace of repurchases may vary with market conditions.",

@@ -1,0 +1,29 @@
+{
+  "synthetic": true,
+  "source": "Hand-authored S-03 unit-test data based on installed typesafe-sdk 0.7.5 wire schema; no remote request or cassette.",
+  "response": {
+    "model": "jev-1.14.0",
+    "answers": {
+      "s1": {
+        "type": "noul",
+        "noul": 0.05
+      },
+      "s2": {
+        "type": "noul",
+        "noul": 0.91
+      },
+      "s3": {
+        "type": "noul",
+        "noul": 0.34
+      },
+      "s4": {
+        "type": "noul",
+        "noul": 0.02
+      }
+    },
+    "usage": {
+      "input_tokens": 19,
+      "output_tokens": 0
+    }
+  }
+}

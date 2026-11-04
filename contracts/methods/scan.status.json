@@ -1,0 +1,102 @@
+{
+  "method": "scan.status",
+  "summary": "读取扫描状态",
+  "owner": "P-02",
+  "phase": "mvp0",
+  "timeoutMs": 30000,
+  "params": {
+    "type": "object",
+    "required": [
+      "runId"
+    ],
+    "properties": {
+      "runId": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "additionalProperties": false
+  },
+  "result": {
+    "$ref": "types.schema.json#/$defs/ScanRun"
+  },
+  "errors": [
+    "NOT_FOUND"
+  ],
+  "examples": [
+    {
+      "name": "running",
+      "params": {
+        "runId": "01JC8Z5V3Q000000000000C6M5"
+      },
+      "result": {
+        "runId": "01JC8Z5V3Q000000000000C6M5",
+        "trigger": "manual",
+        "market": "us",
+        "status": "running",
+        "windowStart": "2026-10-26T00:00:00Z",
+        "windowEnd": "2026-11-02T00:30:41Z",
+        "stats": {
+          "instruments": 4,
+          "skippedNoThesis": 2,
+          "filings": 6,
+          "passages": 17,
+          "decisions": 9,
+          "cachedDecisions": 0,
+          "requests": 9,
+          "inputTokens": 9800,
+          "estCostUsd": "0.000412",
+          "durationMs": 40000
+        },
+        "engine": "jev_direct",
+        "modelId": "jev-1.14.0",
+        "startedAt": "2026-11-02T00:34:20Z",
+        "finishedAt": null,
+        "error": null,
+        "batchSummary": {
+          "total": 17,
+          "succeeded": 9,
+          "failed": 0,
+          "pending": 8
+        }
+      }
+    },
+    {
+      "name": "done",
+      "params": {
+        "runId": "01JC8Z5V3Q000000000000C6M1"
+      },
+      "result": {
+        "runId": "01JC8Z5V3Q000000000000C6M1",
+        "trigger": "manual",
+        "market": "us",
+        "status": "succeeded",
+        "windowStart": "2026-10-26T00:00:00Z",
+        "windowEnd": "2026-11-02T00:30:41Z",
+        "stats": {
+          "instruments": 4,
+          "skippedNoThesis": 2,
+          "filings": 6,
+          "passages": 17,
+          "decisions": 21,
+          "cachedDecisions": 0,
+          "requests": 17,
+          "inputTokens": 18420,
+          "estCostUsd": "0.000774",
+          "durationMs": 31000
+        },
+        "engine": "jev_direct",
+        "modelId": "jev-1.14.0",
+        "startedAt": "2026-11-02T00:30:41Z",
+        "finishedAt": "2026-11-02T00:31:12Z",
+        "error": null,
+        "batchSummary": {
+          "total": 17,
+          "succeeded": 17,
+          "failed": 0,
+          "pending": 0
+        }
+      }
+    }
+  ]
+}

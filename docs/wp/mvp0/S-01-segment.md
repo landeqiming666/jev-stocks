@@ -6,7 +6,7 @@ platform: shared
 lane: semantic
 deps: [C-00]
 size: S
-owns: [core/sentinel/semantic/segment.py, core/tests/unit/semantic/test_segment.py, core/tests/fixtures/semantic/segment/]
+owns: [core/sentinel/semantic/__init__.py, core/sentinel/semantic/segment.py, core/tests/unit/semantic/test_segment.py, core/tests/fixtures/semantic/segment/]
 appends: []
 stubs: []
 ---

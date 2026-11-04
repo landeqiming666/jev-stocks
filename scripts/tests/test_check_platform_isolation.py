@@ -57,6 +57,28 @@ class ScanTests(unittest.TestCase):
         )
         self.assertEqual(isolation.scan(self.root), [])
 
+    def test_bridge_fixed_unix_fixture_guard_is_allowed(self) -> None:
+        self.write(
+            "apps/desktop/src-tauri/tests/bridge.rs",
+            "#[cfg(unix)]\nfn fixed_shell_fixture() {}\n",
+        )
+        self.assertEqual(isolation.scan(self.root), [])
+
+    def test_fixture_exception_does_not_allow_runtime_or_other_os_checks(self) -> None:
+        self.write(
+            "apps/desktop/src-tauri/tests/bridge.rs",
+            '#[cfg(target_os = "macos")]\nfn a() {}\nfn b() { cfg!(unix); }\n',
+        )
+        self.assertEqual(len(isolation.scan(self.root)), 2)
+
+    def test_unix_guard_is_not_allowed_in_production_or_other_tests(self) -> None:
+        for path in [
+            "apps/desktop/src-tauri/src/bridge.rs",
+            "apps/desktop/src-tauri/tests/other.rs",
+        ]:
+            self.write(path, "#[cfg(unix)]\nfn a() {}\n")
+        self.assertEqual(len(isolation.scan(self.root)), 2)
+
     def test_ts_process_platform_is_reported(self) -> None:
         self.write("apps/desktop/src/x.ts", "const p = process.platform;\n")
         self.assertEqual(len(isolation.scan(self.root)), 1)
@@ -69,6 +91,20 @@ class ScanTests(unittest.TestCase):
         self.write("node_modules/a.js", "process.platform;\n")
         self.write("apps/desktop/src/rpc/generated/a.ts", "navigator.userAgent;\n")
         self.assertEqual(isolation.scan(self.root), [])
+
+    def test_ignored_development_sources_do_not_hide_active_source_violations(self) -> None:
+        self.write(".dev-data/jevdb/src/upstream.py", "import sys\nprint(sys.platform)\n")
+        self.write("core/sentinel/active.py", "import sys\nprint(sys.platform)\n")
+        self.assertEqual(
+            [finding.path for finding in isolation.scan(self.root)], ["core/sentinel/active.py"]
+        )
+
+    def test_only_explicit_jevdb_build_helper_can_check_platform(self) -> None:
+        self.write("vendors/jevdb/build.py", "import platform\nplatform.system()\n")
+        self.write("vendors/jevdb/other.py", "import platform\nplatform.system()\n")
+        self.assertEqual(
+            [finding.path for finding in isolation.scan(self.root)], ["vendors/jevdb/other.py"]
+        )
 
     def test_unpaired_shell_script_is_reported(self) -> None:
         self.write("scripts/a.sh", "#!/bin/sh\n")

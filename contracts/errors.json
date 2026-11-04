@@ -1,0 +1,64 @@
+{
+  "codes": {
+    "INVALID_ARGUMENT": {
+      "retryable": false,
+      "reasons": [
+        "UNKNOWN_METHOD"
+      ]
+    },
+    "NOT_FOUND": {
+      "retryable": false
+    },
+    "CONFLICT": {
+      "retryable": false
+    },
+    "CONFIG_REQUIRED": {
+      "retryable": false
+    },
+    "UNAUTHENTICATED": {
+      "retryable": false
+    },
+    "ENGINE_UNAVAILABLE": {
+      "retryable": false
+    },
+    "SOURCE_UNAVAILABLE": {
+      "retryable": true,
+      "reasons": [
+        "SEC_FORBIDDEN",
+        "OFFLINE"
+      ]
+    },
+    "RATE_LIMITED": {
+      "retryable": true
+    },
+    "MODEL_ERROR": {
+      "retryable": true
+    },
+    "BUDGET_EXCEEDED": {
+      "retryable": false
+    },
+    "DATA_INSUFFICIENT": {
+      "retryable": false
+    },
+    "ORDER_REJECTED": {
+      "retryable": false,
+      "reasons": [
+        "NO_PRICE",
+        "INSUFFICIENT_CASH",
+        "INSUFFICIENT_POSITION",
+        "NO_PRICE_AT_FILL",
+        "INSUFFICIENT_CASH_AT_FILL",
+        "INSUFFICIENT_POSITION_AT_FILL"
+      ]
+    },
+    "TIMEOUT": {
+      "retryable": true
+    },
+    "CANCELLED": {
+      "retryable": false
+    },
+    "INTERNAL": {
+      "retryable": true
+    }
+  }
+}

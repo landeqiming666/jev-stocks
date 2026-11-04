@@ -1,0 +1,59 @@
+{
+  "source": "Eastmoney public US stock list",
+  "urlTemplate": "https://push2.eastmoney.com/api/qt/clist/get?pn={page}&pz=100&po=1&np=1&fltt=2&invt=2&fid=f20&fs=m%3A105%2Cm%3A106%2Cm%3A107&fields=f12%2Cf14%2Cf13",
+  "sort": "market cap descending",
+  "count": 239,
+  "generatedLabels": false,
+  "examples": [
+    {
+      "symbol": "NVDA",
+      "name_zh": "英伟达",
+      "aliases": []
+    },
+    {
+      "symbol": "AAPL",
+      "name_zh": "苹果",
+      "aliases": []
+    },
+    {
+      "symbol": "MSFT",
+      "name_zh": "微软",
+      "aliases": []
+    },
+    {
+      "symbol": "GOOGL",
+      "name_zh": "谷歌-A",
+      "aliases": []
+    },
+    {
+      "symbol": "GOOG",
+      "name_zh": "谷歌-C",
+      "aliases": []
+    },
+    {
+      "symbol": "AMZN",
+      "name_zh": "亚马逊",
+      "aliases": []
+    },
+    {
+      "symbol": "TSM",
+      "name_zh": "台积电",
+      "aliases": []
+    },
+    {
+      "symbol": "TSLA",
+      "name_zh": "特斯拉",
+      "aliases": []
+    },
+    {
+      "symbol": "AVGO",
+      "name_zh": "博通",
+      "aliases": []
+    },
+    {
+      "symbol": "LLY",
+      "name_zh": "礼来",
+      "aliases": []
+    }
+  ]
+}
