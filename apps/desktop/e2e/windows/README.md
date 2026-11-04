@@ -21,3 +21,15 @@ scripts\windows_smoke.ps1 -NoLaunch -SelfTest
 | 3 | 已执行的检查通过，仍有待验收项 |
 
 原生 WebView2 窗口、六页截图和用户故事录屏在交互式验收时采集。凭据管理器人工检查和 Windows 最终 JEVDB 门槛也需单独完成。W-03 产物存在时，预检核对报告与扩展哈希并记录实际构建或降级结果。
+
+## Edge 应用外壳预检
+
+复用本机 Microsoft Edge 和项目已安装的 Playwright。Vite 只监听 `127.0.0.1:1476`，由 Playwright 在测试结束后关闭。
+
+```powershell
+pnpm --dir apps/desktop exec playwright test --config e2e/windows/playwright.config.ts
+```
+
+在 1440×900 和 1024×700 下检查六个导航路由、Windows 样式变量和横向溢出，保存每个路由的截图与 trace。路由证据逐项记录业务占位提示是否可见。另验证浏览器离线提示、恢复联网，以及 U-08 错误边界触发后导航仍能使用。
+
+截图与 trace 位于 `results/playwright/`。原生 WebView2 和业务流程按[实机联调记录](manual-checklist.md)验收。
