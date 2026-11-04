@@ -23,6 +23,8 @@ LAYER_RULES: dict[str, set[str]] = {
     "settings": {"domain", "storage", "security", "secrets", "rpc"},
     "secrets": {"domain", "security", "platform"},
     "scan": {"domain", "storage", "markets", "semantic", "rpc"},
+    # 进程入口与组合根同层：只负责装配，不承载业务规则。
+    "__main__": {"*"},
     "app": {"*"},
     "evaluation": {"*"},
     "demo": {"*"},

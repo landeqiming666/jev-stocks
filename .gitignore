@@ -26,6 +26,7 @@ __pycache__/
 eval/reports/
 playwright-report/
 test-results/
+.tmp-pytest/
 
 # 环境变量
 .env

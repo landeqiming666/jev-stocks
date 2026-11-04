@@ -1,7 +1,8 @@
 from __future__ import annotations
 
 import os
-from collections.abc import Callable
+from collections.abc import Callable, Iterator
+from contextlib import AbstractContextManager, contextmanager
 from typing import cast
 
 from pydantic import BaseModel
@@ -36,13 +37,21 @@ def register(
     probe: ConnectionProbe,
     *,
     before_change: Callable[[], None] | None = None,
+    change_guard: Callable[[], AbstractContextManager[None]] | None = None,
 ) -> None:
     def snapshot() -> EngineSnapshot:
         return engine() if callable(engine) else engine
 
-    def guard() -> None:
+    @contextmanager
+    def change() -> Iterator[None]:
+        # 组合根可注入整段配置写入护栏，消除检查与写入之间的扫描启动竞态。
+        if change_guard is not None:
+            with change_guard():
+                yield
+            return
         if before_change is not None:
             before_change()
+        yield
 
     def bootstrap(params: BaseModel, ctx: RequestContext) -> BaseModel:
         return settings.bootstrap(
@@ -53,20 +62,20 @@ def register(
         return settings.get()
 
     def update(params: BaseModel, ctx: RequestContext) -> BaseModel:
-        guard()
-        return settings.update(cast(SettingsPatch, params))
+        with change():
+            return settings.update(cast(SettingsPatch, params))
 
     def test_connection(params: BaseModel, ctx: RequestContext) -> BaseModel:
         return settings.test_connection(probe, snapshot())
 
     def set_key(params: BaseModel, ctx: RequestContext) -> BaseModel:
-        guard()
-        secrets.set_jev_key(cast(SecretSet, params).value)
+        with change():
+            secrets.set_jev_key(cast(SecretSet, params).value)
         return OkResult(ok=True)
 
     def clear(params: BaseModel, ctx: RequestContext) -> BaseModel:
-        guard()
-        secrets.clear_jev_key()
+        with change():
+            secrets.clear_jev_key()
         return OkResult(ok=True)
 
     def status(params: BaseModel, ctx: RequestContext) -> BaseModel:

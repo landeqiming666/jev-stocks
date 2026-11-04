@@ -67,12 +67,14 @@ class RpcServer:
         *,
         parent_pid: int | None = None,
         process_alive: Callable[[int], bool] = is_process_alive,
+        on_start: Callable[[], None] | None = None,
     ) -> None:
         self._stdin = stdin
         self._dispatcher = dispatcher
         self._config = config
         self._parent_pid = parent_pid
         self._process_alive = process_alive
+        self._on_start = on_start
         self._writer = Writer(stdout)
         self._registry = CancelRegistry()
         self._states: dict[str, _State] = {}
@@ -97,6 +99,10 @@ class RpcServer:
     def stopped(self) -> bool:
         return self._stopped.is_set()
 
+    def set_start_hook(self, callback: Callable[[], None] | None) -> None:
+        """在读取 stdin 之前执行一次；用于发送 app.ready。"""
+        self._on_start = callback
+
     def start(self) -> None:
         with self._condition:
             if self._started or self._stop_event.is_set():
@@ -108,6 +114,9 @@ class RpcServer:
         threading.Thread(target=self._finish, name="rpc-lifecycle", daemon=True).start()
         if self._parent_pid is not None:
             threading.Thread(target=self._watch, name="rpc-watchdog", daemon=True).start()
+        # 在读取 stdin 之前发送 app.ready，保证它是核心输出的第一条消息。
+        if self._on_start is not None:
+            self._on_start()
         self._reader.start()
 
     def serve_forever(self) -> None:
