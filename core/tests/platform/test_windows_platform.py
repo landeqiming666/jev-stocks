@@ -166,12 +166,16 @@ def test_file_lock_is_exclusive_within_process(tmp_path: Path) -> None:
 def test_file_lock_is_exclusive_across_processes(tmp_path: Path) -> None:
     path = tmp_path / "shared.lock"
     code = (
-        "from pathlib import Path; import sys,time; from sentinel import platform; "
-        "lock=platform.file_lock(Path(sys.argv[1])); lock.__enter__(); "
-        "print('LOCKED', flush=True); time.sleep(60)"
+        "from pathlib import Path\n"
+        "import sys\n"
+        "from sentinel import platform\n"
+        "with platform.file_lock(Path(sys.argv[1])):\n"
+        "    print('LOCKED', flush=True)\n"
+        "    sys.stdin.read()\n"
     )
     with subprocess.Popen(
         [sys.executable, "-u", "-c", code, str(path)],
+        stdin=subprocess.PIPE,
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
         text=True,
@@ -185,13 +189,15 @@ def test_file_lock_is_exclusive_across_processes(tmp_path: Path) -> None:
             with pytest.raises(platform.AlreadyRunning), platform.file_lock(path):
                 pytest.fail("Parent acquired a lock held by its controlled child")
         finally:
-            if child.poll() is None:
-                child.terminate()
+            assert child.stdin is not None
+            # EOF reaches the interpreter even when sys.executable is a venv launcher.
+            child.stdin.close()
             try:
                 child.wait(timeout=5)
             except subprocess.TimeoutExpired:
                 child.kill()
                 child.wait(timeout=5)
+        assert child.returncode == 0
     with platform.file_lock(path):
         pass
 
