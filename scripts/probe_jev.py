@@ -28,6 +28,7 @@ import typesafe_sdk as sdk
 
 from sentinel import clock as sharedclock
 from sentinel.ids import new_id
+from sentinel.platform import harden_permissions
 from sentinel.security.redact import redact_text, register_secret
 from sentinel.semantic.segment import TextSpan, split_sentences
 
@@ -375,14 +376,14 @@ def secure_json(value: Any, path: Path, *, secret: str = "") -> Path:
     if FORBIDDEN.search(text) or (secret and secret in text):
         raise ValueError("unsafe serialized output")
     path.parent.mkdir(parents=True, exist_ok=True, mode=0o700)
-    path.parent.chmod(0o700)
+    harden_permissions(path.parent)
     # 拒绝符号链接，避免报告输出覆盖非探针文件。
     flags = os.O_WRONLY | os.O_CREAT | os.O_TRUNC | getattr(os, "O_NOFOLLOW", 0)
     if path.is_symlink():
         raise ValueError("output must not be a symbolic link")
     fd = os.open(path, flags, 0o600)
     with os.fdopen(fd, "w", encoding="utf-8") as stream:
-        path.chmod(0o600)
+        harden_permissions(path)
         stream.write(text)
     return path
 

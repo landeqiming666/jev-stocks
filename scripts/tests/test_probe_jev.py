@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import os
 import sys
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
@@ -467,15 +468,27 @@ def test_evidence_offsets_are_codepoints_and_ties_choose_first():
     assert p.select_evidence(spans, [0.1] * 4)["kind"] == "passage"
 
 
-def test_secure_report_permissions_and_unsafe_manual_report_rejected(tmp_path):
+def test_secure_report_permissions_and_unsafe_manual_report_rejected(tmp_path, monkeypatch):
+    targets = []
+    real_harden = p.harden_permissions
+
+    def record_hardening(path):
+        real_harden(path)
+        targets.append(path)
+
+    monkeypatch.setattr(p, "harden_permissions", record_hardening)
 
     report, _ = run()
     path = p.write_report(report, tmp_path / "含 空格 目录")
-    assert path.stat().st_mode & 0o777 == 0o600
-    assert path.parent.stat().st_mode & 0o777 == 0o700
+    assert targets == [path.parent, path]
+    assert json.loads(path.read_text(encoding="utf-8"))["reason"] == report.reason
+    if os.name == "posix":
+        assert path.stat().st_mode & 0o777 == 0o600
+        assert path.parent.stat().st_mode & 0o777 == 0o700
     report.reason = "Authorization"
     with pytest.raises(ValueError):
         p.write_report(report, tmp_path)
+    assert targets == [path.parent, path]
 
 
 def test_semantic_observations_require_completed_sale_and_resist_injection():
