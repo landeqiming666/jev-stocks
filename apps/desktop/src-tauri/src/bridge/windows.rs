@@ -1,6 +1,6 @@
 //! Windows bridge test fixtures, compiled through tests/bridge_windows.rs.
 
-use sentinel_lib::bridge::process::CoreConfig;
+use sentinel_lib::bridge::process::{development_repository_root, CoreConfig};
 use std::fs;
 use std::io;
 use std::os::windows::io::{AsRawHandle, FromRawHandle, OwnedHandle, RawHandle};
@@ -9,6 +9,43 @@ use std::sync::atomic::{AtomicU64, Ordering};
 use std::time::Duration;
 
 static FIXTURE_COUNTER: AtomicU64 = AtomicU64::new(0);
+
+// C-02 inherits its environment. Launch the actual module with scoped paths
+// and an allowlisted environment while preserving the bridge's NDJSON pipes.
+const REAL_CORE_LAUNCHER: &str = r#"
+import os
+from pathlib import Path
+import subprocess
+import sys
+
+root = Path(__file__).parent
+system_root = os.environ["SystemRoot"]
+child_env = {
+    "SystemRoot": system_root,
+    "PATH": str(Path(system_root) / "System32"),
+    "SENTINEL_OFFLINE": "1",
+    "PYTHON_KEYRING_BACKEND": "keyring.backends.null.Keyring",
+}
+for name in ("APPDATA", "LOCALAPPDATA", "USERPROFILE", "TEMP"):
+    directory = root / name
+    directory.mkdir(exist_ok=True)
+    child_env[name] = str(directory)
+child_env["HOME"] = child_env["USERPROFILE"]
+child_env["TMP"] = child_env["TEMP"]
+
+exit_file = root / "real-core-exit.txt"
+exit_file.unlink(missing_ok=True)
+completed = subprocess.run(
+    [sys.executable, "-I", "-B", "-X", "utf8", "-m", "sentinel", *sys.argv[1:]],
+    env=child_env,
+    stdin=sys.stdin.buffer,
+    stdout=sys.stdout.buffer,
+    stderr=sys.stderr.buffer,
+    creationflags=subprocess.CREATE_NO_WINDOW,
+)
+exit_file.write_text(str(completed.returncode), encoding="ascii")
+raise SystemExit(completed.returncode)
+"#;
 
 pub struct Fixture {
     root: PathBuf,
@@ -34,7 +71,7 @@ impl Fixture {
     }
 
     pub fn config(&self, script_body: &str, fixture_args: &[&str]) -> CoreConfig {
-        let script = self.root.join("假 核心.py");
+        let script = self.root.join("桥接 进程.py");
         fs::write(&script, script_body).expect("write fixture source");
         let python = Path::new(env!("CARGO_MANIFEST_DIR"))
             .join("../../../core/.venv/Scripts/python.exe")
@@ -51,6 +88,37 @@ impl Fixture {
             parent_pid: std::process::id(),
             log_level: "info".into(),
         }
+    }
+
+    pub fn real_core_config(&self) -> CoreConfig {
+        let repository = development_repository_root().expect("development repository root");
+        assert!(
+            repository.join("core/sentinel/__main__.py").is_file()
+                && repository.join("core/sentinel/app/main.py").is_file(),
+            "W-02 real-core prerequisite: integrate C-07 (core/sentinel/__main__.py and \
+             core/sentinel/app/main.py) before running this test"
+        );
+        // Environment overrides do not isolate the Windows Credential Manager
+        // if composition selects a native backend directly.
+        assert!(
+            std::env::var("SENTINEL_WINDOWS_DISPOSABLE_PROFILE").as_deref() == Ok("1"),
+            "W-02 real-core prerequisite: use a disposable Windows profile with no stored \
+             Sentinel credentials and networking disabled, then set \
+             SENTINEL_WINDOWS_DISPOSABLE_PROFILE=1"
+        );
+        let mut config = self.config(REAL_CORE_LAUNCHER, &[]);
+        config
+            .argv
+            .splice(1..1, ["-I", "-B", "-X", "utf8"].map(str::to_owned));
+        config.resource_dir = repository.join("resources");
+        config
+    }
+
+    pub fn real_core_exit_code(&self) -> i32 {
+        fs::read_to_string(self.root.join("real-core-exit.txt"))
+            .expect("actual sentinel process exit status")
+            .parse()
+            .expect("integer process exit status")
     }
 }
 

@@ -4,7 +4,7 @@
 mod bridge_probe;
 
 use bridge_probe::{Fixture, FixtureProcess};
-use sentinel_lib::bridge::process::Timings;
+use sentinel_lib::bridge::process::{CoreConfig, Timings};
 use sentinel_lib::bridge::security::MAX_LINE_BYTES;
 use sentinel_lib::bridge::{self, BridgeErrorCode, BridgeEvent, BridgeState, CoreState};
 use serde_json::{json, Value};
@@ -171,17 +171,22 @@ struct Probe {
 impl Probe {
     fn start(args: &[&str]) -> Self {
         let fixture = Fixture::new();
-        let (tx, events) = mpsc::channel();
+        let config = fixture.config(FAKE_CORE, args);
         let timings = Timings {
             startup_timeout: START_TIMEOUT,
             shutdown_grace: Duration::from_millis(200),
             restart_delays: [20, 40, 80].map(Duration::from_millis),
             ..Timings::default()
         };
-        let bridge = BridgeState::start(fixture.config(FAKE_CORE, args), timings, move |event| {
+        Self::start_with_config(fixture, config, timings)
+    }
+
+    fn start_with_config(fixture: Fixture, config: CoreConfig, timings: Timings) -> Self {
+        let (tx, events) = mpsc::channel();
+        let bridge = BridgeState::start(config, timings, move |event| {
             let _ = tx.send(event);
         })
-        .expect("start actual C-02 supervisor with controlled Windows core");
+        .expect("start C-02 supervisor for Windows core");
         let probe = Self {
             bridge,
             events,
@@ -269,6 +274,53 @@ fn test_bridge_startup_handshake_and_bootstrap() {
                 .as_str()
                 .is_some_and(|id| id.starts_with("rs-shutdown-"))
     }));
+}
+
+// From src-tauri, opt in after setting SENTINEL_WINDOWS_DISPOSABLE_PROFILE=1:
+// cargo test --test bridge_windows test_real_core_accepts_bootstrap_on_windows -- --ignored --exact
+#[test]
+#[ignore = "requires C-07 and an offline disposable Windows profile"]
+fn test_real_core_accepts_bootstrap_on_windows() {
+    let fixture = Fixture::new();
+    let config = fixture.real_core_config();
+    let probe = Probe::start_with_config(
+        fixture,
+        config,
+        Timings {
+            startup_timeout: START_TIMEOUT,
+            ..Timings::default()
+        },
+    );
+
+    let id = "r-real-bootstrap";
+    probe.send(id, "app.bootstrap", json!({}));
+    let deadline = Instant::now() + IO_TIMEOUT;
+    let response = loop {
+        match probe.event_before(deadline) {
+            BridgeEvent::Message(line) => {
+                let message: Value = serde_json::from_str(&line).expect("JSON-RPC object");
+                if message["id"] == id {
+                    break message;
+                }
+            }
+            BridgeEvent::Status(status) => {
+                panic!("bridge left Ready before app.bootstrap completed: {status:?}");
+            }
+        }
+    };
+    assert_eq!(response["jsonrpc"], "2.0");
+    let result = response.get("result").expect("app.bootstrap succeeded");
+    assert_eq!(result["protocolVersion"], "1.0");
+    assert_eq!(result["platform"], "windows");
+    assert_eq!(result["offline"], true);
+    assert_eq!(result["demoDataLoaded"], false);
+    assert_eq!(result["configured"]["jevKey"], false);
+    assert_eq!(result["configured"]["secEmail"], false);
+
+    let started = Instant::now();
+    bridge::shutdown(&probe.bridge).expect("graceful real-core shutdown");
+    assert_eq!(probe.fixture.real_core_exit_code(), 0);
+    assert!(started.elapsed() <= Duration::from_secs(3));
 }
 
 #[test]
