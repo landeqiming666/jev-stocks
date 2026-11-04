@@ -1,0 +1,11 @@
+{
+  "jevdbCommit": "47a9070cba09012bedcc60f5e47e09ccb5c2c1fe",
+  "jevdbSha256": "cd52048a08b54a34409e507373b7b1d48c6885f28ef2d76db4e080a584c1d775",
+  "duckdbVersion": "1.4.3",
+  "duckdbCommit": "d1dc88f950d456d72493df452dabdcd13aa413dd",
+  "duckdbSha256": "b6a2afd09d9cf07e50d5cd07077df7f7697b61cca2eb00754f5adf89a1ae6c64",
+  "cliSha256": "6af7c45f38d764d1c8345f1cb1b1f2d07d779e11125ddf5dca7f2dfdf50efc7e",
+  "vcpkgTriplet": "x64-windows-static-md",
+  "vcpkgBaseline": "3af1d1e60af2b2abf55760538cd607829029b07a",
+  "extensionRelativePath": "build/release/extension/jevdb/jevdb.duckdb_extension"
+}

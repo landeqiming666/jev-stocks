@@ -1,0 +1,3 @@
+/.cache/
+/artifacts/**/*.duckdb_extension
+/artifacts/**/*.log
