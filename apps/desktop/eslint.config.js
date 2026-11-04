@@ -39,4 +39,12 @@ export default [
       ],
     },
   },
+  {
+    // Playwright 的 fixture 形参名 `use` 不是 React Hook。
+    files: ["e2e/**/*.ts"],
+    rules: {
+      "react-hooks/rules-of-hooks": "off",
+      "react-hooks/exhaustive-deps": "off",
+    },
+  },
 ];
