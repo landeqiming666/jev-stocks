@@ -1,0 +1,212 @@
+{
+  "events": [
+    {
+      "eventId": "us:0009990001-26-000001",
+      "instrumentId": "us:ZZAR",
+      "market": "us",
+      "formType": "8-K",
+      "title": "Item 5.02 — 控股股东减持计划",
+      "publishedAt": "2026-10-28T20:15:00Z",
+      "filingDate": "2026-10-28",
+      "url": "https://www.sec.gov/Archives/edgar/data/0009990001/000999000126000001/zzar-8-k.htm",
+      "items": "5.02,8.01",
+      "contentStatus": "full_text",
+      "fetchedAt": "2026-10-30T02:00:00Z",
+      "source": "demo"
+    },
+    {
+      "eventId": "us:0009990002-26-000001",
+      "instrumentId": "us:ZZFD",
+      "market": "us",
+      "formType": "8-K",
+      "title": "Item 8.01 — 股票回购与毛利率展望",
+      "publishedAt": "2026-10-27T20:05:00Z",
+      "filingDate": "2026-10-27",
+      "url": "https://www.sec.gov/Archives/edgar/data/0009990002/000999000226000001/zzfd-8-k.htm",
+      "items": "5.02,8.01",
+      "contentStatus": "full_text",
+      "fetchedAt": "2026-10-30T02:00:00Z",
+      "source": "demo"
+    },
+    {
+      "eventId": "us:0009990003-26-000001",
+      "instrumentId": "us:ZZCL",
+      "market": "us",
+      "formType": "6-K",
+      "title": "6-K — 2026 年第三季度业务更新",
+      "publishedAt": "2026-10-26T21:10:00Z",
+      "filingDate": "2026-10-26",
+      "url": "https://www.sec.gov/Archives/edgar/data/0009990003/000999000326000001/zzcl-6-k.htm",
+      "items": "5.02,8.01",
+      "contentStatus": "full_text",
+      "fetchedAt": "2026-10-30T02:00:00Z",
+      "source": "demo"
+    },
+    {
+      "eventId": "us:0009990004-26-000001",
+      "instrumentId": "us:ZZBK",
+      "market": "us",
+      "formType": "8-K",
+      "title": "Item 2.02 — 净息差与拨备更新",
+      "publishedAt": "2026-10-24T20:30:00Z",
+      "filingDate": "2026-10-24",
+      "url": "https://www.sec.gov/Archives/edgar/data/0009990004/000999000426000001/zzbk-8-k.htm",
+      "items": "5.02,8.01",
+      "contentStatus": "full_text",
+      "fetchedAt": "2026-10-30T02:00:00Z",
+      "source": "demo"
+    },
+    {
+      "eventId": "us:0009990005-26-000001",
+      "instrumentId": "us:ZZEN",
+      "market": "us",
+      "formType": "8-K",
+      "title": "Item 7.01 — 资本配置评估",
+      "publishedAt": "2026-10-23T20:40:00Z",
+      "filingDate": "2026-10-23",
+      "url": "https://www.sec.gov/Archives/edgar/data/0009990005/000999000526000001/zzen-8-k.htm",
+      "items": "5.02,8.01",
+      "contentStatus": "full_text",
+      "fetchedAt": "2026-10-30T02:00:00Z",
+      "source": "demo"
+    },
+    {
+      "eventId": "us:0009990006-26-000001",
+      "instrumentId": "us:ZZMD",
+      "market": "us",
+      "formType": "8-K",
+      "title": "Item 5.02 — 首席财务官任命",
+      "publishedAt": "2026-10-22T20:20:00Z",
+      "filingDate": "2026-10-22",
+      "url": "https://www.sec.gov/Archives/edgar/data/0009990006/000999000626000001/zzmd-8-k.htm",
+      "items": "5.02,8.01",
+      "contentStatus": "full_text",
+      "fetchedAt": "2026-10-30T02:00:00Z",
+      "source": "demo"
+    }
+  ],
+  "files": [
+    {
+      "eventId": "us:0009990001-26-000001",
+      "seq": 0,
+      "fileName": "zzar.htm",
+      "docType": "8-K",
+      "url": "https://www.sec.gov/Archives/edgar/data/0009990001/000999000126000001/zzar-8-k.htm",
+      "textStatus": "extracted",
+      "text": "Zenith Arc Robotics today announced that its largest shareholder will sell 4.5 million shares, or 4.5% of outstanding stock, over the next six months. The company said the sale reflects portfolio rebalancing and that the shareholder will retain a 12% stake. Separately, management reaffirmed its full-year revenue guidance.",
+      "charCount": 323
+    },
+    {
+      "eventId": "us:0009990002-26-000001",
+      "seq": 0,
+      "fileName": "zzfd.htm",
+      "docType": "8-K",
+      "url": "https://www.sec.gov/Archives/edgar/data/0009990002/000999000226000001/zzfd-8-k.htm",
+      "textStatus": "extracted",
+      "text": "Zephyr Foods announced a $150 million share repurchase program and raised its gross margin outlook to 31%. The company said input costs have stabilized and that it expects the buyback to be funded from operating cash flow.",
+      "charCount": 222
+    },
+    {
+      "eventId": "us:0009990003-26-000001",
+      "seq": 0,
+      "fileName": "zzcl.htm",
+      "docType": "6-K",
+      "url": "https://www.sec.gov/Archives/edgar/data/0009990003/000999000326000001/zzcl-6-k.htm",
+      "textStatus": "extracted",
+      "text": "Zhongzhi Cloud reported third-quarter revenue growth of 12%, down from 28% a year earlier. Management attributed the slowdown to the timing of two large contracts and said the pipeline remains healthy. The company kept its full-year outlook unchanged.",
+      "charCount": 251
+    },
+    {
+      "eventId": "us:0009990004-26-000001",
+      "seq": 0,
+      "fileName": "zzbk.htm",
+      "docType": "8-K",
+      "url": "https://www.sec.gov/Archives/edgar/data/0009990004/000999000426000001/zzbk-8-k.htm",
+      "textStatus": "extracted",
+      "text": "Zinc Bay Bancorp reported stable net interest margin and a provision coverage ratio of 180%. Management said credit costs remained contained and that deposit balances were stable during the quarter.",
+      "charCount": 198
+    },
+    {
+      "eventId": "us:0009990005-26-000001",
+      "seq": 0,
+      "fileName": "zzen.htm",
+      "docType": "8-K",
+      "url": "https://www.sec.gov/Archives/edgar/data/0009990005/000999000526000001/zzen-8-k.htm",
+      "textStatus": "extracted",
+      "text": "Zeta Energy Partners said it is reviewing its capital allocation plan after commodity prices fell. The company did not provide updated guidance and said the review may take several weeks.",
+      "charCount": 187
+    },
+    {
+      "eventId": "us:0009990006-26-000001",
+      "seq": 0,
+      "fileName": "zzmd.htm",
+      "docType": "8-K",
+      "url": "https://www.sec.gov/Archives/edgar/data/0009990006/000999000626000001/zzmd-8-k.htm",
+      "textStatus": "extracted",
+      "text": "Zenmed Diagnostics appointed a new chief financial officer effective next month. The company said the appointment follows a planned transition and does not change its financial reporting calendar.",
+      "charCount": 196
+    }
+  ],
+  "passages": [
+    {
+      "passageId": "05db98d72f1187a74774d5a34e7c8400",
+      "eventId": "us:0009990001-26-000001",
+      "fileSeq": 0,
+      "seq": 0,
+      "text": "Zenith Arc Robotics today announced that its largest shareholder will sell 4.5 million shares, or 4.5% of outstanding stock, over the next six months. The company said the sale reflects portfolio rebalancing and that the shareholder will retain a 12% stake. Separately, management reaffirmed its full-year revenue guidance.",
+      "startOffset": 0,
+      "endOffset": 323,
+      "contentHash": "ebf1f083ac02a4d5a92878c134623c640a971f1d0a3843dc12c2c7bf0ff4baaa"
+    },
+    {
+      "passageId": "64283e29525c14919e04177b7ee3f6a8",
+      "eventId": "us:0009990002-26-000001",
+      "fileSeq": 0,
+      "seq": 0,
+      "text": "Zephyr Foods announced a $150 million share repurchase program and raised its gross margin outlook to 31%. The company said input costs have stabilized and that it expects the buyback to be funded from operating cash flow.",
+      "startOffset": 0,
+      "endOffset": 222,
+      "contentHash": "605154a5815bcf178df872426e5a2ce589557b4d0c5db466003c6f79f23c65d3"
+    },
+    {
+      "passageId": "07b685ac91168753d73c44e70b960a45",
+      "eventId": "us:0009990003-26-000001",
+      "fileSeq": 0,
+      "seq": 0,
+      "text": "Zhongzhi Cloud reported third-quarter revenue growth of 12%, down from 28% a year earlier. Management attributed the slowdown to the timing of two large contracts and said the pipeline remains healthy. The company kept its full-year outlook unchanged.",
+      "startOffset": 0,
+      "endOffset": 251,
+      "contentHash": "734e34d783ad81a06b549699831a81dfeb41ed68066f488b9ba41b47d07af501"
+    },
+    {
+      "passageId": "cdcde890459e8b003c7c669485617b79",
+      "eventId": "us:0009990004-26-000001",
+      "fileSeq": 0,
+      "seq": 0,
+      "text": "Zinc Bay Bancorp reported stable net interest margin and a provision coverage ratio of 180%. Management said credit costs remained contained and that deposit balances were stable during the quarter.",
+      "startOffset": 0,
+      "endOffset": 198,
+      "contentHash": "01d1e3aa34cc0b259677056dd599e286c709f4241f0161d37938885e9e7ea839"
+    },
+    {
+      "passageId": "c441e041b168e97d0556b76ac8192dc2",
+      "eventId": "us:0009990005-26-000001",
+      "fileSeq": 0,
+      "seq": 0,
+      "text": "Zeta Energy Partners said it is reviewing its capital allocation plan after commodity prices fell. The company did not provide updated guidance and said the review may take several weeks.",
+      "startOffset": 0,
+      "endOffset": 187,
+      "contentHash": "0f2ceb5e5d79337a127a6dec326c6b86cbc62471062b2ac9cb61151df6fbe44c"
+    },
+    {
+      "passageId": "91e2e8d7df87ef108617dfba6e3d3223",
+      "eventId": "us:0009990006-26-000001",
+      "fileSeq": 0,
+      "seq": 0,
+      "text": "Zenmed Diagnostics appointed a new chief financial officer effective next month. The company said the appointment follows a planned transition and does not change its financial reporting calendar.",
+      "startOffset": 0,
+      "endOffset": 196,
+      "contentHash": "1af223319c219abd5ee6b6c2306df0e7437b3bd910552c24daf7bf621466bd92"
+    }
+  ]
+}

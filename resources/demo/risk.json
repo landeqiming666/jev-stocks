@@ -1,0 +1,30 @@
+{
+  "runId": "01K00000000000000000090001",
+  "computedAt": "2026-10-30T02:00:00Z",
+  "scope": "holdings",
+  "windowLabel": "6M",
+  "currency": "USD",
+  "observations": 126,
+  "instrumentIds": [
+    "us:ZZAR",
+    "us:ZZCL",
+    "us:ZZFD"
+  ],
+  "paramsJson": {
+    "shrinkageAlpha": 0.2,
+    "priceBasis": "adjusted",
+    "codeVersion": "1"
+  },
+  "resultJson": {
+    "observations": 126,
+    "symbols": [
+      "us:ZZAR",
+      "us:ZZCL",
+      "us:ZZFD"
+    ],
+    "volatility": {},
+    "drawdown": {},
+    "correlation": [],
+    "svd": []
+  }
+}

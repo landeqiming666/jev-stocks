@@ -1,0 +1,29 @@
+{
+  "version": "1",
+  "demoStart": "2025-10-20",
+  "demoEnd": "2026-10-30",
+  "counts": {
+    "instruments": 6,
+    "holdings": 5,
+    "theses": 6,
+    "events": 6,
+    "decisions": 11,
+    "prices": 1560
+  },
+  "pendingCount": 3,
+  "uncertainCount": 1,
+  "pendingOrder": [
+    "ZZAR",
+    "ZZCL",
+    "ZZEN"
+  ],
+  "files": {
+    "filings.json": "1c655dd66b162b5c48943258d04e9b0697cfd5239f70d7db5b99be76391a5785",
+    "instruments.json": "276a89d9d70fd0e92a8b0f271f7acb6e9fb9003d8803a29ad2610da8f3a915d8",
+    "paper.json": "10a6fdc175164f27dc1e4788fc14ece720e503d33796c27a713ef8d5e8665c9e",
+    "portfolio.json": "25235e0f63be5931ac843082d50909270d2a9fbff9d02298a0958577dafdca03",
+    "prices.csv": "ffbdfefaf838cb780ea1e30cafb7f35efaddfb38ccea659ff7a269326e75e6d5",
+    "risk.json": "c685b22194fcd7a6b988f392557634d37fa9daa00dd0684fa3ee18ca29319292",
+    "scan.json": "9786ace22cc1adfffe7b089fd960653dc390431b71c2329edcfb4818b7532c17"
+  }
+}
