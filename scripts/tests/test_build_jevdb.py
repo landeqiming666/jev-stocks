@@ -3,6 +3,7 @@ from __future__ import annotations
 import hashlib
 import io
 import json
+import os
 import sys
 import tarfile
 import tempfile
@@ -31,11 +32,12 @@ class BuildTests(unittest.TestCase):
             builder.load_pin(self.pin_path)
 
     def test_build_plan_uses_static_openssl_and_unsigned_extension(self):
-        plan = builder.build_plan(self.pin, self.root, Path("/openssl prefix"))
+        prefix = self.root / "openssl prefix"
+        plan = builder.build_plan(self.pin, self.root, prefix)
         self.assertIn("-DOPENSSL_USE_STATIC_LIBS=ON", plan[0])
         self.assertIn("-DEXTENSION_STATIC_BUILD=ON", plan[0])
         self.assertIn("-DBUILD_EXTENSIONS_ONLY=OFF", plan[0])
-        self.assertIn("-DOPENSSL_ROOT_DIR=/openssl prefix", plan[0])
+        self.assertIn(f"-DOPENSSL_ROOT_DIR={prefix}", plan[0])
         self.assertEqual(plan[-1][-2:], ["--parallel", "2"])
         self.assertEqual(
             builder.extension_path(self.root).relative_to(self.root).as_posix(),
@@ -116,12 +118,17 @@ class BuildTests(unittest.TestCase):
 
     def test_archive_rejects_existing_destination_symlink(self):
         destination = self.root / "unpacked"
-        destination.symlink_to(self.root, target_is_directory=True)
+        try:
+            destination.symlink_to(self.root, target_is_directory=True)
+        except OSError as error:
+            if getattr(error, "winerror", None) != 1314:
+                raise
+            self.skipTest("Windows session lacks the symlink creation privilege")
         with self.assertRaises(ValueError):
             builder.safe_extract(self.archive([("root/ok", "file")]), destination, "root")
 
-    def test_safe_fixture_symlink_is_preserved_and_nested_member_rejected(self):
-        archive = self.archive([("root/file", "file")])
+    def symlink_archive(self, *, nested=False):
+        archive = self.root / "source.tar.gz"
         with tarfile.open(archive, "w:gz") as stream:
             file = tarfile.TarInfo("root/file")
             file.size = 1
@@ -130,15 +137,27 @@ class BuildTests(unittest.TestCase):
             link.type = tarfile.SYMTYPE
             link.linkname = "file"
             stream.addfile(link)
+            if nested:
+                file.name = "root/link/child"
+                stream.addfile(file, io.BytesIO(b"x"))
+        return archive
+
+    def test_safe_fixture_symlink_is_preserved(self):
+        archive = self.symlink_archive()
         dest = self.root / "unpacked"
-        builder.safe_extract(archive, dest, "root")
+        try:
+            builder.safe_extract(archive, dest, "root")
+        except OSError as error:
+            if getattr(error, "winerror", None) != 1314:
+                raise
+            self.assertFalse(dest.exists())
+            self.skipTest("Windows session lacks the symlink creation privilege")
         self.assertTrue((dest / "link").is_symlink())
         builder.verify_tree(archive, dest, "root")
-        with tarfile.open(archive, "w:gz") as stream:
-            stream.addfile(link)
-            file.name = "root/link/child"
-            stream.addfile(file, io.BytesIO(b"x"))
-        with self.assertRaises(ValueError):
+
+    def test_archive_rejects_member_nested_under_symlink(self):
+        archive = self.symlink_archive(nested=True)
+        with self.assertRaisesRegex(ValueError, "nested under symlink"):
             builder.safe_extract(archive, self.root / "unsafe", "root")
         self.assertFalse((self.root / "unsafe").exists())
 
@@ -174,10 +193,13 @@ class BuildTests(unittest.TestCase):
     def test_sha256_and_private_lock(self):
         source = self.root / "artifact"
         source.write_bytes(b"artifact")
-        self.assertEqual(builder.sha256_file(source), hashlib.sha256(b"artifact").hexdigest())
+        digest = hashlib.sha256(b"artifact").hexdigest()
+        self.assertEqual(builder.sha256_file(source), digest)
         lock = self.root / "build.lock.json"
-        builder.write_lock(lock, {"sha": builder.sha256_file(source)})
-        self.assertEqual(lock.stat().st_mode & 0o777, 0o600)
+        builder.write_lock(lock, {"sha": digest})
+        self.assertEqual(json.loads(lock.read_text(encoding="utf-8")), {"sha": digest})
+        if os.name == "posix":
+            self.assertEqual(lock.stat().st_mode & 0o777, 0o600)
 
 
 if __name__ == "__main__":

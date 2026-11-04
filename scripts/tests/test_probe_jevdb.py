@@ -54,7 +54,7 @@ class FakeConnection:
 
 
 def native_env_worker_fixture(path, env, channel):
-    native = ctypes.CDLL(None)
+    native = ctypes.CDLL("ucrtbase.dll" if os.name == "nt" else None)
     native.getenv.argtypes = [ctypes.c_char_p]
     native.getenv.restype = ctypes.c_char_p
 
