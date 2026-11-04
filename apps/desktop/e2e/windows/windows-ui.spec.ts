@@ -1,4 +1,4 @@
-import { expect, test, type Page } from "@playwright/test";
+import { expect, test, type Locator, type Page } from "@playwright/test";
 import { writeFile } from "node:fs/promises";
 import { common } from "../../src/i18n/zh-CN/common";
 import { feedback } from "../../src/i18n/zh-CN/feedback";
@@ -6,6 +6,13 @@ import { feedback } from "../../src/i18n/zh-CN/feedback";
 const shellRoutes = ["today", "holdings", "trading", "risk", "scan", "settings"] as const;
 const mainNavigation = (page: Page) =>
   page.getByRole("navigation", { name: common.mainNavigation, exact: true });
+
+async function readPageHeading(main: Locator) {
+  const heading = main.getByRole("heading", { level: 1 }).first();
+  await expect(heading).toBeVisible();
+  await expect(heading).toHaveText(/\S/);
+  return (await heading.innerText()).trim();
+}
 
 test.beforeEach(async ({ page }) => {
   // Supply the same Windows platform marker that Tauri's init script supplies.
@@ -23,7 +30,7 @@ for (const [width, height] of [[1440, 900], [1024, 700]] as const) {
     const nav = mainNavigation(page);
     const main = page.getByRole("main");
     await expect(nav.getByRole("link")).toHaveCount(shellRoutes.length);
-    await expect(main.getByRole("heading", { level: 1, name: common.nav.today })).toBeVisible();
+    await expect(page.locator("[data-route][data-ready]")).toHaveAttribute("data-ready", "true");
 
     const html = page.locator("html");
     await expect(html).toHaveAttribute("data-platform", "windows");
@@ -44,8 +51,11 @@ for (const [width, height] of [[1440, 900], [1024, 700]] as const) {
       await link.click();
       await expect(link).toHaveAttribute("aria-current", "page");
       expect(new URL(page.url()).hash).toBe(`#/${route}`);
-      await expect(main.getByRole("heading", { level: 1, name: label, exact: true })).toBeVisible();
       await expect(page).toHaveTitle(`${label} · ${common.appName}`);
+      // The router owns the tab title. Business pages supply their own heading.
+      const heading = await readPageHeading(main);
+      const placeholderVisible = await main.getByText(common.shellOnly, { exact: true }).isVisible();
+      if (placeholderVisible) expect(heading).toBe(label);
       const layout = await main.evaluate(element => ({
         viewportWidth: window.innerWidth,
         documentScrollWidth: document.documentElement.scrollWidth,
@@ -55,10 +65,7 @@ for (const [width, height] of [[1440, 900], [1024, 700]] as const) {
       expect(layout.viewportWidth).toBe(width);
       expect(layout.documentScrollWidth, route).toBeLessThanOrEqual(width);
       expect(layout.mainScrollWidth, route).toBeLessThanOrEqual(layout.mainWidth);
-      observed.push({
-        route, ...layout,
-        placeholderVisible: await main.getByText(common.shellOnly, { exact: true }).isVisible(),
-      });
+      observed.push({ route, heading, ...layout, placeholderVisible });
       await page.screenshot({
         path: testInfo.outputPath(`${route}-${width}.png`),
         animations: "disabled",
@@ -72,15 +79,20 @@ for (const [width, height] of [[1440, 900], [1024, 700]] as const) {
 
 test("browser offline banner leaves shell navigation usable", async ({ page, context }) => {
   await page.goto("/#/today");
-  await expect(page.getByRole("heading", { level: 1, name: common.nav.today })).toBeVisible();
+  const main = page.getByRole("main");
+  await expect(page.locator("[data-route][data-ready]")).toHaveAttribute("data-ready", "true");
+  await readPageHeading(main);
   const banner = page.getByText(feedback.offline, { exact: true });
   await expect(banner).toHaveCount(0);
   await context.setOffline(true);
   try {
     await expect(banner).toBeVisible();
     await expect(banner).toHaveCount(1);
-    await mainNavigation(page).getByRole("link", { name: common.nav.settings, exact: true }).click();
-    await expect(page.getByRole("heading", { level: 1, name: common.nav.settings })).toBeVisible();
+    const settings = mainNavigation(page).getByRole("link", { name: common.nav.settings, exact: true });
+    await settings.click();
+    await expect(settings).toHaveAttribute("aria-current", "page");
+    await expect(page).toHaveTitle(`${common.nav.settings} · ${common.appName}`);
+    await readPageHeading(main);
   } finally {
     await context.setOffline(false);
   }

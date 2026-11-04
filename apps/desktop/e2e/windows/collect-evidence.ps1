@@ -4,7 +4,7 @@
 .DESCRIPTION
 窗口和退出记录分别写入 native-window.json 和 native-exit.json。退出检查使用
 窗口记录中已经观察到的 PID 与进程启动时间。WindowCloseTimeoutSeconds 大于零时，
-持续记录本次启动树的后续进程，检测到桌面退出后开始退出核验。ScreenshotPath 可登记已采集的截图。
+持续记录本次启动树的后续进程，检测到原生窗口销毁后开始退出核验。ScreenshotPath 可登记已采集的截图。
 .EXAMPLE
 .\collect-evidence.ps1 -LaunchPid $launch.Id -ReportDir $runDir -WaitSeconds 180
 .EXAMPLE
@@ -95,6 +95,7 @@ function Get-NativeProcessTree {
 
 $mode = $PSCmdlet.ParameterSetName
 $lateObserved = @{}
+$windowClosedAtUtc = $null
 $desktopClosedAtUtc = $null
 try {
     if (-not ('Sentinel.Acceptance.NativeEvidence' -as [type])) {
@@ -152,6 +153,8 @@ namespace Sentinel.Acceptance {
 
         public sealed class Window {
             public int Pid { get; set; }
+            public string Hwnd { get; set; }
+            public uint ThreadId { get; set; }
             public string ExecutablePath { get; set; }
             public string Title { get; set; }
             public bool NativeCaption { get; set; }
@@ -191,21 +194,28 @@ namespace Sentinel.Acceptance {
                 using (Process p = Process.GetProcessById(identity.Pid)) {
                     if (p.StartTime.ToUniversalTime() != identity.StartedAtUtc) return null;
                     IntPtr hwnd = p.MainWindowHandle;
+                    if (hwnd == IntPtr.Zero || !IsWindowVisible(hwnd)) return null;
                     uint windowPid;
+                    uint threadId = GetWindowThreadProcessId(hwnd, out windowPid);
                     Rect rect;
-                    if (hwnd == IntPtr.Zero || !IsWindowVisible(hwnd) ||
-                        GetWindowThreadProcessId(hwnd, out windowPid) == 0 ||
-                        windowPid != identity.Pid || !GetClientRect(hwnd, out rect)) return null;
+                    if (threadId == 0 || windowPid != identity.Pid || !GetClientRect(hwnd, out rect)) return null;
                     var title = new StringBuilder(512);
                     GetWindowTextW(hwnd, title, title.Capacity);
                     return new Window {
                         Pid = identity.Pid, ExecutablePath = p.MainModule.FileName,
+                        Hwnd = "0x" + hwnd.ToInt64().ToString("X"), ThreadId = threadId,
                         Title = title.ToString(), NativeCaption = (GetWindowLongW(hwnd, -16) & 0x00C00000) == 0x00C00000,
                         ClientWidth = rect.Right - rect.Left, ClientHeight = rect.Bottom - rect.Top
                     };
                 }
             } catch (ArgumentException) { return null; }
               catch (InvalidOperationException) { return null; }
+        }
+
+        public static bool WindowMatches(long handle, int desktopPid, uint threadId) {
+            uint owner;
+            return GetWindowThreadProcessId(new IntPtr(handle), out owner) == threadId &&
+                owner == desktopPid;
         }
     }
 }
@@ -231,6 +241,17 @@ namespace Sentinel.Acceptance {
         $desktopId = [int]$baseline.window.pid
         $desktopStartedAtUtc = $identities[$desktopId]
         $watchWindow = $WindowCloseTimeoutSeconds -gt 0
+        if ($watchWindow) {
+            $threadId = [uint32]0
+            $windowProperties = $baseline.window.PSObject.Properties
+            if ($null -eq $windowProperties['hwnd'] -or $null -eq $windowProperties['threadId'] -or
+                $baseline.window.hwnd -cnotmatch '\A0x[0-9A-Fa-f]{1,16}\z' -or
+                -not [uint32]::TryParse([string]$baseline.window.threadId, [ref]$threadId) -or $threadId -eq 0) {
+                throw '窗口关闭监控需要包含有效 HWND 和窗口线程的 native-window.json 基线。'
+            }
+            $windowHandle = [Convert]::ToInt64($baseline.window.hwnd, 16)
+            if ($windowHandle -eq 0) { throw '窗口基线包含无效 HWND。' }
+        }
         do {
             $sampledAtUtc = [datetime]::UtcNow
             $live = @{}
@@ -241,11 +262,17 @@ namespace Sentinel.Acceptance {
                 }
                 else { $identities.Remove($processId) }
             }
-            if ($watchWindow -and -not $desktopClosedAtUtc -and
-                (-not $live.ContainsKey($desktopId) -or
-                 $live[$desktopId].StartedAtUtc -ne $desktopStartedAtUtc)) {
-                $desktopClosedAtUtc = [datetime]::UtcNow.ToString('o')
-                $timer.Restart()
+            if ($watchWindow) {
+                $desktopAlive = $live.ContainsKey($desktopId) -and
+                    $live[$desktopId].StartedAtUtc -eq $desktopStartedAtUtc
+                if (-not $windowClosedAtUtc -and (-not $desktopAlive -or
+                    -not [Sentinel.Acceptance.NativeEvidence]::WindowMatches($windowHandle, $desktopId, $threadId))) {
+                    $windowClosedAtUtc = [datetime]::UtcNow.ToString('o')
+                    $timer.Restart()
+                }
+                if (-not $desktopClosedAtUtc -and -not $desktopAlive) {
+                    $desktopClosedAtUtc = [datetime]::UtcNow.ToString('o')
+                }
             }
             if ($watchWindow -and $live.Count -gt 0) {
                 # Keep already verified descendants as anchors if their parent has exited.
@@ -261,9 +288,9 @@ namespace Sentinel.Acceptance {
                     }
                 }
             }
-            if ($watchWindow -and -not $desktopClosedAtUtc) {
+            if ($watchWindow -and -not $windowClosedAtUtc) {
                 if ($timer.Elapsed.TotalSeconds -ge $WindowCloseTimeoutSeconds) {
-                    throw "在 $WindowCloseTimeoutSeconds 秒内未检测到桌面进程 $desktopId 退出。"
+                    throw "在 $WindowCloseTimeoutSeconds 秒内未检测到桌面进程 $desktopId 的原生窗口销毁。"
                 }
             }
             elseif ($live.Count -eq 0 -or $timer.Elapsed.TotalSeconds -ge $WaitSeconds) { break }
@@ -282,6 +309,7 @@ namespace Sentinel.Acceptance {
             capturedAtUtc = [datetime]::UtcNow.ToString('o')
             baselinePath = (Resolve-Path -LiteralPath $BaselinePath).Path
             observedCount = $baselineCount + $lateObserved.Count
+            windowClosedAtUtc = $windowClosedAtUtc
             desktopClosedAtUtc = $desktopClosedAtUtc
             lateObservedProcesses = @($lateObserved.Values | Sort-Object pid, startedAtUtc)
             allObservedExited = $remaining.Count -eq 0
@@ -352,7 +380,8 @@ namespace Sentinel.Acceptance {
             startedAtUtc = $root.StartedAtUtc.ToString('o')
         }
         window = [ordered]@{
-            pid = $window.Pid; executablePath = $window.ExecutablePath; title = $window.Title
+            pid = $window.Pid; hwnd = $window.Hwnd; threadId = $window.ThreadId
+            executablePath = $window.ExecutablePath; title = $window.Title
             executableVersion = [Diagnostics.FileVersionInfo]::GetVersionInfo($window.ExecutablePath).FileVersion
             nativeCaption = $window.NativeCaption
             clientWidth = $window.ClientWidth; clientHeight = $window.ClientHeight
@@ -372,6 +401,7 @@ catch {
     }
     if ($WindowCloseTimeoutSeconds -gt 0) {
         $errorEvidence['windowCloseTimeoutSeconds'] = $WindowCloseTimeoutSeconds
+        $errorEvidence['windowClosedAtUtc'] = $windowClosedAtUtc
         $errorEvidence['desktopClosedAtUtc'] = $desktopClosedAtUtc
         $errorEvidence['lateObservedProcesses'] = @($lateObserved.Values | Sort-Object pid, startedAtUtc)
     }

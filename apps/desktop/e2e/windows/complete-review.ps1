@@ -143,8 +143,10 @@ try {
             $window.window.pid -in $window.processes.pid
         if ($windowPass -and $report.desktop.status -ceq 'pass' -and $report.desktop.exitEvidence -eq $exitPath) {
             $exitEvidence = Read-RunJson 'native-exit.json'
+            $windowClosedAtUtc = [DateTimeOffset]::MinValue
             $exitPass = $exitEvidence.schema -ceq 'windows-native-exit/1' -and
                 $exitEvidence.baselinePath -eq $windowPath -and $exitEvidence.observedCount -gt 0 -and
+                [DateTimeOffset]::TryParse([string]$exitEvidence.windowClosedAtUtc, [ref]$windowClosedAtUtc) -and
                 $exitEvidence.allObservedExited -is [bool] -and $exitEvidence.allObservedExited -and
                 @($exitEvidence.remaining).Count -eq 0
         }

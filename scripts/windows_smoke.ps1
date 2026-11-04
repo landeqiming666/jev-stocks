@@ -36,6 +36,20 @@ function Get-AcceptanceExitCode {
     return 0
 }
 
+function Test-RealBridgeResult {
+    param([string]$Output)
+    $Output -cmatch '(?m)^test test_real_core_accepts_bootstrap_on_windows \.\.\. ok\r?$' -and
+        $Output -cmatch '(?m)^test result: ok\. 1 passed; 0 failed; 0 ignored;'
+}
+
+function Read-PytestResult {
+    param([xml]$Results)
+    $cases = $Results.SelectNodes('/testsuites/testsuite/testcase | /testsuite/testcase')
+    $passed = @($cases | Where-Object { -not $_.SelectSingleNode('skipped | failure | error') }).Count
+    $failed = @($cases | Where-Object { $_.SelectSingleNode('failure | error') }).Count
+    [ordered]@{ passed = $passed; failed = $failed; skipped = $cases.Count - $passed - $failed }
+}
+
 $checks = [ordered]@{}
 foreach ($index in 1..5) {
     $checks["WM-$index"] = New-Outcome -Reason '尚未采集证据。'
@@ -81,7 +95,19 @@ if ($SelfTest) {
         (Get-AcceptanceExitCode -Outcomes @($checks.Values)) -ne 3) {
         throw 'test_no_launch_marks_wm2_wm3_not_run'
     }
-    Write-Output 'Windows smoke report self-tests passed (3).'
+    $passedBridge = "test test_real_core_accepts_bootstrap_on_windows ... ok`r`n" +
+        'test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 7 filtered out'
+    $emptyBridge = 'test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 8 filtered out'
+    if (-not (Test-RealBridgeResult $passedBridge) -or (Test-RealBridgeResult $emptyBridge)) {
+        throw 'test_real_bridge_requires_the_named_passing_case'
+    }
+    $pytestResult = Read-PytestResult '<testsuites><testsuite><testcase><skipped /></testcase></testsuite></testsuites>'
+    $pytestMixed = Read-PytestResult '<testsuite><testcase /><testcase><failure /></testcase><testcase><error /></testcase></testsuite>'
+    if ($pytestResult.passed -ne 0 -or $pytestResult.skipped -ne 1 -or
+        $pytestMixed.passed -ne 1 -or $pytestMixed.failed -ne 2 -or $pytestMixed.skipped -ne 0) {
+        throw 'test_pytest_reports_executed_cases_separately_from_skips'
+    }
+    Write-Output 'Windows smoke report self-tests passed (5).'
     exit 0
 }
 
@@ -190,6 +216,27 @@ function Invoke-DemoLoad {
     return $outcome
 }
 
+function Invoke-RealIntegration {
+    $junit = Join-Path $runDir 'integration.junit.xml'
+    $outcome = Invoke-Recorded 'integration' 'uv' @(
+        'run', '--offline', 'pytest', 'tests/integration', '-q', '-m', 'integration and not network', '--junitxml', $junit
+    ) $core
+    if ($outcome.status -ne 'pass') { return $outcome }
+    try {
+        $outcome.testCounts = Read-PytestResult (Get-Content -LiteralPath $junit -Raw -Encoding utf8)
+        $outcome.junit = $junit
+        if ($outcome.testCounts.passed -eq 0 -or $outcome.testCounts.failed -gt 0) {
+            throw 'I-01 没有通过的离线联调用例，或报告中存在失败。'
+        }
+    }
+    catch {
+        $outcome.status = 'fail'
+        $outcome.reason = $_.Exception.Message
+        $outcome.exitCode = 1
+    }
+    return $outcome
+}
+
 function Invoke-NativeDesktop {
     $collector = Join-Path $repo 'apps/desktop/e2e/windows/collect-evidence.ps1'
     $devLog = Join-Path $runDir 'native-dev.log'
@@ -252,6 +299,7 @@ $environment = [ordered]@{
     npm_config_offline = 'true'
     PYTHONUTF8 = '1'
     PYTHONIOENCODING = 'utf-8'
+    PYTHON_KEYRING_BACKEND = $null
     PYTEST_ADDOPTS = $null
     SENTINEL_OFFLINE = $null
     SENTINEL_CLOCK = $null
@@ -318,9 +366,16 @@ try {
         $report.bridge = Invoke-Recorded 'bridge' 'cargo' @('test', '--offline', '--test', 'bridge_windows') $tauri
         if ($report.dependencies['C-07'] -and $report.prerequisites.disposableProfileConfirmed) {
             $report.realBridge = Invoke-Recorded 'bridge-real' 'cargo' @(
-                'test', '--locked', '--offline', '--test', 'bridge_windows',
+                'test', '--locked', '--offline', '--color', 'never', '--test', 'bridge_windows',
                 'test_real_core_accepts_bootstrap_on_windows', '--', '--ignored', '--exact'
             ) $tauri
+            if ($report.realBridge.status -eq 'pass' -and -not (Test-RealBridgeResult (
+                Get-Content -LiteralPath $report.realBridge.evidence -Raw -Encoding utf8
+            ))) {
+                $report.realBridge.status = 'fail'
+                $report.realBridge.reason = '真实桥接用例未实际执行并通过。'
+                $report.realBridge.exitCode = 1
+            }
         }
         elseif ($report.dependencies['C-07']) {
             $report.realBridge.reason = '真实核心测试需要专用 Windows 测试账户。'
@@ -330,11 +385,7 @@ try {
         $report.prerequisites.disposableProfileConfirmed) {
         # Unit tests exercise mocked transports. The real-core suite uses offline mode.
         $env:SENTINEL_OFFLINE = '1'
-        try {
-            $report.integration = Invoke-Recorded 'integration' 'uv' @(
-                'run', '--offline', 'pytest', 'tests/integration', '-q', '-m', 'integration and not network'
-            ) $core
-        }
+        try { $report.integration = Invoke-RealIntegration }
         finally {
             Remove-Item Env:SENTINEL_OFFLINE
         }
