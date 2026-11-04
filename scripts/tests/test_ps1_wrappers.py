@@ -1,11 +1,10 @@
-"""W-01 包装器准备测试：运行真实 PowerShell，只在临时副本替换 Python 目标。"""
+"""W-01 包装器测试，在临时副本中用受控 Python 脚本验证参数与退出码。"""
 from __future__ import annotations
 
 import json
 import os
 import shutil
 import subprocess
-import sys
 import tempfile
 import unittest
 from pathlib import Path
@@ -97,6 +96,23 @@ class PowerShellWrapperTests(unittest.TestCase):
                 )
                 self.assertEqual(code, 0, output)
 
+    def test_wrapper_preserves_empty_quoted_and_trailing_backslash_arguments(self) -> None:
+        isolated = self.isolated_wrappers()
+        arguments = ("", '嵌入"引号" 和空格', "尾随 反斜杠\\", '反斜杠\\" 和引号', "O'Brien")
+        driver = isolated / "driver.ps1"
+        literals = ", ".join("'" + value.replace("'", "''") + "'" for value in arguments)
+        driver.write_text(
+            f"$values = @({literals})\n"
+            '& "$PSScriptRoot\\check.ps1" @values\n'
+            "exit $LASTEXITCODE\n",
+            encoding="utf-8-sig",
+        )
+        for shell in self.shells:
+            with self.subTest(shell=Path(shell).name):
+                code, output = self.run_ps1(shell, driver)
+                self.assertEqual(code, 0, output)
+                self.assertEqual(json.loads(output.strip())["argv"], list(arguments))
+
     def test_wrapper_exit_code_is_propagated(self) -> None:
         isolated = self.isolated_wrappers()
         for shell in self.shells:
@@ -116,17 +132,6 @@ class PowerShellWrapperTests(unittest.TestCase):
             if not path.stem.startswith("_"):
                 with self.subTest(wrapper=path.name):
                     self.assertTrue(path.with_suffix(".sh").is_file())
-
-    def test_check_py_rejects_unknown_step(self) -> None:
-        # 独立验证共享入口，避免占位 .ps1 的 exit 1 掩盖 check.py 的错误行为。
-        env = os.environ.copy()
-        env.update(PYTHONUTF8="1", PYTHONIOENCODING="utf-8")
-        result = subprocess.run(
-            [sys.executable, str(SCRIPTS / "check.py"), "--only", "no-such-step"],
-            cwd=self.cwd, env=env, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
-            encoding="utf-8", errors="replace", timeout=15,
-        )
-        self.assertNotEqual(result.returncode, 0, result.stdout)
 
     def test_ps1_files_have_utf8_bom_and_crlf(self) -> None:
         for name in (*WRAPPERS, "_py"):

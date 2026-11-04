@@ -1,8 +1,12 @@
+use std::os::windows::process::CommandExt;
+use std::process::{Child, Command, Stdio};
+
 use tauri::{Manager, Runtime, WebviewWindowBuilder};
 
 use super::Platform;
 
-/// 占位实现：W-01 接手并补齐 Windows 平台行为。
+const CREATE_NO_WINDOW: u32 = 0x0800_0000;
+
 pub struct Windows;
 
 impl Platform for Windows {
@@ -20,12 +24,41 @@ document.addEventListener("DOMContentLoaded", function () { document.documentEle
         &self,
         builder: WebviewWindowBuilder<'a, R, M>,
     ) -> WebviewWindowBuilder<'a, R, M> {
-        builder
+        builder.decorations(true)
     }
 
-    fn prepare_core_command(&self, _cmd: &mut std::process::Command) {}
+    fn prepare_core_command(&self, cmd: &mut Command) {
+        cmd.creation_flags(CREATE_NO_WINDOW);
+    }
 
-    fn kill_process_tree(&self, child: &mut std::process::Child) {
+    fn kill_process_tree(&self, child: &mut Child) {
+        if let Ok(Some(_)) = child.try_wait() {
+            return;
+        }
+
+        // 开发模式中的 uv 会再启动 Python，先按根 PID 结束整棵树。
+        let _ = Command::new("taskkill.exe")
+            .args(["/PID", &child.id().to_string(), "/T", "/F"])
+            .creation_flags(CREATE_NO_WINDOW)
+            .stdin(Stdio::null())
+            .stdout(Stdio::null())
+            .stderr(Stdio::null())
+            .status();
+
+        // taskkill 无法启动或结束根进程时，仍用 Child 句柄尝试结束并等待。
         let _ = child.kill();
+        let _ = child.wait();
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn init_script_sets_windows_platform() {
+        let script = Windows.init_script();
+        assert!(script.contains(r#"document.documentElement.dataset.platform = "windows""#));
+        assert!(script.contains("DOMContentLoaded"));
     }
 }

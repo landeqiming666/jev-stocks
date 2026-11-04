@@ -104,13 +104,13 @@ def _acl_entries(path: Path) -> list[dict[str, object]]:
     return entries
 
 
-def _assert_current_user_has_full_control_ace(path: Path) -> None:
+def _assert_current_user_only(path: Path, *, inherited: bool = False) -> None:
     sid = _current_user_sid()
-    entries = _acl_entries(path)
-    assert any(
-        item["sid"] == sid and item["allow"] and int(item["rights"]) & FULL_CONTROL == FULL_CONTROL
-        for item in entries
-    )
+    (entry,) = _acl_entries(path)
+    assert entry["sid"] == sid
+    assert entry["allow"] is True
+    assert entry["inherited"] is inherited
+    assert int(entry["rights"]) & FULL_CONTROL == FULL_CONTROL
 
 
 def test_name_is_windows() -> None:
@@ -206,6 +206,9 @@ def test_file_lock_creates_parent_directory(tmp_path: Path) -> None:
 def test_harden_permissions_removes_broad_groups(tmp_path: Path) -> None:
     directory = tmp_path / "temporary-acl-target"
     directory.mkdir()
+    existing_child = directory / "existing.txt"
+    existing_child.touch()
+    child_acl = _acl_entries(existing_child)
     with _restore_acl_after(directory):
         # Explicit grants expose implementations which only remove inheritance.
         subprocess.run(
@@ -216,12 +219,12 @@ def test_harden_permissions_removes_broad_groups(tmp_path: Path) -> None:
         )
         assert {entry["sid"] for entry in _acl_entries(directory)} >= BROAD_SIDS
         platform.harden_permissions(directory)
-        entries = _acl_entries(directory)
-        assert not BROAD_SIDS.intersection(entry["sid"] for entry in entries)
-        _assert_current_user_has_full_control_ace(directory)
+        _assert_current_user_only(directory)
+        assert _acl_entries(existing_child) == child_acl
         sample = directory / "writable.txt"
         sample.write_text("probe", encoding="utf-8")
         assert sample.read_text(encoding="utf-8") == "probe"
+        _assert_current_user_only(sample, inherited=True)
 
 
 def test_harden_permissions_missing_path_raises(tmp_path: Path) -> None:
@@ -239,7 +242,7 @@ def test_harden_permissions_handles_spaces_and_unicode(tmp_path: Path) -> None:
         sample = directory / "probe.txt"
         sample.write_text("可读写", encoding="utf-8")
         assert sample.read_text(encoding="utf-8") == "可读写"
-        _assert_current_user_has_full_control_ace(directory)
+        _assert_current_user_only(directory)
 
 
 def test_file_lock_nonempty_file_keeps_content_and_exclusion(tmp_path: Path) -> None:
@@ -265,7 +268,7 @@ def test_harden_permissions_handles_a_file(tmp_path: Path) -> None:
         platform.harden_permissions(path)
         path.write_text("after", encoding="utf-8")
         assert path.read_text(encoding="utf-8") == "after"
-        _assert_current_user_has_full_control_ace(path)
+        _assert_current_user_only(path)
 
 
 def test_file_lock_locks_byte_zero_on_nonempty_file(tmp_path: Path) -> None:
@@ -298,7 +301,7 @@ def test_file_lock_locks_byte_zero_on_nonempty_file(tmp_path: Path) -> None:
 
 
 def test_is_process_alive_false_for_terminated_exit_259() -> None:
-    """Pending W-01 process contract CR: a terminated process is never alive."""
+    """The actual exit code 259 does not make a terminated process alive."""
     with subprocess.Popen([sys.executable, "-c", "import os; os._exit(259)"]) as child:
         assert child.wait(timeout=10) == 259
         assert platform.is_process_alive(child.pid) is False
