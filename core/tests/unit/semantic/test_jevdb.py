@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import errno
 import hashlib
 import json
 import logging
@@ -609,16 +610,31 @@ def test_score_fixture_is_explicitly_synthetic(setup_engine: Any, inputs: Any) -
 @pytest.mark.parametrize(
     "name", ["relative", "quote'", 'quote"', "newline\n", "wrong.bin", "directory"]
 )
-def test_invalid_extension_paths_never_open_connections(tmp_path: Path, name: str) -> None:
+def test_invalid_extension_paths_never_open_connections(
+    tmp_path: Path, name: str, monkeypatch: pytest.MonkeyPatch
+) -> None:
     path = tmp_path / (name if name in ("wrong.bin", "directory") else name + ".duckdb_extension")
     if name == "directory":
         path.mkdir()
     else:
-        path.write_bytes(b"synthetic")
+        try:
+            path.write_bytes(b"synthetic")
+        except OSError as exc:
+            if exc.errno != errno.EINVAL or name not in ('quote"', "newline\n"):
+                raise
+            # NTFS rejects these filenames. Let this case reach the character check.
+            is_file = Path.is_file
+            monkeypatch.setattr(
+                Path, "is_file", lambda candidate: candidate == path or is_file(candidate)
+            )
     if name == "relative":
         path = Path(path.name)
 
+    opened = False
+
     def factory(*a: Any, **k: Any) -> Connection:
+        nonlocal opened
+        opened = True
         raise AssertionError("invalid path opened connection")
 
     engine = jevdb.JevdbEngine(
@@ -627,8 +643,10 @@ def test_invalid_extension_paths_never_open_connections(tmp_path: Path, name: st
         secret_provider=lambda: KEY,
         connection_factory=factory,
     )
-    with pytest.raises(EngineError, match="ENGINE_UNAVAILABLE"):
+    with pytest.raises(EngineError, match="ENGINE_UNAVAILABLE") as failure:
         engine.load()
+    assert failure.value.reason == "EXTENSION_PATH_OR_ABI"
+    assert not opened
     engine.close()
 
 
@@ -1012,9 +1030,12 @@ def test_real_static_load_null_sql_binding_and_zero_requests(
     if path is None:
         pytest.skip("explicit verified static artifact required")
     extension = Path(path)
-    assert (
-        hashlib.sha256(extension.read_bytes()).hexdigest()
-        == "d9f3f1d613847900436af87422f0cc7c3e8e9268934559f207433e6e6d3ffd9a"
+    expected_sha256 = os.environ.get(
+        "SENTINEL_JEVDB_TEST_SHA256",
+        "d9f3f1d613847900436af87422f0cc7c3e8e9268934559f207433e6e6d3ffd9a",
+    )
+    assert hashlib.sha256(extension.read_bytes()).hexdigest() == expected_sha256.lower(), (
+        "verified static artifact SHA-256 mismatch"
     )
     monkeypatch.setenv("SENTINEL_OFFLINE", "1")
     engine = jevdb.JevdbEngine(
