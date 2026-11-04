@@ -1,0 +1,5 @@
+*.ps1 text eol=crlf
+/apps/desktop/src/rpc/generated/*.ts text eol=lf
+/core/sentinel/storage/migrations/*.sql text eol=lf
+/core/tests/fixtures/markets/probe/*.json text eol=lf
+/design/prototype/data/mock.js text eol=lf
