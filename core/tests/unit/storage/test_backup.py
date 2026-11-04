@@ -61,12 +61,20 @@ def test_wal_backup_is_consistent_and_can_restore(db: Database) -> None:
 
 def test_standalone_backup_checkpoints_wal(tmp_path: Path) -> None:
     path = tmp_path / "sentinel.duckdb"
-    with duckdb.connect(str(path)) as raw:
+    # An abrupt exit leaves a committed WAL and releases the source file handles.
+    code = textwrap.dedent("""
+        import os
+        import sys
+        import duckdb
+        raw = duckdb.connect(sys.argv[1])
         raw.execute("CREATE TABLE sample (id INTEGER); INSERT INTO sample VALUES(7)")
-        assert Path(str(path) + ".wal").exists()
-        backup = backup_database(path, tmp_path / "backups", 0, datetime(2026, 11, 2, tzinfo=UTC))
-        with duckdb.connect(str(backup), read_only=True) as restored:
-            assert restored.execute("SELECT * FROM sample").fetchall() == [(7,)]
+        os._exit(0)
+    """)
+    subprocess.run([sys.executable, "-c", code, str(path)], check=True, timeout=10)
+    assert Path(str(path) + ".wal").exists()
+    backup = backup_database(path, tmp_path / "backups", 0, datetime(2026, 11, 2, tzinfo=UTC))
+    with duckdb.connect(str(backup), read_only=True) as restored:
+        assert restored.execute("SELECT * FROM sample").fetchall() == [(7,)]
 
 
 def test_backup_unavailable_or_inside_transaction(db: Database, tmp_path: Path) -> None:

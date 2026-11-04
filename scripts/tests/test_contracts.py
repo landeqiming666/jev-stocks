@@ -796,7 +796,12 @@ class ContractTests(unittest.TestCase):
             target = Path(tmp) / "contracts"
             shutil.copytree(CONTRACTS, target)
             out = Path(tmp) / "linked.js"
-            out.symlink_to(target / "index.json")
+            try:
+                out.symlink_to(target / "index.json")
+            except OSError as error:
+                if getattr(error, "winerror", None) != 1314:
+                    raise
+                self.skipTest("Windows session lacks the symlink creation privilege")
             before = (target / "index.json").read_bytes()
             result = self.run_script(
                 "gen_proto_mock.py", "--contracts", target, "--out", out

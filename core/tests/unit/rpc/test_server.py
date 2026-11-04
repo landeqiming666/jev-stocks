@@ -450,7 +450,7 @@ def child(script: str | None = None, *args: str) -> Iterator[subprocess.Popen[by
             stream.close()
 
 
-def subprocess_line(stream: IO[bytes], timeout: float = 1.0) -> bytes:
+def subprocess_line(stream: IO[bytes], timeout: float = 5.0) -> bytes:
     lines: queue.Queue[bytes] = queue.Queue()
     threading.Thread(target=lambda: lines.put(stream.readline()), daemon=True).start()
     return lines.get(timeout=timeout)
@@ -479,7 +479,7 @@ def test_server_writes_only_ndjson() -> None:
         assert json.loads(subprocess_line(proc.stdout))["result"] == {"ok": True}
         assert proc.wait(timeout=1.0) == 0
         assert proc.stdout.read() == b""
-        assert b"noise\nnative-noise\n" in proc.stderr.read()
+        assert b"noise\nnative-noise\n" in proc.stderr.read().replace(b"\r\n", b"\n")
 
 
 @pytest.mark.parametrize("force", [False, True])
@@ -489,7 +489,7 @@ def test_real_subprocess_shutdown_exits_with_four_permanently_blocked_workers(fo
         for i in range(4):
             send_child(proc, f"slow-{i}", "slow.method")
         for _ in range(4):
-            assert subprocess_line(proc.stderr) == b"worker-started\n"
+            assert subprocess_line(proc.stderr).rstrip(b"\r\n") == b"worker-started"
         send_child(proc, "ping", "app.ping")
         assert json.loads(subprocess_line(proc.stdout, 0.2))["id"] == "ping"
         start = time.monotonic()

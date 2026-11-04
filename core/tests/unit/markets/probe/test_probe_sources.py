@@ -437,7 +437,12 @@ def test_offline_rejects_missing_or_incomplete_provenance(probe, mode, tmp_path)
 def test_offline_rejects_fixture_symlink(probe, tmp_path):
     target = tmp_path / "private.json"
     target.write_text('{"secret":"synthetic-secret"}')
-    (tmp_path / "quotes_tencent_us.probe.json").symlink_to(target)
+    try:
+        (tmp_path / "quotes_tencent_us.probe.json").symlink_to(target)
+    except OSError as error:
+        if getattr(error, "winerror", None) != 1314:
+            raise
+        pytest.skip("Windows session lacks the symlink creation privilege")
     with pytest.raises(ValueError, match="symlink"):
         probe.offline_checks(tmp_path)
 
