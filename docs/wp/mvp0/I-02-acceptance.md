@@ -7,7 +7,7 @@ lane: integration
 deps: [I-01, E-02]
 size: L
 size_approval: cr/F18-01-closure-clarifications.md
-owns: [scripts/acceptance.py, apps/desktop/e2e/acceptance/]
+owns: [scripts/acceptance.py, scripts/acceptance_live.py, scripts/tests/test_acceptance.py, scripts/tests/test_acceptance_live.py, apps/desktop/e2e/acceptance/]
 appends: []
 stubs: []
 ---
@@ -58,19 +58,25 @@ stubs: []
 - E-02 的 `dataset.jsonl`、manifest 和 cassette 完整，离线回放可运行。
 - `scripts/check.py` 已包含 lint、typecheck、pytest、前端测试、Rust 检查、文档检查与平台隔离检查。
 - 验收在 macOS arm64 主线运行；Windows 只复用报告 schema，由 W-05 执行。
-- `--full` 还要求：macOS arm64 上 JEVDB 扩展可加载、`JEV_API_KEY` 存在、真实 JEVDB 查询预算已获确认。缺任一项时 M-8=`fail`，整体不得通过。
+- `--full` 还要求：macOS arm64 上 JEVDB 扩展可加载，`JEV_API_KEY`、`SENTINEL_SEC_CONTACT` 存在，且使用 `--confirm-live-model-cost` 确认真实模型费用。缺配置时 M-8=`fail`；未确认费用时为 `not_run`，整体不得通过。
 
 ## 4. 交付物清单
 
 | 路径 | 动作 | 职责 |
 |---|---|---|
 | `scripts/acceptance.py` | 新建 | 编排检查、隔离数据目录、生成报告与退出码 |
+| `scripts/acceptance_live.py` | 新建 | 真实 SEC 快照、内存密钥组合根、实际 SQL/统计审计与持久化证据校验 |
+| `scripts/tests/test_acceptance*.py` | 新建 | 验收环境、Python 启动、报告路径和 M-8 的显式合成回归 |
 | `apps/desktop/e2e/acceptance/playwright.config.ts` | 新建 | 串行验收场景，禁用重试 |
-| `apps/desktop/e2e/acceptance/fixture.ts` | 新建 | 复用 I-01 核心桥，固定视口与证据目录 |
-| `apps/desktop/e2e/acceptance/acceptance.spec.ts` | 新建 | M-1/M-2/M-6 与六页可访问性 |
+| `apps/desktop/e2e/real-core/fixture.ts` | 修改 | 复用 I-01 核心桥；可选 `memorySecrets` 只供验收使用 |
+| `apps/desktop/e2e/acceptance/memory_core.py` | 新建 | 验收专用核心入口，注入 `MemorySecretStore`，不读写系统钥匙串 |
+| `apps/desktop/e2e/acceptance/acceptance.spec.ts` | 新建 | 6 个用例：M-1 清除/重载、M-2 离线/键盘/重启/演示时长、M-3 真实 RPC |
 | `apps/desktop/e2e/acceptance/demo-script.ts` | 新建 | 5 分钟章节、选择器与预期文本 |
-| `apps/desktop/e2e/acceptance/manual-checklist.md` | 新建 | 录屏、键盘、断网、重启四项人工证据 |
+| `apps/desktop/e2e/acceptance/manual-checklist.md` | 新建 | 键盘、断网、取消/重启、密钥、窄屏、演示清除六项人工证据；另附录屏 |
+| `apps/desktop/e2e/acceptance/m8.config.ts` / `m8.spec.ts` | 新建 | 显式运行的真实模型扫描、真实核心 RPC 与证据抽屉截图 |
 | `apps/desktop/e2e/acceptance/report.schema.json` | 新建 | `acceptance.json` 字段约束 |
+
+M-3 的假密钥只存在于验收子进程内存；`memory_core.py` 仅用于验收，生产入口仍使用系统钥匙串。验收数据目录必须是独立临时目录，不得指向默认应用数据。
 
 ## 5. 接口规格
 
@@ -80,11 +86,12 @@ class AcceptanceRunner:
     def __init__(self, root: Path, work_dir: Path, mode: Literal["offline", "full"]) -> None: ...
     def preflight(self) -> list[CheckResult]: ...
     def run(self) -> AcceptanceReport: ...
-    def write(self, out_dir: Path) -> Path: ...
+
+def write_report(report: AcceptanceReport, out_dir: Path) -> Path: ...
 
 def main(argv: Sequence[str] | None = None) -> int: ...
 ```
-CLI：`scripts/acceptance.py [--offline|--full] [--report-dir PATH] [--skip-e2e] [--json]`。默认 `--offline`，只做开发回归；M-8 固定为 `not_run`，因此整体 `overall=fail`。最终提交必须无 `--skip-e2e` 运行 `--full`，且 M-1～M-8 全 pass。
+CLI：`scripts/acceptance.py [--offline|--full] [--report-dir PATH] [--skip-e2e] [--skip-gate] [--json] [--self-test] [--confirm-live-model-cost] [--m8-symbol SYMBOL] [--m8-accession ACCESSION] [--m8-statement TEXT] [--m8-token-budget N]`。默认 `--offline`，只做开发回归；M-8 固定为 `not_run`，因此整体 `overall=fail`。最终提交必须无 `--skip-e2e` 运行 `--full --confirm-live-model-cost`，且 M-1～M-8 全 pass。
 
 ### 5.2 报告字段
 | 字段 | 类型 | 必填 | 约束 | 含义 |
@@ -110,18 +117,18 @@ CLI：`scripts/acceptance.py [--offline|--full] [--report-dir PATH] [--skip-e2e]
 
 ## 6. 实现步骤
 
-1. 创建 `TemporaryDirectory(prefix="sentinel acceptance 中文 ")`，设置 `SENTINEL_DATA_DIR`、`SENTINEL_OFFLINE=1`、`SENTINEL_CLOCK=2026-11-02T08:35:00Z`。
-2. 运行 `scripts/check.py`；失败则 M-7 fail，保留完整 stdout/stderr，不继续宣称后续通过。
-3. 运行 `scripts/load_demo.py --json`；校验 `6/5/6/6/12/1560`，保存 JSON 为 M-1 证据。
-4. 运行 I-01 的真实核心集成测试；再运行本目录 Playwright；保存 trace、截图和 `acceptance-results.json`。
-5. 关闭网络或在 `SENTINEL_OFFLINE=1` 下重新启动，打开六个页面；保存每页截图并断言已有数据仍可见，归入 M-2。
-6. 用假密钥触发保存、连接测试和一次 `INTERNAL`；扫描日志、DuckDB 文本列、`settings.get` 与 `app.bootstrap` 输出，泄漏一处即 M-3 fail。
+1. 创建唯一且保留的临时工作目录；显式 `--work-dir` 必须为空。仅演示数据和离线浏览器子进程设置 `SENTINEL_OFFLINE=1`、`SENTINEL_CLOCK=2026-11-02T08:35:00Z`。
+2. 运行 `scripts/check.py` 时清除继承的离线开关、固定时钟和真实模型凭据，防止禁掉 MockTransport 单测或触发真实模型；失败则 M-7 fail，保留完整 stdout/stderr。
+3. 运行 `scripts/load_demo.py --json` 载入，再 `--clear` 清除，最后重载；三次均校验计数 `6/5/6/6/12/1560`，并断言清除确实删除行，保存 JSON 为 M-1 证据。
+4. 运行本目录 Playwright（真实核心 headless）；保存 `results.json`、日志和证据。结构化结果缺失时 M-2 即使退出码为 0 也 fail。
+5. 在 `SENTINEL_OFFLINE=1` 下打开六个页面；断言已有数据仍可见、扫描按钮禁用并提示“当前离线，无法开始扫描。”，归入 M-2。
+6. 用假密钥走真实 UI/RPC：保存、连接测试、扫描、清除；扫描 UI、日志、DuckDB 文本列、`settings.get`、`app.bootstrap` 与 `settings.testConnection`，泄漏一处即 M-3 fail。验收核心必须走 `memory_core.py` 的进程内存存储，不得读写系统钥匙串。
 7. 查询 `decision`，断言 12 行的 `engine/model_id/question_set_version/evidence_kind` 非空且值在白名单；归入 M-4。
 8. 运行 `scripts/eval.py --replay … --split test`；把 `report.md`、`report.json`、`predictions.jsonl` 归入 M-5。MVP-0 只要求完整报告，不调用 v1 的 `--gate`；评测执行失败或报告缺失时 M-5 fail，但不得删产物。
 9. 运行 I-01 的“无证据不展示”测试，人工在数据库插入一条缺少证据的阳性判定并重启，断言不进清单；归入 M-6。
-10. **仅 `--full`**：对一份固定公开 SEC 披露启动一次真实扫描，强制引擎为 `jevdb`；轮询到完成。保存扩展路径与 SHA-256、DuckDB 版本、模型 ID、问题集版本、生成 SQL、`jevdb_stats()`、`decision` 行和证据抽屉截图到 M-8 证据目录。若引擎降级、请求失败或界面显示 `jev_direct`，M-8 fail。
+10. **仅 `--full --confirm-live-model-cost`**：从 SEC 获取标的与披露，默认 AAPL 最新 Item 2.02，可用 `--m8-symbol`、`--m8-accession`、`--m8-statement` 固定复核案例。保存原始 submissions 与选中行的 HTTP 快照、哈希和来源；以披露时刻固定时钟，只回放该披露 HTTP。启动生产组合根/真实 RPC（密钥仅在独立子进程内存中），强制 `jevdb` 并真正调用远端模型，预算缺省 50000 tokens（`--m8-token-budget`）。保存扩展 SHA、DuckDB 版本、实际执行 SQL、同连接 `jevdb_stats()`、扫描状态、判定、清单与证据抽屉截图。零请求、零判定、降级、数据库与页面来源不一致、缺图或无可展示的阳性/待确认条目均 fail，不调整分数凑通过。HTTP 回放不能称作现场 SEC 扫描；F18-S04-CR-01 的 criteria 等价问题仍独立未验证。
 11. 汇总 `overall`：仅当 M-1～M-8 全部 pass 时为 pass；任何 `not_run` 视为 fail。终端输出一行 `ACCEPTANCE PASS/FAIL <passed>/8`。
-12. 复制 `manual-checklist.md` 到报告目录，要求在录屏后勾选键盘、断网、取消/重启、密钥四项；未勾选不得提交。
+12. 复制 `manual-checklist.md` 到报告目录，要求在录屏后逐项完成六项人工验收；自动化结果不自动勾选清单，未完成不得宣称人工验收通过。
 13. 生成 `acceptance.json`、`summary.md`、`artifacts/`，不清理失败的临时目录，路径打印在终端。
 
 ## 7. 5 分钟演示脚本
@@ -166,12 +173,12 @@ CLI：`scripts/acceptance.py [--offline|--full] [--report-dir PATH] [--skip-e2e]
 
 ### 9.1 命令与期望输出
 ```bash
-python3 scripts/acceptance.py --full --json
+uv run --project core python scripts/acceptance.py --full --confirm-live-model-cost --json
 # 期望：真实 JEVDB 可用时退出码 0；ACCEPTANCE PASS 8/8
-python3 scripts/acceptance.py --offline --json
+uv run --project core python scripts/acceptance.py --offline --json
 # 期望：开发回归可执行，但 M-8=not_run、退出码 1；不得用于最终提交
 python3 scripts/acceptance.py --skip-e2e
-# 期望：退出码 1；overall=fail；M-1=not_run
+# 期望：退出码 1；overall=fail；M-2/M-3=not_run，其余按实际执行
 python3 scripts/check_docs.py --strict
 # 期望：错误 0
 ```
@@ -182,7 +189,7 @@ python3 scripts/check_docs.py --strict
 - [ ] 5 分钟脚本实测 ≤ 300 秒，两个视口无横向滚动
 - [ ] 密钥泄漏、缺证据、离线、评测失败四种反向测试通过
 - [ ] M-8 保存真实 JEVDB 的扩展 SHA、SQL、统计、数据库结果与界面截图；任何直连替代均失败
-- [ ] 人工录屏与键盘/断网/重启/密钥四项都勾选
+- [ ] 人工录屏与六项清单全部完成
 - [ ] 报告中没有任何真实密钥、持仓或个人信息
 - [ ] 已写 `docs/wp/status/I-02.md`
 

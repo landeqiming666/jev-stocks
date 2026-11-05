@@ -185,3 +185,21 @@ U-02 排序以真实 P-03/04 的关系、headline、event.publishedAt、decision
 风险 Decimal 市值权重使用独立 Context(prec=60, ROUND_HALF_UP)，不继承调用方 traps。
 主审先红回归证明 1/3 权重原先会被调用方 Inexact trap 中断；修复后结果与调用方 flags
 均稳定。此补充不修改收益、协方差、零方差处理或年化规则。
+
+## 15. I-02 验收器复审修正
+
+2026-11-05 用户授权修复独立复审发现的 M-7/M-8、Python 启动与清单计数问题。
+I-02 owns 补充 `scripts/acceptance_live.py`、`scripts/tests/test_acceptance.py`、
+`scripts/tests/test_acceptance_live.py`。C-07 的 `build_container`/`EngineRuntime`
+只增加可选 `http_client`/`jevdb_connection_factory` 注入，用于明确标记的 SEC HTTP 回放
+和同一实际原生连接的 SQL/数值统计审计；默认构造行为、40 方法与问题集不改变。
+M-8 真实费用必须显式 `--confirm-live-model-cost`，内存密钥不写系统钥匙串；
+合成回归不能作真实闸门证据。人工清单六项与录屏仍单独执行，不自动勾选。
+
+M-3 的浏览器用例会真实调用 `secrets.set`/`secrets.clear`。为避免验收碰触用户钥匙串，
+验收专用入口 `apps/desktop/e2e/acceptance/memory_core.py` 复用生产组合根，只注入
+`MemorySecretStore`，并由 `SENTINEL_ACCEPTANCE_MEMORY_SECRETS=1` 标记；生产入口不变。
+M-1 改为载入→清除→重载并断言删除行数；M-2 补离线扫描阻断、键盘/抽屉焦点和结构化结果
+缺失即 fail；M-3 证据必须覆盖 UI、`settings.get`、`app.bootstrap`、连接测试、核心日志和
+清除后扫描拒绝。M-8 证据额外绑定原始 SEC submissions 哈希、HTTP 快照哈希、目标 accession、
+运行时版本/扩展哈希、实际 SQL、同连接统计与数据库/页面一致性；任一缺失或篡改即 fail。

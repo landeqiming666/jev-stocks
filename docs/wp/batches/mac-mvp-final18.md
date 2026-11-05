@@ -25,13 +25,13 @@
 | E-02 | 已发布 | wp/E-02 @ ea793d6…；92 定向；synthetic 回放 30 样本、F1 0.80；真实标注 NOT_RUN |
 | C-07 | 已发布 | wp/C-07 @ 95461d186d47；20 单测；真实进程冒烟；16/0/1 |
 | I-01 | 已发布 | wp/I-01 @ 051b4bc81ee2；集成 20 passed/1 skipped；真实核心 e2e 10 passed |
-| I-02 | 已发布 | wp/I-02 @ 73156a67e7d4；acceptance 7/8，M-8 BLOCKED（无 JEVDB/密钥） |
+| I-02 | 已发布，复审修复已推送 | wp/I-02 @ 73156a67e7d4；2026-11-05 修复后整条离线 7/8（M-1～M-7 pass、M-8 not_run），真实 M-8 BLOCKED，人工 0/6；详见状态文件 |
 
 ## 验收结论
 
 - 全量门禁：`scripts/check.sh --e2e` **17 通过 / 0 失败 / 0 跳过**（e2e 10 个真实核心用例）。
 - 真实进程联调：`core/tests/integration` 20 passed、1 skipped；`pnpm e2e` 10 passed。
-- 验收脚本：`python3 scripts/acceptance.py --offline` 7/8，M-8 = not_run（无真实 JEVDB 与密钥）。
+- 验收脚本：2026-11-05 最终源码整条复跑 M-1～M-7 pass、M-8 not_run（7/8），报告在 `.dev-data/validation/manual-acceptance-20261105/round4/`；9 个证据引用全部可解析。真实 M-8 因缺 `SENTINEL_JEVDB_PATH`、`JEV_API_KEY`、`SENTINEL_SEC_CONTACT` 且未授权模型费用而 BLOCKED；六项人工验收 0/6，自动化不代勾。
 - 桌面应用：`pnpm tauri dev` 编译并启动 `sentinel-desktop`，Rust 桥按契约注入
   `--data-dir ~/Library/Application Support/org.thesissentinel.desktop --parent-pid … --resource-dir …/resources`，
   核心创建 `sentinel.duckdb` 后随应用退出被回收；本会话无法截屏（黑屏），GUI 点击流程改由

@@ -21,9 +21,12 @@ export class CoreBridge {
   private buffer = "";
   private exitCode: number | null = null;
 
-  constructor(readonly dataDir: string) {}
+  constructor(readonly dataDir: string, readonly memorySecrets = false) {}
 
   async start(): Promise<void> {
+    const entry = this.memorySecrets
+      ? [join(ROOT, "apps/desktop/e2e/acceptance/memory_core.py")]
+      : ["-m", "sentinel"];
     const child = spawn(
       "uv",
       [
@@ -31,8 +34,7 @@ export class CoreBridge {
         "--project",
         join(ROOT, "core"),
         "python",
-        "-m",
-        "sentinel",
+        ...entry,
         "--data-dir",
         this.dataDir,
         "--resource-dir",
@@ -260,7 +262,10 @@ export function installTauriShim(): void {
 export const test = base.extend<{ core: CoreBridge; app: Page }>({
   // eslint-disable-next-line no-empty-pattern
   core: async ({}, use) => {
-    const bridge = new CoreBridge(tempDataDir());
+    const bridge = new CoreBridge(
+      tempDataDir(),
+      process.env.SENTINEL_ACCEPTANCE_MEMORY_SECRETS === "1",
+    );
     await bridge.start();
     try {
       await use(bridge);

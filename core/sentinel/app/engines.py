@@ -14,7 +14,7 @@ from sentinel.errors import EngineError, ErrorCode, SentinelError, UserError
 from sentinel.semantic.base import EngineName, SemanticEngine
 from sentinel.semantic.engines import EngineChange, EngineFactories, select_engine
 from sentinel.semantic.engines.jev_direct import JevDirectEngine
-from sentinel.semantic.engines.jevdb import JevdbEngine
+from sentinel.semantic.engines.jevdb import DuckDBConnection, JevdbEngine
 from sentinel.settings.models import EngineChoice, EngineSnapshot
 
 MODEL_ID = "jev-1.14.0"
@@ -44,12 +44,14 @@ class EngineRuntime:
         secret: Callable[[], str | None],
         env: Mapping[str, str],
         notify: Callable[[str, dict[str, object]], None] | None = None,
+        jevdb_connection_factory: Callable[..., DuckDBConnection] | None = None,
     ) -> None:
         self._choice, self._secret, self._env, self._notify = choice, secret, env, notify
         self._lock = threading.RLock()
         self._engine: SemanticEngine | None = None
         self._fingerprint: _Fingerprint | None = None
         self._change: EngineChange | None = None
+        self._jevdb_connection_factory = jevdb_connection_factory
 
     # -- 配置读取 ---------------------------------------------------------
     def _key(self) -> str:
@@ -92,6 +94,7 @@ class EngineRuntime:
                 model_id=MODEL_ID,
                 secret_provider=self._key,
                 endpoint=self._endpoint(),
+                connection_factory=self._jevdb_connection_factory,
             )
             return cast(SemanticEngine, engine)
 

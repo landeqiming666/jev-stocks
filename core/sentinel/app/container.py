@@ -35,6 +35,7 @@ from sentinel.secrets import (
     SecretsService,
     SecretStore,
 )
+from sentinel.semantic.engines.jevdb import DuckDBConnection
 from sentinel.semantic.pipeline import DecisionPipeline
 from sentinel.settings import SettingsService
 from sentinel.settings.models import MODEL_ID
@@ -138,7 +139,13 @@ def _secret_store() -> SecretStore:
         return MemorySecretStore()
 
 
-def build_container(args: AppArgs, *, secret_store: SecretStore | None = None) -> AppContainer:
+def build_container(
+    args: AppArgs,
+    *,
+    secret_store: SecretStore | None = None,
+    jevdb_connection_factory: Callable[..., DuckDBConnection] | None = None,
+    http_client: HttpClient | None = None,
+) -> AppContainer:
     data_dir = args.data_dir
     data_dir.mkdir(parents=True, exist_ok=True)
     platform.harden_permissions(data_dir)
@@ -157,7 +164,7 @@ def build_container(args: AppArgs, *, secret_store: SecretStore | None = None) -
         allowed_domains=allowed_domains(os.environ.get(ENV_ENDPOINT)),
     )
     secrets = SecretsService(secret_store or _secret_store(), clock.now)
-    http = HttpClient(cache_dir=data_dir / "cache")
+    http = http_client if http_client is not None else HttpClient(cache_dir=data_dir / "cache")
     email_provider = lambda: settings.get().sec_contact_email  # noqa: E731
 
     instruments_repo = InstrumentRepository(db)
@@ -181,6 +188,7 @@ def build_container(args: AppArgs, *, secret_store: SecretStore | None = None) -
         choice=lambda: settings.get().engine,
         secret=secrets.get_jev_key,
         env=os.environ,
+        jevdb_connection_factory=jevdb_connection_factory,
     )
     probe = EngineProbe(engine, http=http, offline=os.environ.get("SENTINEL_OFFLINE") == "1")
 

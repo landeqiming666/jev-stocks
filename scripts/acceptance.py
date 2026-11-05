@@ -8,24 +8,51 @@ import json
 import os
 import re
 import shutil
+import signal
 import subprocess
 import sys
+import tempfile
 import time
 from collections.abc import Sequence
+from contextlib import suppress
 from dataclasses import dataclass, field
-from datetime import UTC, datetime
+from datetime import datetime
 from pathlib import Path
 from typing import Literal
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "core"))
 
-try:  # 允许直接 python3 scripts/acceptance.py，自动切到 core 的虚拟环境
+if sys.version_info[:2] != (3, 12):
+    os.execvp(
+        "uv",
+        [
+            "uv",
+            "run",
+            "--project",
+            str(ROOT / "core"),
+            "python",
+            str(Path(__file__)),
+            *sys.argv[1:],
+        ],
+    )
+
+from datetime import UTC  # noqa: E402
+
+try:
     import duckdb  # noqa: F401
 except ImportError:  # pragma: no cover - 取决于调用方式
     os.execvp(
         "uv",
-        ["uv", "run", "--project", str(ROOT / "core"), "python", str(Path(__file__)), *sys.argv[1:]],
+        [
+            "uv",
+            "run",
+            "--project",
+            str(ROOT / "core"),
+            "python",
+            str(Path(__file__)),
+            *sys.argv[1:],
+        ],
     )
 
 from sentinel.storage import Database  # noqa: E402
@@ -89,7 +116,7 @@ class AcceptanceReport:
                 for check in self.checks
             ],
             "overall": self.overall,
-            "workDir": self.work_dir,
+            "workDir": _display_path(Path(self.work_dir)),
         }
 
 
@@ -97,12 +124,40 @@ def _iso(moment: datetime) -> str:
     return moment.astimezone(UTC).isoformat().replace("+00:00", "Z")
 
 
-def _run(command: Sequence[str], *, cwd: Path, env: dict[str, str] | None = None) -> tuple[int, str]:
-    merged = {**os.environ, **(env or {})}
-    result = subprocess.run(
-        list(command), cwd=str(cwd), env=merged, capture_output=True, text=True, timeout=600
+def _run(
+    command: Sequence[str],
+    *,
+    cwd: Path,
+    env: dict[str, str | None] | None = None,
+    timeout: float = 600,
+) -> tuple[int, str]:
+    merged = dict(os.environ)
+    for name, value in (env or {}).items():
+        if value is None:
+            merged.pop(name, None)
+        else:
+            merged[name] = value
+    process = subprocess.Popen(
+        list(command),
+        cwd=str(cwd),
+        env=merged,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True,
+        # start_new_session 仅 POSIX 有效；Windows 复用报告格式时不传该参数。
+        start_new_session=os.name == "posix",
     )
-    return result.returncode, (result.stdout or "") + (result.stderr or "")
+    try:
+        stdout, stderr = process.communicate(timeout=timeout)
+    except subprocess.TimeoutExpired:
+        if hasattr(os, "killpg"):
+            with suppress(ProcessLookupError):
+                os.killpg(process.pid, signal.SIGKILL)
+        else:
+            process.kill()
+        stdout, stderr = process.communicate()
+        return 124, (stdout or "") + (stderr or "") + "\nacceptance command timed out"
+    return process.returncode, (stdout or "") + (stderr or "")
 
 
 def find_secret(text: str) -> bool:
@@ -116,14 +171,19 @@ class AcceptanceRunner:
         self.mode = mode
         self.skip_e2e = False
         self.skip_gate = False
+        self.confirm_live_model_cost = False
+        self.m8_symbol = "AAPL"
+        self.m8_accession: str | None = None
+        self.m8_statement = "Apple has not announced its quarterly financial results."
+        self.m8_token_budget = 50_000
 
     # -- 单项检查 ---------------------------------------------------------
-    def check_m1(self) -> CheckResult:
-        data_dir = self.work_dir / "demo-data"
-        code, output = _run(
+    def _demo(self, data_dir: Path, *extra: str) -> tuple[int, str]:
+        return _run(
             [
                 sys.executable,
                 "scripts/load_demo.py",
+                *extra,
                 "--json",
                 "--data-dir",
                 str(data_dir),
@@ -131,21 +191,79 @@ class AcceptanceRunner:
             cwd=self.root,
             env={"SENTINEL_OFFLINE": "1", "SENTINEL_CLOCK": "2026-11-02T08:35:00Z"},
         )
-        evidence = self._write_evidence("m1-demo-load.json", output)
+
+    @staticmethod
+    def _last_json(output: str) -> dict[str, object]:
+        line = output.strip().splitlines()[-1]
+        payload = json.loads(line)
+        if not isinstance(payload, dict):
+            raise ValueError("demo summary is not an object")
+        return payload
+
+    def check_m1(self) -> CheckResult:
+        """载入 → 清除 → 再载入，确认固定计数可恢复且清除确实删除全部演示行。"""
+        data_dir = self.work_dir / "demo-data"
+        code, loaded = self._demo(data_dir)
         if code != 0:
+            evidence = self._write_evidence("m1-demo-load.json", loaded)
             return CheckResult("M-1", "fail", [evidence], "demo load failed")
         try:
-            payload = json.loads(output.strip().splitlines()[-1])
-            counts = payload["counts"]
-        except (ValueError, KeyError, IndexError):
+            first = self._last_json(loaded)
+            first_counts = first["counts"]
+        except (ValueError, KeyError, IndexError, TypeError):
+            evidence = self._write_evidence("m1-demo-load.json", loaded)
             return CheckResult("M-1", "fail", [evidence], "unreadable demo summary")
-        if counts != EXPECTED_COUNTS:
-            return CheckResult("M-1", "fail", [evidence], f"counts {counts}")
-        return CheckResult("M-1", "pass", [evidence], "6/5/6/6/12/1560")
+        if first_counts != EXPECTED_COUNTS:
+            evidence = self._write_evidence(
+                "m1-demo-load.json", json.dumps(first, ensure_ascii=False)
+            )
+            return CheckResult("M-1", "fail", [evidence], f"counts {first_counts}")
+
+        clear_code, cleared_output = self._demo(data_dir, "--clear")
+        try:
+            cleared = self._last_json(cleared_output)
+        except (ValueError, IndexError):
+            cleared = {}
+        removed = cleared.get("removed")
+        if clear_code != 0 or cleared.get("cleared") is not True or not isinstance(removed, int):
+            evidence = self._write_evidence(
+                "m1-demo-load.json",
+                json.dumps({"load": first, "clear": cleared_output}, ensure_ascii=False),
+            )
+            return CheckResult("M-1", "fail", [evidence], "demo clear failed")
+        if removed <= 0:
+            evidence = self._write_evidence(
+                "m1-demo-load.json",
+                json.dumps({"load": first, "clear": cleared}, ensure_ascii=False),
+            )
+            return CheckResult("M-1", "fail", [evidence], "demo clear removed no rows")
+
+        reload_code, reloaded = self._demo(data_dir)
+        try:
+            second = self._last_json(reloaded)
+            second_counts = second["counts"]
+        except (ValueError, KeyError, IndexError, TypeError):
+            second = {}
+            second_counts = None
+        payload = {
+            "load": first,
+            "clear": {"removed": removed},
+            "reload": second,
+            "expected": EXPECTED_COUNTS,
+        }
+        evidence = self._write_evidence(
+            "m1-demo-load.json", json.dumps(payload, ensure_ascii=False)
+        )
+        if reload_code != 0 or second_counts != EXPECTED_COUNTS:
+            return CheckResult("M-1", "fail", [evidence], f"reload counts {second_counts}")
+        return CheckResult(
+            "M-1", "pass", [evidence], f"load/clear/reload 6/5/6/6/12/1560 ({removed} rows)"
+        )
 
     def check_m2(self) -> CheckResult:
         if self.skip_e2e:
             return CheckResult("M-2", "not_run", [], "--skip-e2e")
+        browser_dir = (self.work_dir / "artifacts" / "browser").resolve()
         code, output = _run(
             [
                 "pnpm",
@@ -154,21 +272,57 @@ class AcceptanceRunner:
                 "test",
                 "-c",
                 "e2e/acceptance/playwright.config.ts",
-                "--reporter=line",
             ],
             cwd=self.root / "apps" / "desktop",
-            env={"SENTINEL_OFFLINE": "1"},
+            env={"SENTINEL_OFFLINE": "1", "SENTINEL_ACCEPTANCE_ARTIFACTS": str(browser_dir)},
         )
         log = self._write_evidence("m2-playwright.log", output)
-        results = self.root / "test-results" / "acceptance" / "results.json"
+        results = browser_dir / "results.json"
         evidence = [log] + ([self._rel(results)] if results.is_file() else [])
         if code != 0:
             return CheckResult("M-2", "fail", evidence, "playwright acceptance failed")
+        if not results.is_file():
+            return CheckResult("M-2", "fail", evidence, "playwright results missing")
         return CheckResult("M-2", "pass", evidence, "six pages offline at 1440/1024")
 
     def check_m3(self) -> CheckResult:
-        """密钥泄漏扫描：日志、数据库文本列与 bootstrap/settings 输出。"""
+        """假密钥走真实 RPC/UI 后，扫描 RPC 输出、核心日志与演示库文本列。"""
+        if self.skip_e2e:
+            return CheckResult("M-3", "not_run", [], "--skip-e2e cannot exercise real RPC")
         data_dir = self.work_dir / "demo-data"
+        browser_evidence = self.work_dir / "artifacts" / "browser" / "m3-credentials.json"
+        if not browser_evidence.is_file():
+            return CheckResult(
+                "M-3", "fail", [], "browser credential evidence missing (M-2 must run first)"
+            )
+        try:
+            browser = json.loads(browser_evidence.read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            return CheckResult("M-3", "fail", [], "browser credential evidence unreadable")
+        required = {
+            "memorySecretStore": True,
+            "secretVisibleInUi": False,
+            "settingsGetClean": True,
+            "bootstrapClean": True,
+            "connectionTestClean": True,
+            "coreLogsClean": True,
+            "secretStatusBefore": True,
+            "secretStatusAfter": False,
+            "scanWhileConfiguredError": "SOURCE_UNAVAILABLE",
+            "scanAfterClearError": "CONFIG_REQUIRED",
+        }
+        mismatched = [
+            name for name, expected in required.items() if browser.get(name) != expected
+        ]
+        if mismatched:
+            return CheckResult(
+                "M-3", "fail", [], f"browser credential evidence invalid: {mismatched}"
+            )
+        if not isinstance(browser.get("coreLogFiles"), int) or browser["coreLogFiles"] < 1:
+            return CheckResult("M-3", "fail", [], "no core log file was scanned")
+        if find_secret(json.dumps(browser.get("rpcResponses"), ensure_ascii=False)):
+            return CheckResult("M-3", "fail", [], "secret echoed by real RPC response")
+
         planted = self.work_dir / "planted-secret.log"
         planted.write_text(f"debug: {SECRET_SENTINEL}\n", encoding="utf-8")
         detector = self._scan_secret_sources(data_dir, planted)
@@ -176,13 +330,25 @@ class AcceptanceRunner:
         clean = self._scan_secret_sources(data_dir, None)
         evidence = self._write_evidence(
             "m3-secret-scan.json",
-            json.dumps({"plantedDetected": detector, "cleanSources": not clean}, ensure_ascii=False),
+            json.dumps(
+                {
+                    "browser": browser,
+                    "plantedDetected": detector,
+                    "cleanSources": not clean,
+                },
+                ensure_ascii=False,
+            ),
         )
         if not detector:
             return CheckResult("M-3", "fail", [evidence], "planted secret not detected")
         if clean:
             return CheckResult("M-3", "fail", [evidence], "secret found in real sources")
-        return CheckResult("M-3", "pass", [evidence], "no secret in logs/db/bootstrap")
+        return CheckResult(
+            "M-3",
+            "pass",
+            [evidence],
+            "real RPC/log/UI clean; cleared key blocks scan",
+        )
 
     def _scan_secret_sources(self, data_dir: Path, extra: Path | None) -> bool:
         texts: list[str] = []
@@ -224,7 +390,8 @@ class AcceptanceRunner:
         finally:
             con.close()
         evidence = self._write_evidence(
-            "m4-decisions.json", json.dumps([list(map(str, row)) for row in rows], ensure_ascii=False)
+            "m4-decisions.json",
+            json.dumps([list(map(str, row)) for row in rows], ensure_ascii=False),
         )
         if len(rows) != 12:
             return CheckResult("M-4", "fail", [evidence], f"decision rows {len(rows)}")
@@ -259,7 +426,9 @@ class AcceptanceRunner:
             return CheckResult("M-5", "fail", [log], "replay failed or report missing")
         payload = json.loads(report.read_text(encoding="utf-8"))
         evidence = [log, self._rel(report)]
-        if payload.get("samples") != 30 or not isinstance(payload.get("strict", {}).get("f1"), float):
+        if payload.get("samples") != 30 or not isinstance(
+            payload.get("strict", {}).get("f1"), float
+        ):
             return CheckResult("M-5", "fail", evidence, "report incomplete")
         return CheckResult("M-5", "pass", evidence, "synthetic replay report")
 
@@ -305,7 +474,17 @@ class AcceptanceRunner:
         code, output = _run(
             [sys.executable, "scripts/check.py"],
             cwd=self.root,
-            env={"SENTINEL_OFFLINE": "1", "TMPDIR": str(tmp)},
+            env={
+                "SENTINEL_OFFLINE": None,
+                "SENTINEL_CLOCK": None,
+                "JEV_API_KEY": None,
+                "TYPESAFE_API_KEY": None,
+                "EVAL_BASELINE_API_KEY": None,
+                "JEV_ENDPOINT": None,
+                "SENTINEL_JEVDB_PATH": None,
+                "SENTINEL_SEC_CONTACT": None,
+                "TMPDIR": str(tmp),
+            },
         )
         log = self._write_evidence("m7-check.log", output)
         if code != 0:
@@ -317,46 +496,129 @@ class AcceptanceRunner:
             return CheckResult("M-8", "not_run", [], "offline mode cannot verify real JEVDB")
         extension = os.environ.get("SENTINEL_JEVDB_PATH")
         key = os.environ.get("JEV_API_KEY")
-        missing = [name for name, value in (("SENTINEL_JEVDB_PATH", extension), ("JEV_API_KEY", key)) if not value]
+        missing = [
+            name
+            for name, value in (
+                ("SENTINEL_JEVDB_PATH", extension),
+                ("JEV_API_KEY", key),
+                ("SENTINEL_SEC_CONTACT", os.environ.get("SENTINEL_SEC_CONTACT")),
+            )
+            if not value or not value.strip()
+        ]
         if missing:
             evidence = self._write_evidence(
                 "m8-blocked.json", json.dumps({"missing": missing, "reason": "CONFIG_REQUIRED"})
             )
             return CheckResult("M-8", "fail", [evidence], f"missing {', '.join(missing)}")
-        path = Path(extension or "")
+        path = Path(extension or "").expanduser().resolve()
         if not path.is_file():
             evidence = self._write_evidence(
                 "m8-blocked.json", json.dumps({"missing": ["extension"], "path": str(path)})
             )
             return CheckResult("M-8", "fail", [evidence], "extension file missing")
-        return CheckResult(
-            "M-8",
-            "fail",
-            [],
-            "real JEVDB scan not executed by this runner; run scripts/probe_jevdb.py",
+        if os.environ.get("SENTINEL_OFFLINE") == "1":
+            return CheckResult("M-8", "fail", [], "SENTINEL_OFFLINE blocks live acceptance")
+        if not self.confirm_live_model_cost:
+            return CheckResult("M-8", "not_run", [], "requires --confirm-live-model-cost")
+        if self.skip_e2e:
+            return CheckResult("M-8", "not_run", [], "--skip-e2e cannot verify M-8 UI")
+        return self._live_m8(path)
+
+    def _live_m8(self, extension: Path) -> CheckResult:
+        from acceptance_live import validate_evidence
+
+        directory = self.work_dir / "artifacts" / "m8"
+        directory.mkdir(parents=True, exist_ok=False)
+        command = [
+            sys.executable,
+            "scripts/acceptance_live.py",
+            "--prepare",
+            str(directory),
+            "--symbol",
+            self.m8_symbol,
+            "--statement",
+            self.m8_statement,
+            "--token-budget",
+            str(self.m8_token_budget),
+        ]
+        if self.m8_accession:
+            command.extend(["--accession", self.m8_accession])
+        code, output = _run(command, cwd=self.root, env={"SENTINEL_CLOCK": None})
+        evidence = [self._write_evidence("m8-prepare.log", output)]
+        if code != 0:
+            return CheckResult("M-8", "fail", evidence, "SEC case preparation failed")
+        code, output = _run(
+            ["pnpm", "exec", "playwright", "test", "-c", "e2e/acceptance/m8.config.ts"],
+            cwd=self.root / "apps" / "desktop",
+            env={
+                "SENTINEL_M8_DIR": str(directory.resolve()),
+                "SENTINEL_JEVDB_PATH": str(extension),
+            },
         )
+        evidence.append(self._write_evidence("m8-playwright.log", output))
+        if code != 0:
+            return CheckResult("M-8", "fail", evidence, "real core/JEVDB/UI flow failed")
+        try:
+            proof = validate_evidence(directory, extension)
+        except (OSError, ValueError, KeyError, TypeError):
+            return CheckResult("M-8", "fail", evidence, "incomplete real JEVDB evidence")
+        evidence.extend(self._rel(path) for path in sorted((directory / "audit").glob("*")))
+        evidence.extend(
+            self._rel(directory / name)
+            for name in (
+                "case.json",
+                "runtime.json",
+                "sec-http.json",
+                "sec-submissions-original.json",
+                "result.json",
+                "evidence-drawer.png",
+            )
+        )
+        evidence.append(self._write_evidence("m8-verified.json", json.dumps(proof)))
+        return CheckResult("M-8", "pass", evidence, "real SEC/JEVDB/core/UI evidence verified")
 
     # -- 编排 -------------------------------------------------------------
     def preflight(self) -> list[CheckResult]:
         missing = [name for name in ("uv", "pnpm") if shutil.which(name) is None]
-        if missing:
-            return [CheckResult("M-1", "fail", [], f"missing tools: {missing}")]
-        return []
+        if not missing:
+            return []
+        # 报告 schema 固定要求 M-1…M-8 全部出现；缺工具时不能只写一行。
+        return [
+            CheckResult(
+                check_id,
+                "fail" if check_id == "M-1" else "not_run",
+                [],
+                f"missing tools: {', '.join(missing)}",
+            )
+            for check_id in CHECK_IDS
+        ]
 
     def run(self) -> AcceptanceReport:
         started = datetime.now(UTC)
         checks = self.preflight()
         if not checks:
-            checks = [
-                self.check_m1(),
-                self.check_m2(),
-                self.check_m3(),
-                self.check_m4(),
-                self.check_m5(),
-                self.check_m6(),
-                self.check_m7(),
-                self.check_m8(),
-            ]
+            for check_id, check in zip(
+                CHECK_IDS,
+                (
+                    self.check_m1,
+                    self.check_m2,
+                    self.check_m3,
+                    self.check_m4,
+                    self.check_m5,
+                    self.check_m6,
+                    self.check_m7,
+                    self.check_m8,
+                ),
+                strict=True,
+            ):
+                try:
+                    checks.append(check())
+                except Exception as exc:
+                    evidence = self._write_evidence(
+                        f"{check_id.lower()}-error.json",
+                        json.dumps({"errorType": type(exc).__name__}),
+                    )
+                    checks.append(CheckResult(check_id, "fail", [evidence], "check failed"))
         return AcceptanceReport(
             mode=self.mode,
             platform=_platform_name(),
@@ -367,15 +629,21 @@ class AcceptanceRunner:
         )
 
     def _rel(self, path: Path) -> str:
-        try:
-            return str(path.relative_to(self.root))
-        except ValueError:
-            return str(path)
+        return os.path.relpath(path.resolve(), self.work_dir.resolve())
 
     def _write_evidence(self, name: str, content: str) -> str:
         directory = self.work_dir / "artifacts"
         directory.mkdir(parents=True, exist_ok=True)
         path = directory / name
+        for name in (
+            "JEV_API_KEY",
+            "TYPESAFE_API_KEY",
+            "EVAL_BASELINE_API_KEY",
+            "SENTINEL_SEC_CONTACT",
+        ):
+            value = os.environ.get(name)
+            if value:
+                content = content.replace(value, "[REDACTED]")
         path.write_text(content, encoding="utf-8")
         try:
             return str(path.relative_to(self.work_dir))
@@ -394,9 +662,41 @@ def _platform_name() -> str:
     return "macos" if platform.system() == "Darwin" else "windows"
 
 
+def _display_path(path: Path) -> str:
+    """仓库内路径用相对形式，避免报告写入用户名或临时绝对路径。"""
+    resolved = path.resolve()
+    try:
+        return resolved.relative_to(ROOT).as_posix()
+    except ValueError:
+        return str(resolved)
+
+
+def _absolute_work_dir(report: AcceptanceReport) -> Path:
+    work = Path(report.work_dir)
+    return work if work.is_absolute() else ROOT / work
+
+
+def verify_evidence(path: Path) -> list[str]:
+    """按报告目录解析每个证据路径，返回缺失项。"""
+    payload = json.loads(path.read_text(encoding="utf-8"))
+    missing: list[str] = []
+    for check in payload["checks"]:
+        for item in check["evidence"]:
+            target = (path.parent / item).resolve()
+            if not target.is_file():
+                missing.append(f"{check['id']}: {item}")
+    return missing
+
+
 def write_report(report: AcceptanceReport, out_dir: Path) -> Path:
     out_dir.mkdir(parents=True, exist_ok=True)
     payload = report.to_wire()
+    work_dir = _absolute_work_dir(report)
+    for check in payload["checks"]:
+        check["evidence"] = [
+            os.path.relpath((work_dir / item).resolve(), out_dir.resolve())
+            for item in check["evidence"]
+        ]
     path = out_dir / "acceptance.json"
     path.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     lines = [
@@ -405,16 +705,20 @@ def write_report(report: AcceptanceReport, out_dir: Path) -> Path:
         f"- 模式：{report.mode}",
         f"- 平台：{report.platform}",
         f"- 总体：{report.overall.upper()}",
-        f"- 数据目录：`{report.work_dir}`",
+        f"- 数据目录：`{_display_path(Path(report.work_dir))}`",
         "",
         "| 项 | 状态 | 证据 | 说明 |",
         "|---|---|---|---|",
     ]
-    for check in report.checks:
+    for check in payload["checks"]:
         lines.append(
-            f"| {check.id} | {check.status} | {', '.join(check.evidence) or '—'} | {check.detail} |"
+            f"| {check['id']} | {check['status']} | {', '.join(check['evidence']) or '—'} "
+            f"| {check['detail']} |"
         )
     (out_dir / "summary.md").write_text("\n".join(lines) + "\n", encoding="utf-8")
+    checklist = out_dir / "manual-checklist.md"
+    if not checklist.exists():
+        shutil.copyfile(ROOT / "apps/desktop/e2e/acceptance/manual-checklist.md", checklist)
     return path
 
 
@@ -462,29 +766,55 @@ def main(argv: Sequence[str] | None = None) -> int:
     group.add_argument("--full", action="store_true", help="包含真实 JEVDB 验证")
     parser.add_argument("--report-dir", type=Path, default=ROOT / "test-results" / "acceptance")
     parser.add_argument("--skip-e2e", action="store_true")
-    parser.add_argument("--skip-gate", action="store_true", help="跳过 scripts/check.py（仅本地快速验证）")
+    parser.add_argument(
+        "--skip-gate", action="store_true", help="跳过 scripts/check.py（仅本地快速验证）"
+    )
     parser.add_argument("--work-dir", type=Path, help="覆盖临时工作目录")
     parser.add_argument("--json", action="store_true")
     parser.add_argument("--self-test", action="store_true")
+    parser.add_argument(
+        "--confirm-live-model-cost", action="store_true", help="确认真实模型调用费用"
+    )
+    parser.add_argument("--m8-symbol", default="AAPL")
+    parser.add_argument("--m8-accession", help="固定 SEC accession；缺省选择最新 2.02 财报披露")
+    parser.add_argument(
+        "--m8-statement", default="Apple has not announced its quarterly financial results."
+    )
+    parser.add_argument("--m8-token-budget", type=int, default=50_000)
     args = parser.parse_args(argv)
     if args.self_test:
         return self_test()
     mode: Literal["offline", "full"] = "full" if args.full else "offline"
     started = time.monotonic()
-    stamp = datetime.now(UTC).strftime("%Y%m%d-%H%M%S")
-    work_dir = args.work_dir or (ROOT / ".tmp-pytest" / f"acceptance-{stamp}")
-    work_dir.mkdir(parents=True, exist_ok=True)
+    if args.work_dir:
+        work_dir = args.work_dir.resolve()
+        if work_dir.exists() and any(work_dir.iterdir()):
+            parser.error("--work-dir must be empty; use a new directory for each run")
+        work_dir.mkdir(parents=True, exist_ok=True)
+    else:
+        parent = ROOT / ".tmp-pytest"
+        parent.mkdir(parents=True, exist_ok=True)
+        work_dir = Path(tempfile.mkdtemp(prefix="acceptance-", dir=parent))
     runner = AcceptanceRunner(ROOT, work_dir, mode)
     runner.skip_e2e = bool(args.skip_e2e)
     runner.skip_gate = bool(args.skip_gate)
+    runner.confirm_live_model_cost = bool(args.confirm_live_model_cost)
+    runner.m8_symbol = args.m8_symbol
+    runner.m8_accession = args.m8_accession
+    runner.m8_statement = args.m8_statement
+    runner.m8_token_budget = args.m8_token_budget
     report = runner.run()
     out = args.report_dir
-    write_report(report, out)
+    report_path = write_report(report, out)
+    missing = verify_evidence(report_path)
     passed = sum(1 for check in report.checks if check.status == "pass")
     elapsed = time.monotonic() - started
     if args.json:
-        print(json.dumps(report.to_wire(), ensure_ascii=False))
+        print(report_path.read_text(encoding="utf-8").strip())
     print(f"ACCEPTANCE {report.overall.upper()} {passed}/8 ({elapsed:.0f}s) -> {out}")
+    if missing:
+        print("evidence missing: " + ", ".join(missing), file=sys.stderr)
+        return 1
     if elapsed > MAX_ACCEPTANCE_SECONDS:
         print("acceptance exceeded 15 minutes", file=sys.stderr)
         return 1
