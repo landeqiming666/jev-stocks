@@ -1,0 +1,66 @@
+{
+  "scope": "actual Windows native JEVDB LOAD with runtime auto selection, fake in-memory key and offline mode",
+  "sha256": "aaeb7917cd8b834eb06ac0145689a6410264e9c5c9e09b3f39da3c2b18a176ed",
+  "cases": {
+    "valid": {
+      "active": "jevdb",
+      "available": true,
+      "health": [
+        "jevdb",
+        "ok"
+      ],
+      "change": null,
+      "stats": {
+        "requests": 0,
+        "retries": 0,
+        "input_tokens": 0,
+        "errors": 0
+      }
+    },
+    "invalid": {
+      "active": "jev_direct",
+      "available": false,
+      "health": [
+        "jev_direct",
+        "ok"
+      ],
+      "change": {
+        "from_engine": "jevdb",
+        "to_engine": "jev_direct",
+        "reason": "未找到 JEVDB 扩展，已改用 Jev 直连（同一模型）"
+      }
+    },
+    "missing": {
+      "active": "jev_direct",
+      "available": false,
+      "health": [
+        "jev_direct",
+        "ok"
+      ],
+      "change": {
+        "from_engine": "jevdb",
+        "to_engine": "jev_direct",
+        "reason": "未找到 JEVDB 扩展，已改用 Jev 直连（同一模型）"
+      }
+    },
+    "restored": {
+      "active": "jevdb",
+      "available": true,
+      "health": [
+        "jevdb",
+        "ok"
+      ],
+      "change": null,
+      "stats": {
+        "requests": 0,
+        "retries": 0,
+        "input_tokens": 0,
+        "errors": 0
+      }
+    },
+    "explicit_invalid": {
+      "code": "ENGINE_UNAVAILABLE",
+      "reason": "EXTENSION_LOAD"
+    }
+  }
+}

@@ -1,0 +1,164 @@
+{
+  "schema": "published-windows-verification/1",
+  "testedCommit": "6dea7bb80688ec2d23f70e4773652605d7976c04",
+  "timestampUtc": "2026-11-17T14:21:40.7745170Z",
+  "platform": "windows",
+  "osBuild": "26200.9974",
+  "architecture": "X64",
+  "offline": true,
+  "noLaunch": true,
+  "originalOverall": "fail",
+  "originalExitCode": 3,
+  "checks": {
+    "WM-1": {
+      "status": "pass",
+      "reason": "",
+      "exitCode": 0
+    },
+    "WM-2": {
+      "status": "not_run",
+      "reason": "尚未采集真实 WebView2 窗口、原生标题栏和六页截图。",
+      "exitCode": null
+    },
+    "WM-3": {
+      "status": "not_run",
+      "reason": "尚未完成真实核心联调和 US-01 至 US-15 的 Windows 录屏。",
+      "exitCode": null
+    },
+    "WM-4": {
+      "status": "not_run",
+      "reason": "WinVault 自动项通过，等待凭据管理器人工查看。",
+      "exitCode": null
+    },
+    "WM-5": {
+      "status": "not_run",
+      "reason": "W-03 构建结果已记录，等待 Windows 最终门槛 ADR。",
+      "exitCode": null
+    }
+  },
+  "testTotals": {
+    "engineering": {
+      "passed": 16,
+      "failed": 0,
+      "skipped": 1
+    },
+    "scripts": {
+      "passed": 336,
+      "skipped": 3,
+      "subtestsPassed": 4418
+    },
+    "coreUnit": {
+      "passed": 2826,
+      "skipped": 8,
+      "deselectedIntegration": 21
+    },
+    "frontendUnit": {
+      "passed": 465
+    },
+    "bridge": {
+      "passed": 7,
+      "ignoredProductionProfileCase": 1
+    },
+    "coreIntegration": {
+      "passed": 20,
+      "skipped": 1
+    },
+    "mockBrowser": {
+      "passed": 4
+    },
+    "realCoreBrowser": {
+      "passed": 11,
+      "skipped": 0
+    },
+    "winvault": {
+      "passed": 14
+    }
+  },
+  "outcomes": {
+    "bridge": {
+      "status": "pass",
+      "reason": "",
+      "exitCode": 0
+    },
+    "realBridge": {
+      "status": "not_run",
+      "reason": "真实核心测试需要专用 Windows 测试账户。",
+      "exitCode": null
+    },
+    "integration": {
+      "status": "pass",
+      "reason": "",
+      "exitCode": 0,
+      "testCounts": {
+        "passed": 20,
+        "failed": 0,
+        "skipped": 1
+      },
+      "requiredCases": [
+        "test_core_ready_then_bootstrap",
+        "test_shutdown_exits_within_three_seconds",
+        "test_demo_load_returns_exact_counts",
+        "test_demo_inbox_exact_counts",
+        "test_decision_act_and_reopen",
+        "test_paper_advance_moves_clock_exactly_one_day",
+        "test_risk_has_60_observations_and_unit_diagonal"
+      ]
+    },
+    "demo": {
+      "status": "pass",
+      "reason": "",
+      "exitCode": 0,
+      "counts": {
+        "instruments": 6,
+        "holdings": 5,
+        "theses": 6,
+        "events": 6,
+        "decisions": 12,
+        "prices": 1560
+      }
+    },
+    "browser": {
+      "status": "pass",
+      "reason": "",
+      "exitCode": 0
+    },
+    "realBrowser": {
+      "status": "pass",
+      "reason": "",
+      "exitCode": 0,
+      "testCounts": {
+        "startTime": "2026-11-17T14:27:53.910Z",
+        "duration": 26256.725000000002,
+        "expected": 11,
+        "skipped": 0,
+        "unexpected": 0,
+        "flaky": 0
+      }
+    },
+    "credentials": {
+      "status": "pass",
+      "reason": "",
+      "exitCode": 0
+    },
+    "desktop": {
+      "status": "not_run",
+      "reason": "按 -NoLaunch 跳过原生窗口。",
+      "exitCode": null
+    }
+  },
+  "credentialProbe": {
+    "backend": "Windows Credential Locker",
+    "service": "isolated-test-service",
+    "account": "isolated-test-account",
+    "write_ok": true,
+    "read_ok": true,
+    "delete_ok": true
+  },
+  "jevdb": {
+    "status": "built",
+    "built": true,
+    "fallback": "none",
+    "errorClass": null
+  },
+  "scope": "Offline automatic run with memory-only secrets for real-core integration. Native window proof is published separately."
+}

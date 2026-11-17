@@ -1,0 +1,131 @@
+{
+  "cases": [
+    {
+      "name": "test_core_ready_then_bootstrap",
+      "className": "tests.integration.test_core_lifecycle",
+      "seconds": 1.006,
+      "status": "pass"
+    },
+    {
+      "name": "test_spaces_and_chinese_path",
+      "className": "tests.integration.test_core_lifecycle",
+      "seconds": 0.941,
+      "status": "pass"
+    },
+    {
+      "name": "test_unknown_method_and_bad_params_are_invalid_argument",
+      "className": "tests.integration.test_core_lifecycle",
+      "seconds": 0.944,
+      "status": "pass"
+    },
+    {
+      "name": "test_shutdown_exits_within_three_seconds",
+      "className": "tests.integration.test_core_lifecycle",
+      "seconds": 0.952,
+      "status": "pass"
+    },
+    {
+      "name": "test_cancel_returns_within_200ms",
+      "className": "tests.integration.test_core_lifecycle",
+      "seconds": 1.138,
+      "status": "skipped",
+      "skipReason": "demo run has no failed batch to retry"
+    },
+    {
+      "name": "test_cancel_deadline_on_real_server",
+      "className": "tests.integration.test_core_lifecycle",
+      "seconds": 2.013,
+      "status": "pass"
+    },
+    {
+      "name": "test_stderr_has_no_traceback_on_clean_exit",
+      "className": "tests.integration.test_core_lifecycle",
+      "seconds": 0.993,
+      "status": "pass"
+    },
+    {
+      "name": "test_response_ids_are_echoed",
+      "className": "tests.integration.test_core_lifecycle",
+      "seconds": 0.97,
+      "status": "pass"
+    },
+    {
+      "name": "test_demo_load_returns_exact_counts",
+      "className": "tests.integration.test_demo_flow",
+      "seconds": 1.085,
+      "status": "pass"
+    },
+    {
+      "name": "test_demo_inbox_exact_counts",
+      "className": "tests.integration.test_demo_flow",
+      "seconds": 1.158,
+      "status": "pass"
+    },
+    {
+      "name": "test_decision_detail_has_evidence",
+      "className": "tests.integration.test_demo_flow",
+      "seconds": 1.139,
+      "status": "pass"
+    },
+    {
+      "name": "test_decision_act_and_reopen",
+      "className": "tests.integration.test_demo_flow",
+      "seconds": 1.24,
+      "status": "pass"
+    },
+    {
+      "name": "test_demo_load_twice_conflicts",
+      "className": "tests.integration.test_demo_flow",
+      "seconds": 1.19,
+      "status": "pass"
+    },
+    {
+      "name": "test_demo_clear_removes_only_demo_rows",
+      "className": "tests.integration.test_demo_flow",
+      "seconds": 1.183,
+      "status": "pass"
+    },
+    {
+      "name": "test_unconfigured_scan_fails_without_losing_inbox",
+      "className": "tests.integration.test_demo_flow",
+      "seconds": 1.124,
+      "status": "pass"
+    },
+    {
+      "name": "test_scan_requires_email_even_without_key",
+      "className": "tests.integration.test_demo_flow",
+      "seconds": 1.17,
+      "status": "pass"
+    },
+    {
+      "name": "test_demo_paper_account_is_ready",
+      "className": "tests.integration.test_paper_risk_flow",
+      "seconds": 1.118,
+      "status": "pass"
+    },
+    {
+      "name": "test_paper_advance_moves_clock_exactly_one_day",
+      "className": "tests.integration.test_paper_risk_flow",
+      "seconds": 1.335,
+      "status": "pass"
+    },
+    {
+      "name": "test_risk_has_60_observations_and_unit_diagonal",
+      "className": "tests.integration.test_paper_risk_flow",
+      "seconds": 1.142,
+      "status": "pass"
+    },
+    {
+      "name": "test_paper_order_validation_is_rejected_with_reason",
+      "className": "tests.integration.test_paper_risk_flow",
+      "seconds": 1.098,
+      "status": "pass"
+    },
+    {
+      "name": "test_paper_reset_requires_matching_confirmation",
+      "className": "tests.integration.test_paper_risk_flow",
+      "seconds": 1.107,
+      "status": "pass"
+    }
+  ]
+}

@@ -1,0 +1,57 @@
+{
+  "scope": "actual Tauri native window, real C-02+core RPC, memory secrets, offline",
+  "port": 52855,
+  "status": "pass",
+  "initialization": {
+    "bootstrap": {
+      "protocolVersion": "1.0",
+      "appVersion": "0.1.0",
+      "dbSchemaVersion": 12,
+      "platform": "windows",
+      "engine": {
+        "requested": "auto",
+        "active": null,
+        "modelId": "jev-1.14.0",
+        "jevdbAvailable": false
+      },
+      "markets": [
+        "us"
+      ],
+      "configured": {
+        "jevKey": false,
+        "secEmail": false
+      },
+      "demoDataLoaded": true,
+      "offline": true,
+      "now": "2026-11-02T08:35:00Z"
+    },
+    "demo": {
+      "loaded": true,
+      "counts": {
+        "instruments": 6,
+        "holdings": 5,
+        "theses": 6,
+        "events": 6,
+        "decisions": 12,
+        "prices": 1560
+      }
+    },
+    "demoMs": 191.19999998807907,
+    "inbox": {
+      "pendingCount": 3,
+      "overturnCount": 1,
+      "weakenCount": 1,
+      "uncertainCount": 1,
+      "processedCount": 0
+    },
+    "accountCount": 1,
+    "viewport": [
+      1280,
+      820
+    ],
+    "devicePixelRatio": 1.5
+  },
+  "observedCount": 20,
+  "windowClosedAtUtc": "2026-11-17T14:06:52.4298857Z",
+  "desktopClosedAtUtc": "2026-11-17T14:06:52.4328842Z"
+}

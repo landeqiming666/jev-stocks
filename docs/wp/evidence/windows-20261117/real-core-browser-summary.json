@@ -1,0 +1,188 @@
+{
+  "stats": {
+    "startTime": "2026-11-17T14:27:53.910Z",
+    "duration": 26256.725000000002,
+    "expected": 11,
+    "skipped": 0,
+    "unexpected": 0,
+    "flaky": 0
+  },
+  "cases": [
+    {
+      "title": "six pages show demo data at 1440x900 and 1024x700",
+      "file": "demo-flow.spec.ts",
+      "ok": true,
+      "tests": [
+        {
+          "status": "expected",
+          "results": [
+            {
+              "status": "passed",
+              "durationMs": 2544
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "today shows the pending cards and evidence drawer",
+      "file": "demo-flow.spec.ts",
+      "ok": true,
+      "tests": [
+        {
+          "status": "expected",
+          "results": [
+            {
+              "status": "passed",
+              "durationMs": 1654
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "holdings page lists five holdings and six theses",
+      "file": "demo-flow.spec.ts",
+      "ok": true,
+      "tests": [
+        {
+          "status": "expected",
+          "results": [
+            {
+              "status": "passed",
+              "durationMs": 1585
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "trading page advances the demo clock one trading day",
+      "file": "demo-flow.spec.ts",
+      "ok": true,
+      "tests": [
+        {
+          "status": "expected",
+          "results": [
+            {
+              "status": "passed",
+              "durationMs": 1771
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "risk page shows correlation for three holdings",
+      "file": "demo-flow.spec.ts",
+      "ok": true,
+      "tests": [
+        {
+          "status": "expected",
+          "results": [
+            {
+              "status": "passed",
+              "durationMs": 1596
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "settings page reports demo data loaded",
+      "file": "demo-flow.spec.ts",
+      "ok": true,
+      "tests": [
+        {
+          "status": "expected",
+          "results": [
+            {
+              "status": "passed",
+              "durationMs": 1485
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "failed fixture startup reaps its process",
+      "file": "failures.spec.ts",
+      "ok": true,
+      "tests": [
+        {
+          "status": "expected",
+          "results": [
+            {
+              "status": "passed",
+              "durationMs": 830
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "restarting banner keeps the cached inbox visible",
+      "file": "failures.spec.ts",
+      "ok": true,
+      "tests": [
+        {
+          "status": "expected",
+          "results": [
+            {
+              "status": "passed",
+              "durationMs": 1555
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "failed core offers a retry action",
+      "file": "failures.spec.ts",
+      "ok": true,
+      "tests": [
+        {
+          "status": "expected",
+          "results": [
+            {
+              "status": "passed",
+              "durationMs": 1586
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "restarting the real core keeps local demo data",
+      "file": "failures.spec.ts",
+      "ok": true,
+      "tests": [
+        {
+          "status": "expected",
+          "results": [
+            {
+              "status": "passed",
+              "durationMs": 2707
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "unknown method surfaces a visible error",
+      "file": "failures.spec.ts",
+      "ok": true,
+      "tests": [
+        {
+          "status": "expected",
+          "results": [
+            {
+              "status": "passed",
+              "durationMs": 992
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,127 @@
+{
+  "scope": "native WebView2 with real C-02/core RPC and in-memory secret store",
+  "width": 1024,
+  "height": 700,
+  "pages": [
+    {
+      "route": "today",
+      "active": true,
+      "ready": true,
+      "heading": "今天有 2 件事需要你看一眼",
+      "platform": "windows",
+      "viewport": [
+        1024,
+        700
+      ],
+      "documentWidth": 1024,
+      "mainWidth": 946,
+      "mainScrollWidth": 946,
+      "placeholder": false,
+      "variables": {
+        "--titlebar-inset-left": "0px",
+        "--font-cjk": "\"Microsoft YaHei UI\"",
+        "--kbd-mod": "\"Ctrl\""
+      }
+    },
+    {
+      "route": "holdings",
+      "active": true,
+      "ready": true,
+      "heading": "持仓",
+      "platform": "windows",
+      "viewport": [
+        1024,
+        700
+      ],
+      "documentWidth": 1024,
+      "mainWidth": 956,
+      "mainScrollWidth": 956,
+      "placeholder": false,
+      "variables": {
+        "--titlebar-inset-left": "0px",
+        "--font-cjk": "\"Microsoft YaHei UI\"",
+        "--kbd-mod": "\"Ctrl\""
+      }
+    },
+    {
+      "route": "trading",
+      "active": true,
+      "ready": true,
+      "heading": "交易",
+      "platform": "windows",
+      "viewport": [
+        1024,
+        700
+      ],
+      "documentWidth": 1024,
+      "mainWidth": 946,
+      "mainScrollWidth": 946,
+      "placeholder": false,
+      "variables": {
+        "--titlebar-inset-left": "0px",
+        "--font-cjk": "\"Microsoft YaHei UI\"",
+        "--kbd-mod": "\"Ctrl\""
+      }
+    },
+    {
+      "route": "risk",
+      "active": true,
+      "ready": true,
+      "heading": "风险",
+      "platform": "windows",
+      "viewport": [
+        1024,
+        700
+      ],
+      "documentWidth": 1024,
+      "mainWidth": 946,
+      "mainScrollWidth": 946,
+      "placeholder": false,
+      "variables": {
+        "--titlebar-inset-left": "0px",
+        "--font-cjk": "\"Microsoft YaHei UI\"",
+        "--kbd-mod": "\"Ctrl\""
+      }
+    },
+    {
+      "route": "scan",
+      "active": true,
+      "ready": true,
+      "heading": "扫描",
+      "platform": "windows",
+      "viewport": [
+        1024,
+        700
+      ],
+      "documentWidth": 1024,
+      "mainWidth": 956,
+      "mainScrollWidth": 956,
+      "placeholder": false,
+      "variables": {
+        "--titlebar-inset-left": "0px",
+        "--font-cjk": "\"Microsoft YaHei UI\"",
+        "--kbd-mod": "\"Ctrl\""
+      }
+    },
+    {
+      "route": "settings",
+      "active": true,
+      "ready": true,
+      "heading": "设置",
+      "platform": "windows",
+      "viewport": [
+        1024,
+        700
+      ],
+      "documentWidth": 1024,
+      "mainWidth": 946,
+      "mainScrollWidth": 946,
+      "placeholder": false,
+      "variables": {
+        "--titlebar-inset-left": "0px",
+        "--font-cjk": "\"Microsoft YaHei UI\"",
+        "--kbd-mod": "\"Ctrl\""
+      }
+    }
+  ]
+}

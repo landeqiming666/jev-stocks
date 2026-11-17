@@ -1,0 +1,18 @@
+{
+  "powerShell": "7.6.9",
+  "pass": true,
+  "originalFailurePreserved": true,
+  "observedStartupScope": {
+    "kind": "launch",
+    "pid": 5044,
+    "startedAtUtc": "2026-11-17T14:32:57.3005692Z"
+  },
+  "cleaned": [
+    43504,
+    50976,
+    53644,
+    74276
+  ],
+  "siblingPreserved": true,
+  "allObservedExited": true
+}

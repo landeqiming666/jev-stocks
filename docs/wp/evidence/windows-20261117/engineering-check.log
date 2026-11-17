@@ -1,0 +1,146 @@
+检查完成: 错误 0, 警告 0
+平台隔离检查通过
+........................s.............s................ [ 16%]
+........................................................................ [ 37%]
+............................................................s............................ [ 63%]
+.......................... [ 71%]
+............................................................... [ 89%]
+..................................                                                                    [100%]
+336 passed, 3 skipped, 4418 subtests passed in 31.97s
+OK   16.07:1 (需要 4.5) --ink / --paper  正文主色 / 应用背景  #1A1C20 on #FAF8F3
+OK   17.06:1 (需要 4.5) --ink / --surface  正文主色 / 卡片  #1A1C20 on #FFFFFF
+OK   14.99:1 (需要 4.5) --ink / --surface-2  正文主色 / 次级块  #1A1C20 on #F3F0E9
+OK    7.97:1 (需要 4.5) --ink-2 / --paper  次级文字 / 应用背景  #4A4D55 on #FAF8F3
+OK    8.45:1 (需要 4.5) --ink-2 / --surface  次级文字 / 卡片  #4A4D55 on #FFFFFF
+OK    7.43:1 (需要 4.5) --ink-2 / --surface-2  次级文字 / 次级块  #4A4D55 on #F3F0E9
+OK    5.33:1 (需要 4.5) --muted / --paper  辅助文字 / 应用背景  #64676F on #FAF8F3
+OK    5.66:1 (需要 4.5) --muted / --surface  辅助文字 / 卡片  #64676F on #FFFFFF
+OK    4.97:1 (需要 4.5) --muted / --surface-2  辅助文字 / 次级块  #64676F on #F3F0E9
+OK    4.90:1 (需要 4.5) --accent-ink / --accent  强调色按钮文字  #FFFFFF on #C4472D
+OK    4.90:1 (需要 4.5) --accent / --surface  强调色文字 / 卡片  #C4472D on #FFFFFF
+OK    5.55:1 (需要 4.5) --accent-text / --accent-soft  强调色文字 / 强调底（--accent 本身在此底色上只有约 4.29，不得用作文字）  #A93A22 on #FBEDE9
+OK    6.33:1 (需要 4.5) --accent-text / --surface  强调色文字 / 卡片  #A93A22 on #FFFFFF
+OK   17.06:1 (需要 4.5) --on-ink / --ink  主按钮文字 / 墨色按钮  #FFFFFF on #1A1C20
+OK    5.78:1 (需要 4.5) --verdict-over / --verdict-over-bg  推翻标签  #B3261E on #FCEEEC
+OK    4.73:1 (需要 4.5) --verdict-weak / --verdict-weak-bg  削弱标签  #A65A0B on #FFF4E5
+OK    4.72:1 (需要 4.5) --verdict-hold / --verdict-hold-bg  支持标签  #1E7A5A on #EAF5F0
+OK    4.96:1 (需要 4.5) --verdict-none / --verdict-none-bg  无关标签  #64676F on #F1F0EC
+OK    6.06:1 (需要 4.5) --verdict-unsure / --verdict-unsure-bg  待确认标签  #3B5B85 on #EAF0F8
+OK    6.54:1 (需要 4.5) --verdict-over / --surface  推翻文字 / 卡片  #B3261E on #FFFFFF
+OK    5.14:1 (需要 4.5) --verdict-weak / --surface  削弱文字 / 卡片  #A65A0B on #FFFFFF
+OK    5.27:1 (需要 4.5) --up / --surface  上涨数字 / 卡片  #1E7A5A on #FFFFFF
+OK    5.44:1 (需要 4.5) --down / --surface  下跌数字 / 卡片  #C0392B on #FFFFFF
+OK    5.27:1 (需要 4.5) --ok / --surface  正常状态文字 / 卡片  #1E7A5A on #FFFFFF
+OK    5.78:1 (需要 4.5) --warn / --surface  警告状态文字 / 卡片  #8F5A00 on #FFFFFF
+OK    6.54:1 (需要 4.5) --danger / --surface  错误状态文字 / 卡片  #B3261E on #FFFFFF
+OK    5.78:1 (需要 4.5) --danger / --danger-bg  错误提示条  #B3261E on #FCEEEC
+OK    5.32:1 (需要 4.5) --warn / --warn-bg  警告提示条  #8F5A00 on #FFF4E5
+OK    6.06:1 (需要 4.5) --info / --info-bg  信息提示条  #3B5B85 on #EAF0F8
+OK    1.46:1 (需要 1.3) --line-strong / --paper  边框可见性（非文字，仅要求可辨）  #D5CFC2 on #FAF8F3
+OK    4.62:1 (需要 3.0) --focus-ring / --paper  焦点环 / 背景（非文字组件 ≥ 3）  #C4472D on #FAF8F3
+OK    4.90:1 (需要 3.0) --focus-ring / --surface  焦点环 / 卡片（非文字组件 ≥ 3）  #C4472D on #FFFFFF
+对比度检查完成: 共 32 对, 不达标 0
+[CSS] 检查 8 个文件
+[JS] 引用的契约示例全部存在
+[渲染] 检查 49 个页面状态
+[回归] R10/R11/R12 检查完成
+原型检查完成: 问题 0
+generated TypeScript is up to date
+mock.js is up to date
+All checks passed!
+269 files already formatted
+Success: no issues found in 150 source files
+................s....................................................... [  2%]
+........................................................................ [  5%]
+........................................................................ [  7%]
+........................................................................ [ 10%]
+........................................................................ [ 12%]
+........................................................................ [ 15%]
+........................................................................ [ 17%]
+........................................................................ [ 20%]
+........................................................................ [ 22%]
+........................................................................ [ 25%]
+.............................s.......................................... [ 27%]
+........................................................................ [ 30%]
+........................................................................ [ 33%]
+........................................................................ [ 35%]
+........................................................................ [ 38%]
+........................................................................ [ 40%]
+........................................................................ [ 43%]
+........................................................................ [ 45%]
+........................................................................ [ 48%]
+........................................................................ [ 50%]
+........................................................................ [ 53%]
+........................................................................ [ 55%]
+........................................................................ [ 58%]
+........................................................................ [ 60%]
+........................................................................ [ 63%]
+........................................................................ [ 66%]
+........................................................................ [ 68%]
+........................................................................ [ 71%]
+....................................................s................... [ 73%]
+........................................................................ [ 76%]
+........................................................................ [ 78%]
+........................................................................ [ 81%]
+........................................................................ [ 83%]
+........................................................................ [ 86%]
+........................................................................ [ 88%]
+.............................................s.ssss..................... [ 91%]
+........................................................................ [ 94%]
+........................................................................ [ 96%]
+........................................................................ [ 99%]
+..........................                                               [100%]
+=========================== short test summary info ===========================
+SKIPPED [1] tests/platform/test_macos_keychain.py:136: requires CoreFoundation, not a keychain write
+SKIPPED [1] tests/unit/markets/probe/test_probe_sources.py:445: Windows session lacks the symlink creation privilege
+SKIPPED [1] tests/unit/semantic/test_jevdb.py:1031: explicit verified static artifact required
+SKIPPED [1] tests/unit/test_smoke.py:28: 只在 macos 上运行
+SKIPPED [1] tests/unit/test_smoke.py:47: 只在 macos 上运行
+SKIPPED [1] tests/unit/test_smoke.py:59: 只在 macos 上运行
+SKIPPED [1] tests/unit/test_smoke.py:71: 只在 macos 上运行
+SKIPPED [1] tests/unit/test_smoke.py:88: 只在 macos 上运行
+2826 passed, 8 skipped, 21 deselected in 260.50s (0:04:20)
+powershell.exe : $ eslint .
+At <workspace>/JEV Stocks/scripts/windows_smoke.ps1:141 char:13
++             & $Command @Arguments 2>&1 | Out-File -LiteralPath $log - ...
++             ~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: ($ eslint .:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+
+$ tsc --noEmit
+$ vitest run
+
+ RUN  v5.0.5 <workspace>/JEV Stocks/apps/desktop
+
+
+ Test Files  60 passed (60)
+      Tests  465 passed (465)
+   Start at  22:26:43
+   Duration  9.59s (environment 73%, import 15%, tests 10%, transform 2%)
+
+Environment  jsdom was created 60 times · 137.30s total, 73% of tracked time
+             create it once per worker with pool: 'vmThreads' (keeps per-file isolation) or isolate: false (shares it across files)
+             learn more: https://vitest.dev/guide/improving-performance#test-environments
+
+warning: hard linking files in the incremental compilation cache failed. copying files instead. consider moving the cache directory to a file system which supports hard linking in session dir `//?/<workspace>/JEV Stocks/apps/desktop/src-tauri/target/debug/incremental/bridge_windows-2clp9url07v8m/s-hntz3l3pil-0y8nglu-working`
+
+warning: `sentinel-desktop` (test "bridge_windows") generated 1 warning
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.56s
+PASS docs
+PASS isolation
+PASS scripts-test
+PASS contrast
+PASS proto
+PASS generated-ts
+PASS generated-proto
+PASS py-lint
+PASS py-format
+PASS py-types
+PASS py-test
+PASS web-lint
+PASS web-types
+PASS web-test
+PASS rust-fmt
+PASS rust-clippy
+SKIP e2e (需要 --e2e)
+通过 16 · 失败 0 · 跳过 1

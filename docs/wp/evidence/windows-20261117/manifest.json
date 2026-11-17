@@ -1,0 +1,138 @@
+{
+  "schema": "published-windows-evidence/1",
+  "files": [
+    {
+      "published": "acceptance-summary.json",
+      "sha256": "66bbed27c05fb590599e4c18407f1e396eb03d972441f502c2ab1d191ed1fce6",
+      "source": "tmp/windows-integrate-20261117/acceptance-verified/acceptance.json",
+      "sourceSha256": "f961b41606ef39a46d8ff95f0bbb9d455a1907b6d4e430468c009050432383d0",
+      "transformation": "selected fields from the original report"
+    },
+    {
+      "published": "engineering-check.log",
+      "sha256": "4426ed625555cad82c906e926674b35a73702c0bbbc32831faf3bdad0629196f",
+      "source": "tmp/windows-integrate-20261117/acceptance-verified/20261117-142140-364953160e094380bfb9a001d5486285/check.log",
+      "sourceSha256": "99fb8277b98f2170c1d0bcca41786c0055dd8a9ecfe4ef6329d4465db4d8da51",
+      "transformation": "workspace prefix replaced with <workspace>, path separators and line endings normalized, trailing whitespace removed"
+    },
+    {
+      "published": "core-integration-summary.json",
+      "sha256": "b3f9de2a81ff45ff37b4d01068fcbbf00c35f3ef05510b4da8aff2053e6e055c",
+      "source": "tmp/windows-integrate-20261117/acceptance-verified/20261117-142140-364953160e094380bfb9a001d5486285/integration.junit.xml",
+      "sourceSha256": "4dbcce9113f130768f6ff0de60cf17395a32404cbc74679cde50d18b7603af16",
+      "transformation": "selected fields from the original report"
+    },
+    {
+      "published": "real-core-browser-summary.json",
+      "sha256": "53c725876920a86d9f37df69553178686d0dfc0bd3632320dc63e1bead60a3e0",
+      "source": "tmp/windows-integrate-20261117/acceptance-verified/20261117-142140-364953160e094380bfb9a001d5486285/real-core-playwright/results.json",
+      "sourceSha256": "f200714375ac49a76eb282f35673c789de39ffe37cb517a5cfca6dd19e3eae08",
+      "transformation": "selected fields from the original report"
+    },
+    {
+      "published": "native-verification.json",
+      "sha256": "66749ac66aed2de1ff60fbcb64912d3d4ad52ac4e8179fe90758c57d050c3e40",
+      "source": "tmp/windows-fixes-20261117/native-real/native-real-6i_jr18c/verification.json",
+      "sourceSha256": "66749ac66aed2de1ff60fbcb64912d3d4ad52ac4e8179fe90758c57d050c3e40",
+      "transformation": "byte-for-byte copy"
+    },
+    {
+      "published": "native-routes.json",
+      "sha256": "fb8c054666f402bb77c1554a636e32db278df3b3f0b845319b67e1a79828b5c5",
+      "source": "tmp/windows-fixes-20261117/native-real/native-real-6i_jr18c/routes.json",
+      "sourceSha256": "fb8c054666f402bb77c1554a636e32db278df3b3f0b845319b67e1a79828b5c5",
+      "transformation": "byte-for-byte copy"
+    },
+    {
+      "published": "native-exit-summary.json",
+      "sha256": "cc6db98c200195c4174b29485afced7c0e898bdea0b0fc7bcaa2f034e9dd160d",
+      "source": "tmp/windows-fixes-20261117/native-real/native-real-6i_jr18c/native-exit.json",
+      "sourceSha256": "19fb53ccbb7cd48aba4e9f2c2beff0127c88be1b215705f23ba9d7e2643619b2",
+      "transformation": "selected fields from the original report"
+    },
+    {
+      "published": "screenshots/today-1024.png",
+      "sha256": "dea385574aee83260867e4eea592b28277dccdc42816c28a7c8fe9bae417d2be",
+      "source": "tmp/windows-fixes-20261117/native-real/native-real-6i_jr18c/today-1024.png",
+      "sourceSha256": "dea385574aee83260867e4eea592b28277dccdc42816c28a7c8fe9bae417d2be",
+      "transformation": "byte-for-byte copy"
+    },
+    {
+      "published": "screenshots/holdings-1024.png",
+      "sha256": "b6affdc95b7c46517a7f5eb4a3a090081bf3630429d319c97f457c358d84226a",
+      "source": "tmp/windows-fixes-20261117/native-real/native-real-6i_jr18c/holdings-1024.png",
+      "sourceSha256": "b6affdc95b7c46517a7f5eb4a3a090081bf3630429d319c97f457c358d84226a",
+      "transformation": "byte-for-byte copy"
+    },
+    {
+      "published": "screenshots/scan-1024.png",
+      "sha256": "352db0667f4a725d26d89b5454d9f6bb98c747a14550961901602aea93ff8b8a",
+      "source": "tmp/windows-fixes-20261117/native-real/native-real-6i_jr18c/scan-1024.png",
+      "sourceSha256": "352db0667f4a725d26d89b5454d9f6bb98c747a14550961901602aea93ff8b8a",
+      "transformation": "byte-for-byte copy"
+    },
+    {
+      "published": "screenshots/trading-1024.png",
+      "sha256": "1ecff1ab1e4930c3e58d43cb6791955bb309de18b4b329f4ef62489abb823253",
+      "source": "tmp/windows-fixes-20261117/native-real/native-real-6i_jr18c/trading-1024.png",
+      "sourceSha256": "1ecff1ab1e4930c3e58d43cb6791955bb309de18b4b329f4ef62489abb823253",
+      "transformation": "byte-for-byte copy"
+    },
+    {
+      "published": "screenshots/risk-1024.png",
+      "sha256": "dfd3ca96a706994b0c783177807c2001c53afe3cafbbc01ceb6e4c6a22e6c20c",
+      "source": "tmp/windows-fixes-20261117/native-real/native-real-6i_jr18c/risk-1024.png",
+      "sourceSha256": "dfd3ca96a706994b0c783177807c2001c53afe3cafbbc01ceb6e4c6a22e6c20c",
+      "transformation": "byte-for-byte copy"
+    },
+    {
+      "published": "screenshots/settings-1024.png",
+      "sha256": "4099a96bd36c82b3f99bfcfffdf3f7d2b42ccc69a3eab101141c91e6ec2354d6",
+      "source": "tmp/windows-fixes-20261117/native-real/native-real-6i_jr18c/settings-1024.png",
+      "sourceSha256": "4099a96bd36c82b3f99bfcfffdf3f7d2b42ccc69a3eab101141c91e6ec2354d6",
+      "transformation": "byte-for-byte copy"
+    },
+    {
+      "published": "jev-runtime.json",
+      "sha256": "b39601fed577cebc5ce300b05d305cb080bf7ef9358942cd24c02a8eaf34cc86",
+      "source": "tmp/windows-fixes-20261117/jev-runtime/result.json",
+      "sourceSha256": "b39601fed577cebc5ce300b05d305cb080bf7ef9358942cd24c02a8eaf34cc86",
+      "transformation": "byte-for-byte copy"
+    },
+    {
+      "published": "demo-performance.json",
+      "sha256": "1c5e98060e63a3a593a5635a4a9c595afefcca1f91668c0ea427bf23923e14ca",
+      "source": "tmp/windows-integrate-20261117/demo-benchmark-json-batch/result.json",
+      "sourceSha256": "1c5e98060e63a3a593a5635a4a9c595afefcca1f91668c0ea427bf23923e14ca",
+      "transformation": "byte-for-byte copy"
+    },
+    {
+      "published": "cleanup-ps51.json",
+      "sha256": "7ee648e168316f6e724c147b0f7ed7ffffc1415d1c7a7ad5710520f35fa80b22",
+      "source": "tmp/windows-fixes-20261117/cleanup-ps51-final/verification.json",
+      "sourceSha256": "7ee648e168316f6e724c147b0f7ed7ffffc1415d1c7a7ad5710520f35fa80b22",
+      "transformation": "byte-for-byte copy"
+    },
+    {
+      "published": "cleanup-ps7.json",
+      "sha256": "4db98d7a7428d89ae960b3b9f9d37ff1696f69f0de2c75c16e2738a21d4a8cbc",
+      "source": "tmp/windows-fixes-20261117/cleanup-ps7-final/verification.json",
+      "sourceSha256": "4db98d7a7428d89ae960b3b9f9d37ff1696f69f0de2c75c16e2738a21d4a8cbc",
+      "transformation": "byte-for-byte copy"
+    },
+    {
+      "published": "startup-cleanup-ps51.json",
+      "sha256": "0c828a21301a091236483f0dcd87a448f511e7736e7a4875d70af17b223604ac",
+      "source": "tmp/windows-fixes-20261117/cleanup-handoff-ps51-final/verification.json",
+      "sourceSha256": "8c8feee87bcc3d8b9d1cff4260b0de06c9a20546a719e576eec81e6c792ad25a",
+      "transformation": "complete JSON content converted from UTF-16 to UTF-8"
+    },
+    {
+      "published": "startup-cleanup-ps7.json",
+      "sha256": "05ed5c4fc0fd19a0ac04ce260fa73f3ff9a461abb73b2ac2b330ac4b75d1141d",
+      "source": "tmp/windows-fixes-20261117/cleanup-handoff-ps7-final/verification.json",
+      "sourceSha256": "05ed5c4fc0fd19a0ac04ce260fa73f3ff9a461abb73b2ac2b330ac4b75d1141d",
+      "transformation": "byte-for-byte copy"
+    }
+  ]
+}

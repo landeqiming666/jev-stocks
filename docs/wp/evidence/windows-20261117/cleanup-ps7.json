@@ -1,0 +1,32 @@
+{
+  "powerShell": "7.6.9",
+  "cases": {
+    "parentExited": {
+      "pass": true,
+      "cleaned": [
+        4220,
+        12168,
+        28596,
+        33072
+      ],
+      "siblingPreserved": true,
+      "originalEvidencePreserved": true
+    },
+    "identityMismatch": {
+      "pass": true,
+      "actions": 0,
+      "processPreserved": true,
+      "nativeHandleGuard": "identity_mismatch"
+    },
+    "lateOnly": {
+      "pass": true,
+      "errorPreserved": true,
+      "repeatedCleanupNoOp": true
+    },
+    "unrelatedRecord": {
+      "pass": true,
+      "rejected": true,
+      "bothProcessesPreserved": true
+    }
+  }
+}

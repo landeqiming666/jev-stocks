@@ -1,0 +1,19 @@
+{
+  "label": "json-batch",
+  "scope": "actual native database, offline demo only",
+  "loadSeconds": 0.1997620000038296,
+  "counts": {
+    "instruments": 6,
+    "holdings": 5,
+    "theses": 6,
+    "events": 6,
+    "decisions": 12,
+    "prices": 1560
+  },
+  "loadedRows": 1652,
+  "clearSeconds": 0.07443090004380792,
+  "cleared": {
+    "loaded": false,
+    "rows": 0
+  }
+}
