@@ -1,0 +1,40 @@
+{
+  "items": [
+    {
+      "thesisId": "01JC8Z5V3Q00000000000063A1",
+      "instrumentId": "us:ZZAR",
+      "version": 2,
+      "statement": "控股股东长期持股，不会大幅减持",
+      "killCondition": "控股股东减持超过 2%",
+      "status": "active",
+      "createdAt": "2026-09-02T02:10:00Z",
+      "updatedAt": "2026-10-12T11:03:00Z",
+      "versionCount": 2,
+      "lastDecision": {
+        "decisionId": "01JC8Z5V3Q00000000000094Z1",
+        "relation": "overturn",
+        "headline": 0.93,
+        "createdAt": "2026-11-02T00:31:12Z",
+        "eventTitle": "8-K: Other Events — Completed sale by controlling stockholder"
+      }
+    },
+    {
+      "thesisId": "01JC8Z5V3Q00000000000063A2",
+      "instrumentId": "us:ZZAR",
+      "version": 1,
+      "statement": "Management keeps R&D spending above 15% of revenue",
+      "killCondition": null,
+      "status": "active",
+      "createdAt": "2026-09-02T02:15:00Z",
+      "updatedAt": "2026-09-02T02:15:00Z",
+      "versionCount": 1,
+      "lastDecision": {
+        "decisionId": "01JC8Z5V3Q00000000000094Z3",
+        "relation": "weaken",
+        "headline": 0.74,
+        "createdAt": "2026-11-02T00:31:12Z",
+        "eventTitle": "8-K: Results of Operations — Third Quarter 2026"
+      }
+    }
+  ]
+}

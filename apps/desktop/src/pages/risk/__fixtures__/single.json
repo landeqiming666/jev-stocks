@@ -1,0 +1,56 @@
+{
+  "asOf": "2026-10-30",
+  "window": {
+    "label": "1Y",
+    "from": "2025-10-30",
+    "to": "2026-10-30",
+    "observations": 251
+  },
+  "currency": "USD",
+  "annualizedVol": 0.187,
+  "maxDrawdown": 0.214,
+  "effectiveHoldings": 1.0,
+  "topWeights": [
+    {
+      "instrumentId": "us:ZZAR",
+      "symbol": "ZZAR",
+      "weight": 1.0
+    }
+  ],
+  "correlation": {
+    "instrumentIds": [
+      "us:ZZAR"
+    ],
+    "symbols": [
+      "ZZAR"
+    ],
+    "matrix": [
+      [
+        1.0
+      ]
+    ]
+  },
+  "svd": {
+    "explained": [
+      1.0
+    ],
+    "loadings": [
+      {
+        "symbol": "ZZAR",
+        "value": 1.0
+      }
+    ]
+  },
+  "conditionNumberRaw": null,
+  "conditionNumberShrunk": null,
+  "warnings": [
+    "只有 1 只持仓，相关系数与 SVD 没有意义"
+  ],
+  "excluded": [
+    {
+      "instrumentId": "us:ZZMD",
+      "symbol": "ZZMD",
+      "reason": "只关注，数量为 0，不计入权重"
+    }
+  ]
+}

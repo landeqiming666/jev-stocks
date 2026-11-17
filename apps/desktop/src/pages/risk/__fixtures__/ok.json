@@ -1,0 +1,124 @@
+{
+  "asOf": "2026-10-30",
+  "window": {
+    "label": "1Y",
+    "from": "2025-10-30",
+    "to": "2026-10-30",
+    "observations": 251
+  },
+  "currency": "USD",
+  "annualizedVol": 0.187,
+  "maxDrawdown": 0.214,
+  "effectiveHoldings": 4.67,
+  "topWeights": [
+    {
+      "instrumentId": "us:ZZFD",
+      "symbol": "ZZFD",
+      "weight": 0.2782
+    },
+    {
+      "instrumentId": "us:ZZAR",
+      "symbol": "ZZAR",
+      "weight": 0.2491
+    },
+    {
+      "instrumentId": "us:ZZCL",
+      "symbol": "ZZCL",
+      "weight": 0.1662
+    }
+  ],
+  "correlation": {
+    "instrumentIds": [
+      "us:ZZAR",
+      "us:ZZFD",
+      "us:ZZCL",
+      "us:ZZBK",
+      "us:ZZEN"
+    ],
+    "symbols": [
+      "ZZAR",
+      "ZZFD",
+      "ZZCL",
+      "ZZBK",
+      "ZZEN"
+    ],
+    "matrix": [
+      [
+        1.0,
+        0.21,
+        0.58,
+        0.34,
+        0.12
+      ],
+      [
+        0.21,
+        1.0,
+        0.09,
+        0.27,
+        0.31
+      ],
+      [
+        0.58,
+        0.09,
+        1.0,
+        0.22,
+        -0.05
+      ],
+      [
+        0.34,
+        0.27,
+        0.22,
+        1.0,
+        0.41
+      ],
+      [
+        0.12,
+        0.31,
+        -0.05,
+        0.41,
+        1.0
+      ]
+    ]
+  },
+  "svd": {
+    "explained": [
+      0.46,
+      0.22,
+      0.15,
+      0.1,
+      0.07
+    ],
+    "loadings": [
+      {
+        "symbol": "ZZAR",
+        "value": 0.55
+      },
+      {
+        "symbol": "ZZCL",
+        "value": 0.5
+      },
+      {
+        "symbol": "ZZBK",
+        "value": 0.47
+      },
+      {
+        "symbol": "ZZEN",
+        "value": 0.4
+      },
+      {
+        "symbol": "ZZFD",
+        "value": 0.26
+      }
+    ]
+  },
+  "conditionNumberRaw": 14.8,
+  "conditionNumberShrunk": 9.3,
+  "warnings": [],
+  "excluded": [
+    {
+      "instrumentId": "us:ZZMD",
+      "symbol": "ZZMD",
+      "reason": "只关注，数量为 0，不计入权重"
+    }
+  ]
+}

@@ -1,0 +1,4 @@
+.c-drawer__sec .c-kv dd { overflow-wrap: anywhere; }
+.c-drawer__sec .c-barlist__row:has(.is-na) { grid-template-columns: 88px minmax(0, 1fr) 96px; }
+.c-drawer__sec .c-barlist__value.is-na { white-space: normal; }
+.c-drawer__foot .c-field { margin: 0; }

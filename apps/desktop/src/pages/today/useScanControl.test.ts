@@ -1,0 +1,98 @@
+import { afterEach, expect, test, vi } from "vitest";
+import { act, cleanup, renderHook, waitFor } from "@testing-library/react";
+import { useScanControl, PROGRESS_MIN_MS } from "./useScanControl";
+import { deferred, example, testClient } from "./test-support";
+import { RpcError, type ParamsOfNotification, type ScanRun } from "../../rpc";
+import { useAppStore } from "../../app/store";
+
+afterEach(() => { cleanup(); vi.useRealTimers(); useAppStore.getState().reset(); });
+const progress: ParamsOfNotification<"scan.progress"> = { runId: "run-1", market: "us", stage: "decide", done: 9, total: 17, message: "正在判定 ZZCL 的 6-K" };
+test("scan_control_sends_cancel_when_running", async () => {
+  const fake = testClient();
+  const hook = renderHook(() => useScanControl(fake.client));
+  act(() => fake.emit("scan.progress", progress));
+  await act(() => hook.result.current.cancel());
+  expect(fake.call).toHaveBeenCalledWith("scan.cancel", { runId: "run-1" }, expect.any(Object));
+});
+test("scan_control_ignores_invalid_foreign_and_terminal_progress", async () => {
+  const fake = testClient(), hook = renderHook(() => useScanControl(fake.client));
+  act(() => fake.emit("scan.progress", { ...progress, stage: "anything" }));
+  act(() => fake.emit("scan.progress", { ...progress, done: 1.5 }));
+  act(() => fake.emit("scan.progress", { ...progress, market: "hk" }));
+  expect(hook.result.current.progress).toBeNull();
+  act(() => fake.emit("scan.progress", progress));
+  act(() => fake.emit("scan.progress", { ...progress, runId: "foreign" }));
+  expect(hook.result.current.runId).toBe("run-1");
+  const finished = { ...example<ScanRun>("scan.status", "done"), runId: "run-1" };
+  act(() => fake.emit("scan.finished", { runId: "run-1", status: "succeeded" }));
+  expect(hook.result.current.progress).not.toBeNull();
+  act(() => fake.emit("scan.finished", finished));
+  expect(hook.result.current.progress).toBeNull();
+  act(() => fake.emit("scan.progress", progress));
+  expect(hook.result.current.progress).toBeNull();
+});
+test("scan_control_deduplicates_start_cancel_and_preserves_cancel_until_finished", async () => {
+  const fake = testClient(), start = deferred<{ runId: string }>(), cancel = deferred<{ ok: true }>();
+  fake.call.mockImplementationOnce(() => start.promise);
+  const hook = renderHook(() => useScanControl(fake.client));
+  let first!: Promise<void>, second!: Promise<void>;
+  act(() => { first = hook.result.current.start(); second = hook.result.current.start(); });
+  start.resolve({ runId: "run-1" });
+  await act(() => Promise.all([first, second]));
+  expect(fake.call.mock.calls.filter(([method]) => method === "scan.start")).toHaveLength(1);
+  fake.call.mockImplementationOnce(() => cancel.promise);
+  act(() => { first = hook.result.current.cancel(); second = hook.result.current.cancel(); });
+  cancel.resolve({ ok: true });
+  await act(() => Promise.all([first, second]));
+  expect(fake.call.mock.calls.filter(([method]) => method === "scan.cancel")).toHaveLength(1);
+  expect(hook.result.current.runId).toBe("run-1");
+});
+test("scan_control_throttles_progress_and_cleans_timers_subscriptions", async () => {
+  vi.useFakeTimers();
+  const fake = testClient(), hook = renderHook(() => useScanControl(fake.client));
+  act(() => fake.emit("scan.progress", progress));
+  act(() => fake.emit("scan.progress", { ...progress, done: 10 }));
+  expect(hook.result.current.progress?.done).toBe(9);
+  act(() => vi.advanceTimersByTime(PROGRESS_MIN_MS));
+  expect(hook.result.current.progress?.done).toBe(10);
+  hook.unmount();
+  expect([...fake.handlers.values()].every(group => group.size === 0)).toBe(true);
+  expect(vi.getTimerCount()).toBe(0);
+});
+test("scan_control_late_start_does_not_resurrect_finished_run_or_update_unmounted_store", async () => {
+  const fake = testClient(), start = deferred<{ runId: string }>();
+  fake.call.mockImplementationOnce(() => start.promise);
+  const hook = renderHook(() => useScanControl(fake.client));
+  let request!: Promise<void>;
+  act(() => { request = hook.result.current.start(); });
+  act(() => fake.emit("scan.finished", { ...example<ScanRun>("scan.status", "done"), runId: "run-1" }));
+  start.resolve({ runId: "run-1" });
+  await act(() => request);
+  await waitFor(() => expect(hook.result.current.runId).toBeNull());
+});
+test("scan_control_conflict_blocks_duplicate_start_until_real_progress", async () => {
+  const fake = testClient(); fake.call.mockRejectedValueOnce(new RpcError("CONFLICT", "扫描正在进行"));
+  const hook = renderHook(() => useScanControl(fake.client));
+  await act(() => hook.result.current.start());
+  expect(hook.result.current.conflict).toBe(true);
+  await act(() => hook.result.current.start());
+  expect(fake.call.mock.calls.filter(([method]) => method === "scan.start")).toHaveLength(1);
+  act(() => fake.emit("scan.progress", progress));
+  expect(hook.result.current.conflict).toBe(false);
+  expect(hook.result.current.runId).toBe("run-1");
+});
+test("scan_control_unmount_aborts_pending_start_and_discards_late_result", async () => {
+  const fake = testClient(), pending = deferred<{ runId: string }>();
+  fake.call.mockImplementationOnce(() => pending.promise);
+  useAppStore.setState({ client: fake.client });
+  const hook = renderHook(() => useScanControl(fake.client));
+  let request!: Promise<void>;
+  await act(async () => { request = hook.result.current.start(); await Promise.resolve(); });
+  const options = (fake.call.mock.calls[0] as unknown as [string, object, { signal: AbortSignal }])[2];
+  hook.unmount();
+  expect(options.signal.aborted).toBe(true);
+  pending.resolve({ runId: "late" });
+  await act(() => request);
+  expect(useAppStore.getState().scanProgress).toBeNull();
+  expect(fake.client.dispose).not.toHaveBeenCalled();
+});

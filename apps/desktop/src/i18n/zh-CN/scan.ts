@@ -1,1 +1,19 @@
-export const scan = {} as const;
+export const scan = {
+  title: "扫描", start: "立即扫描", cancel: "取消扫描", cancelling: "正在等待扫描取消",
+  lastScan: "上次扫描", lastFailed: "上次扫描失败", configRequired: "请先完成设置",
+  offline: "当前离线，扫描无法开始", runningConflict: "扫描正在进行。",
+  loading: "正在加载扫描记录", loadFailed: "扫描记录加载失败。", refresh: "刷新", retry: "重试",
+  empty: "还没有扫描记录", emptyHelp: "点“立即扫描”，系统会读取有逻辑的标的最近的披露。",
+  budget: "今日预算", used: "今日已用", estimate: "估算", reset: "重置于",
+  budgetExhausted: "预算已用完", budgetWarning: "预算已使用", more: "加载更多",
+  details: "扫描明细", close: "关闭扫描明细", detailLoading: "正在加载明细",
+  rangeStats: "范围与统计", window: "窗口", to: "至", model: "模型", batches: "批次",
+  noBatches: "没有批次记录", retrySuccess: "已重试成功", retryTimeout: "重试超过 60 秒，正在刷新实际状态。",
+  retryUnconfirmed: "重试返回的批次尚未成功，请查看实际状态。", reconciling: "正在刷新实际状态", runNotFound: "扫描运行不存在。",
+  batchMismatch: "返回的批次与请求不一致。", authFailed: "Jev 密钥无效，请去设置。", attempts: "尝试",
+  times: "次", seconds: "秒", milliseconds: "毫秒", cached: "缓存命中", skipped: "没有逻辑被跳过",
+  batchSummary: "运行批次摘要", listedBatches: "已返回批次", pending: "待处理", error: "错误", tokensCost: "tokens / 费用",
+  columns: ["开始时间", "状态", "标的", "披露", "段落", "判定", "请求", "tokens", "估算费用", "耗时", "引擎"],
+  statuses: { queued: "排队中", running: "进行中", succeeded: "成功", partial: "部分成功",
+    failed: "失败", cancelled: "已取消", interrupted: "已中断", pending: "待处理" },
+} as const;

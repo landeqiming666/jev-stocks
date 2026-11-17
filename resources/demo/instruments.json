@@ -1,0 +1,174 @@
+{
+  "instruments": [
+    {
+      "instrumentId": "us:ZZAR",
+      "market": "us",
+      "symbol": "ZZAR",
+      "name": "Zenith Arc Robotics Inc.",
+      "nameZh": "天顶弧机器人",
+      "exchange": "NASDAQ",
+      "currency": "USD",
+      "cik": "0009990001",
+      "isActive": true,
+      "source": "demo",
+      "updatedAt": "2026-10-30T02:00:00Z"
+    },
+    {
+      "instrumentId": "us:ZZFD",
+      "market": "us",
+      "symbol": "ZZFD",
+      "name": "Zephyr Foods Corp.",
+      "nameZh": "和风食品",
+      "exchange": "NYSE",
+      "currency": "USD",
+      "cik": "0009990002",
+      "isActive": true,
+      "source": "demo",
+      "updatedAt": "2026-10-30T02:00:00Z"
+    },
+    {
+      "instrumentId": "us:ZZCL",
+      "market": "us",
+      "symbol": "ZZCL",
+      "name": "Zhongzhi Cloud Ltd.",
+      "nameZh": "中智云",
+      "exchange": "NASDAQ",
+      "currency": "USD",
+      "cik": "0009990003",
+      "isActive": true,
+      "source": "demo",
+      "updatedAt": "2026-10-30T02:00:00Z"
+    },
+    {
+      "instrumentId": "us:ZZBK",
+      "market": "us",
+      "symbol": "ZZBK",
+      "name": "Zinc Bay Bancorp",
+      "nameZh": "锌湾银行",
+      "exchange": "NYSE",
+      "currency": "USD",
+      "cik": "0009990004",
+      "isActive": true,
+      "source": "demo",
+      "updatedAt": "2026-10-30T02:00:00Z"
+    },
+    {
+      "instrumentId": "us:ZZEN",
+      "market": "us",
+      "symbol": "ZZEN",
+      "name": "Zeta Energy Partners",
+      "nameZh": "泽塔能源",
+      "exchange": "NYSE",
+      "currency": "USD",
+      "cik": "0009990005",
+      "isActive": true,
+      "source": "demo",
+      "updatedAt": "2026-10-30T02:00:00Z"
+    },
+    {
+      "instrumentId": "us:ZZMD",
+      "market": "us",
+      "symbol": "ZZMD",
+      "name": "Zenmed Diagnostics Inc.",
+      "nameZh": "泽美诊断",
+      "exchange": "NASDAQ",
+      "currency": "USD",
+      "cik": "0009990006",
+      "isActive": true,
+      "source": "demo",
+      "updatedAt": "2026-10-30T02:00:00Z"
+    }
+  ],
+  "aliases": [
+    {
+      "instrumentId": "us:ZZAR",
+      "alias": "zzar",
+      "kind": "symbol"
+    },
+    {
+      "instrumentId": "us:ZZAR",
+      "alias": "zenith arc robotics inc.",
+      "kind": "name_en"
+    },
+    {
+      "instrumentId": "us:ZZAR",
+      "alias": "天顶弧机器人",
+      "kind": "name_zh"
+    },
+    {
+      "instrumentId": "us:ZZFD",
+      "alias": "zzfd",
+      "kind": "symbol"
+    },
+    {
+      "instrumentId": "us:ZZFD",
+      "alias": "zephyr foods corp.",
+      "kind": "name_en"
+    },
+    {
+      "instrumentId": "us:ZZFD",
+      "alias": "和风食品",
+      "kind": "name_zh"
+    },
+    {
+      "instrumentId": "us:ZZCL",
+      "alias": "zzcl",
+      "kind": "symbol"
+    },
+    {
+      "instrumentId": "us:ZZCL",
+      "alias": "zhongzhi cloud ltd.",
+      "kind": "name_en"
+    },
+    {
+      "instrumentId": "us:ZZCL",
+      "alias": "中智云",
+      "kind": "name_zh"
+    },
+    {
+      "instrumentId": "us:ZZBK",
+      "alias": "zzbk",
+      "kind": "symbol"
+    },
+    {
+      "instrumentId": "us:ZZBK",
+      "alias": "zinc bay bancorp",
+      "kind": "name_en"
+    },
+    {
+      "instrumentId": "us:ZZBK",
+      "alias": "锌湾银行",
+      "kind": "name_zh"
+    },
+    {
+      "instrumentId": "us:ZZEN",
+      "alias": "zzen",
+      "kind": "symbol"
+    },
+    {
+      "instrumentId": "us:ZZEN",
+      "alias": "zeta energy partners",
+      "kind": "name_en"
+    },
+    {
+      "instrumentId": "us:ZZEN",
+      "alias": "泽塔能源",
+      "kind": "name_zh"
+    },
+    {
+      "instrumentId": "us:ZZMD",
+      "alias": "zzmd",
+      "kind": "symbol"
+    },
+    {
+      "instrumentId": "us:ZZMD",
+      "alias": "zenmed diagnostics inc.",
+      "kind": "name_en"
+    },
+    {
+      "instrumentId": "us:ZZMD",
+      "alias": "泽美诊断",
+      "kind": "name_zh"
+    }
+  ]
+}

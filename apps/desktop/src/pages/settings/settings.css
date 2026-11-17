@@ -1,0 +1,32 @@
+.p-settings { display: grid; gap: var(--space-3); min-width: 0; padding-bottom: var(--space-5); }
+.p-settings__head, .p-settings__row { display: flex; align-items: center; justify-content: space-between; gap: var(--space-4); min-width: 0; }
+.p-settings__head h1 { font-size: var(--text-h1-size); line-height: var(--text-h1-lh); margin: 0; }
+.p-settings__group { display: grid; gap: var(--space-3); }
+.p-settings__group h2 { font-size: var(--text-h2-size); line-height: var(--text-h2-lh); font-weight: 600; margin: 0; }
+.p-settings__group p { margin: 0; }
+.p-settings__row .c-field { flex: 1; max-width: 580px; min-width: 0; }
+.p-settings__actions { display: flex; align-items: center; flex-wrap: wrap; gap: var(--space-2); }
+.p-settings__help { color: var(--muted); font-size: var(--text-small-size); line-height: var(--text-small-lh); }
+.p-settings__engines { border: 0; padding: 0; margin: 0; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--space-3); }
+.p-settings__budget { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1fr); gap: var(--space-5); margin-bottom: var(--space-3); }
+.p-settings__estimate { display: flex; flex-direction: column; gap: var(--space-1); }
+.p-settings__estimate strong { font-size: 22px; line-height: 32px; font-weight: 500; }
+.p-settings__checks { list-style: none; padding: 0; margin: 0 0 var(--space-3); }
+.p-settings__checks li { display: grid; grid-template-columns: 26px 52px minmax(0, 1fr) auto; align-items: start; gap: var(--space-2); padding: var(--space-2) 0; border-top: 1px solid var(--line); }
+.p-settings__checks + .c-banner { margin-bottom: var(--space-3); }
+.p-settings .c-table { table-layout: fixed; width: 100%; }
+.p-settings .c-table th:nth-child(1) { width: 24%; }
+.p-settings .c-table th:nth-child(2) { width: 27%; }
+.p-settings .c-table td { white-space: normal; overflow-wrap: anywhere; vertical-align: top; }
+.p-settings__about { display: flex; flex-wrap: wrap; gap: var(--space-6); margin: 0; }
+.p-settings__about dt { color: var(--muted); font-size: var(--text-small-size); }
+.p-settings__about dd { margin: var(--space-1) 0 0; }
+.c-modal .p-settings__actions { justify-content: flex-end; margin-top: var(--space-4); }
+.p-settings__gallery-note { position: fixed; bottom: 5px; right: 24px; color: var(--muted); font-size: 11px; z-index: 1; background: var(--paper); }
+@media (max-width: 800px) {
+  .p-settings__engines, .p-settings__budget { grid-template-columns: 1fr; }
+  .p-settings__row { flex-wrap: wrap; }
+  .p-settings__row .c-field { flex-basis: 100%; max-width: none; }
+  .p-settings__checks li { grid-template-columns: 26px 52px minmax(0, 1fr); }
+  .p-settings__checks li > :last-child { grid-column: 3; }
+}

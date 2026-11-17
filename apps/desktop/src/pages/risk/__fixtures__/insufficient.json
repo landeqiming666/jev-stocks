@@ -1,0 +1,9 @@
+{
+  "code": "DATA_INSUFFICIENT",
+  "message": "样本不足：共同交易日 42 天，至少需要 60 天。",
+  "data": {
+    "retryable": false,
+    "observations": 42,
+    "required": 60
+  }
+}

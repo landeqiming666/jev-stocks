@@ -4,7 +4,7 @@ import math
 from calendar import monthrange
 from collections.abc import Mapping, Sequence
 from datetime import date, timedelta
-from decimal import Decimal, localcontext
+from decimal import ROUND_HALF_UP, Context, Decimal, localcontext
 from typing import Protocol
 
 import numpy as np
@@ -146,8 +146,7 @@ def build_risk_input(
         [by_id[h.instrument_id][endpoint].close for h in participating], dtype=np.float64
     )
     # 小数持仓与市值不按数量上限截断；只在输出权重时转换为 float。
-    with localcontext() as context:
-        context.prec = 60
+    with localcontext(Context(prec=60, rounding=ROUND_HALF_UP)):
         values = [
             Decimal(h.quantity) * Decimal(str(close))
             for h, close in zip(participating, closes, strict=True)

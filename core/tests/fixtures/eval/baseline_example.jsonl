@@ -1,0 +1,3 @@
+{"source": "synthetic", "latencyMs": 5, "response": {"model": "example-model", "choices": [{"message": {"content": "overturn"}}], "usage": {"prompt_tokens": 10, "completion_tokens": 2}}}
+{"source": "synthetic", "latencyMs": 10, "response": {"model": "example-model", "choices": [{"message": {"content": "weaken"}}], "usage": {"prompt_tokens": 20, "completion_tokens": 2}}}
+{"source": "synthetic", "latencyMs": 15, "response": {"model": "example-model", "choices": [{"message": {"content": "none"}}], "usage": {"prompt_tokens": 30, "completion_tokens": 2}}}
