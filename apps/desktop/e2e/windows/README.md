@@ -10,7 +10,7 @@ scripts\windows_smoke.ps1 -NoLaunch -SelfTest
 
 只有已经按锁文件安装依赖时才使用 `-SkipInstall`。如果需要复用已有工具环境，先加载本机的开发环境脚本，再运行预检。独立工作树应使用自己的 Cargo 产物目录，避免正在使用的可执行文件阻塞构建。
 
-预检记录 `doctor.ps1`、`setup.ps1`、`check.ps1`、桥接、WinVault 和 Edge 测试。工程门禁与离线集成测试分开执行。E-01 加载器可用时，预检在 `demo-cli/` 加载演示数据并核对六项计数。W-02 真实核心测试和 I-01 离线联调需要各自的入口和专用 Windows 测试账户。桥接必须执行指定用例，I-01 会保存 JUnit 报告及通过、失败和跳过数。WinVault 自动探针使用隔离的临时凭据。
+预检记录 `doctor.ps1`、`setup.ps1`、`check.ps1`、桥接、WinVault 和 Edge 测试。工程门禁与离线集成测试分开执行。E-01 加载器可用时，预检在 `demo-cli/` 加载演示数据并核对六项计数。I-01 的 Python 与真实核心浏览器测试使用内存凭据和独立数据目录，分别保留 JUnit、JSON、截图和 trace。报告中的 `realBrowser` 记录浏览器业务联调。W-02 默认生产入口测试需要没有 Sentinel 凭据的专用 Windows 账户。WinVault 自动探针使用隔离的临时凭据。
 
 报告写入 `results/acceptance.json`。每次运行的原始报告和日志保留在独立子目录。可用 `-ReportDir` 指定其他本地目录。报告记录实际运行的提交、五项 Windows 验收状态和依赖缺口。
 
@@ -31,6 +31,14 @@ scripts\windows_smoke.ps1 -SkipInstall -WindowCloseTimeoutSeconds 900
 ```
 
 原生应用从独立的空 `desktop-data/` 启动。脚本打印本次证据目录和窗口 PID，并保存 `native-window.json`。完成[实机联调清单](manual-checklist.md)后关闭窗口。脚本在检测到原生窗口销毁时开始五秒计时，检查本次已观察到的进程是否退出，并在 `native-exit.json` 中分别记录窗口关闭时间和桌面进程退出时间。六页截图、业务录屏和凭据管理器人工检查由验收人员采集。W-03 产物存在时，预检核对报告与扩展哈希，并记录实际构建或降级结果。Windows 最终 JEVDB 门槛由 ADR 确认。
+
+启动结束后，清理器按本次记录的 PID 和启动时间回收仍存活的进程，记录在 `native-cleanup.json`。退出失败的原始证据单独保留。也可针对同次目录中的窗口基线执行定向清理。
+
+```powershell
+apps\desktop\e2e\windows\collect-evidence.ps1 -CleanupPath "$runDir\native-window.json" -ReportDir $runDir -WaitSeconds 5
+```
+
+窗口出现前失败时，`native-window-error.json` 会保留已观测的启动作用域与进程身份。它也可作为同次目录的清理基线；没有观测到启动身份时，清理器会拒绝该输入。
 
 ## 复核本次证据
 
