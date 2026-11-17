@@ -13,6 +13,8 @@
 .\collect-evidence.ps1 -BaselinePath "$runDir\native-window.json" -ReportDir $runDir -WaitSeconds 5 -WindowCloseTimeoutSeconds 900
 .EXAMPLE
 .\collect-evidence.ps1 -CleanupPath "$runDir\native-window.json" -ReportDir $runDir -WaitSeconds 5
+.EXAMPLE
+.\collect-evidence.ps1 -CleanupPath "$runDir\native-window-error.json" -ReportDir $runDir -WaitSeconds 5
 #>
 [CmdletBinding(DefaultParameterSetName = 'Launch')]
 param(
@@ -145,6 +147,8 @@ $mode = $PSCmdlet.ParameterSetName
 $lateObserved = @{}
 $windowClosedAtUtc = $null
 $desktopClosedAtUtc = $null
+$scopeEvidence = $null
+$observed = @{}
 try {
     if (-not ('Sentinel.Acceptance.NativeEvidence' -as [type])) {
         Add-Type -TypeDefinition @'
@@ -304,11 +308,13 @@ namespace Sentinel.Acceptance {
     $timer = [Diagnostics.Stopwatch]::StartNew()
     if ($mode -eq 'Cleanup') {
         $cleanupBaseline = (Resolve-Path -LiteralPath $CleanupPath).Path
-        if ($cleanupBaseline -ne (Join-Path $reportRoot 'native-window.json')) {
-            throw '清理需要同次验收目录中的 native-window.json。'
-        }
         $baseline = Get-Content -LiteralPath $cleanupBaseline -Raw -Encoding UTF8 | ConvertFrom-Json
-        if ($baseline.schema -cne 'windows-native-window/1' -or
+        $hasWindowBaseline = $cleanupBaseline -eq (Join-Path $reportRoot 'native-window.json') -and
+            $baseline.schema -ceq 'windows-native-window/1'
+        $hasLaunchError = $cleanupBaseline -eq (Join-Path $reportRoot 'native-window-error.json') -and
+            $baseline.schema -ceq 'windows-native-evidence-error/1' -and
+            $baseline.mode -cin @('launch', 'desktop') -and $baseline.mode -ceq $baseline.scope.kind
+        if ((-not $hasWindowBaseline -and -not $hasLaunchError) -or
             $baseline.scope.kind -cnotin @('launch', 'desktop')) {
             throw '清理需要有效的 Sentinel 原生窗口基线。'
         }
@@ -317,7 +323,8 @@ namespace Sentinel.Acceptance {
         $desktopEntry = @($baseline.processes | Where-Object {
             $_.pid -eq $baseline.window.pid -and $_.name -ceq 'sentinel-desktop'
         })
-        if ($rootEntry.Count -ne 1 -or $desktopEntry.Count -ne 1 -or
+        if ($rootEntry.Count -ne 1 -or ($hasWindowBaseline -and $desktopEntry.Count -ne 1) -or
+            ($baseline.scope.kind -ceq 'desktop' -and $rootEntry[0].name -cne 'sentinel-desktop') -or
             ([datetimeoffset]$rootEntry[0].startedAtUtc).UtcDateTime -ne
                 ([datetimeoffset]$baseline.scope.startedAtUtc).UtcDateTime) {
             throw '清理基线缺少匹配的启动进程或 Sentinel 进程。'
@@ -325,7 +332,8 @@ namespace Sentinel.Acceptance {
         $rootRecord = Read-NativeCleanupIdentity $rootEntry[0]
         $records["$($rootRecord.pid):$($rootRecord.startedAtUtc.Ticks)"] = $rootRecord
         Add-NativeCleanupChildren $records @($baseline.processes)
-        foreach ($name in 'native-exit.json', 'native-exit-error.json') {
+        $supplements = if ($hasWindowBaseline) { @('native-exit.json', 'native-exit-error.json') } else { @() }
+        foreach ($name in $supplements) {
             $source = Join-Path $reportRoot $name
             if (-not (Test-Path -LiteralPath $source -PathType Leaf)) { continue }
             $extra = Get-Content -LiteralPath $source -Raw -Encoding UTF8 | ConvertFrom-Json
@@ -482,7 +490,14 @@ namespace Sentinel.Acceptance {
         throw "指定桌面 PID $rootId 对应的进程不是 Sentinel。"
     }
 
-    $observed = @{}
+    $scopeEvidence = [ordered]@{
+        kind = $mode.ToLowerInvariant(); pid = $rootId
+        startedAtUtc = $root.StartedAtUtc.ToString('o')
+    }
+    $observed[$rootId] = [pscustomobject]@{
+        pid = $rootId; parentPid = $null; name = $root.Name
+        startedAtUtc = $root.StartedAtUtc.ToString('o')
+    }
     $window = $null
     do {
         $sampledAtUtc = [datetime]::UtcNow
@@ -532,10 +547,7 @@ namespace Sentinel.Acceptance {
         osVersion = [Environment]::OSVersion.Version.ToString()
         architecture = [string][Runtime.InteropServices.RuntimeInformation]::OSArchitecture
         powerShellVersion = $PSVersionTable.PSVersion.ToString()
-        scope = [ordered]@{
-            kind = $mode.ToLowerInvariant(); pid = $rootId
-            startedAtUtc = $root.StartedAtUtc.ToString('o')
-        }
+        scope = $scopeEvidence
         window = [ordered]@{
             pid = $window.Pid; hwnd = $window.Hwnd; threadId = $window.ThreadId
             executablePath = $window.ExecutablePath; title = $window.Title
@@ -566,6 +578,10 @@ catch {
     }
     if ($mode -eq 'Exit') {
         $errorEvidence['baselinePath'] = $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath($BaselinePath)
+    }
+    if ($mode -in @('Launch', 'Desktop')) {
+        $errorEvidence['scope'] = $scopeEvidence
+        $errorEvidence['processes'] = @($observed.Values | Sort-Object pid)
     }
     Write-NativeEvidence $errorFile $errorEvidence | Out-Null
     throw $failure

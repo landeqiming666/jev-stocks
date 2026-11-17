@@ -12,6 +12,7 @@ export default defineConfig({
   outputDir: join(output, "traces"),
   workers: 1,
   fullyParallel: false,
+  forbidOnly: true,
   timeout: 30_000,
   expect: { timeout: 10_000 },
   reporter: [["list"], ["json", { outputFile: join(output, "results.json") }]],

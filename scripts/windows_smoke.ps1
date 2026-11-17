@@ -50,6 +50,11 @@ function Read-PytestResult {
     [ordered]@{ passed = $passed; failed = $failed; skipped = $cases.Count - $passed - $failed }
 }
 
+function Test-RealBrowserResult {
+    param($Stats)
+    $Stats.expected -gt 0 -and $Stats.unexpected -eq 0 -and $Stats.flaky -eq 0 -and $Stats.skipped -eq 0
+}
+
 $checks = [ordered]@{}
 foreach ($index in 1..5) {
     $checks["WM-$index"] = New-Outcome -Reason '尚未采集证据。'
@@ -108,7 +113,11 @@ if ($SelfTest) {
         $pytestMixed.passed -ne 1 -or $pytestMixed.failed -ne 2 -or $pytestMixed.skipped -ne 0) {
         throw 'test_pytest_reports_executed_cases_separately_from_skips'
     }
-    Write-Output 'Windows smoke report self-tests passed (5).'
+    if (-not (Test-RealBrowserResult @{expected = 11; unexpected = 0; flaky = 0; skipped = 0}) -or
+        (Test-RealBrowserResult @{expected = 1; unexpected = 0; flaky = 0; skipped = 10})) {
+        throw 'test_real_browser_rejects_partially_skipped_runs'
+    }
+    Write-Output 'Windows smoke report self-tests passed (6).'
     exit 0
 }
 
@@ -305,19 +314,27 @@ function Invoke-NativeDesktop {
             }
             $launch.Dispose()
         }
-        if ($snapshot) {
-            try {
-                $cleanup = & $collector -CleanupPath $snapshot.evidencePath -ReportDir $runDir -WaitSeconds 5
+        try {
+            $cleanupBaseline = if ($snapshot) { $snapshot.evidencePath } else { $null }
+            $startupFailurePath = Join-Path $runDir 'native-window-error.json'
+            if (-not $cleanupBaseline -and (Test-Path -LiteralPath $startupFailurePath -PathType Leaf)) {
+                $startupFailure = Get-Content -LiteralPath $startupFailurePath -Raw -Encoding utf8 | ConvertFrom-Json
+                if ($startupFailure.scope -and @($startupFailure.processes).Count -gt 0) {
+                    $cleanupBaseline = $startupFailurePath
+                }
+            }
+            if ($cleanupBaseline) {
+                $cleanup = & $collector -CleanupPath $cleanupBaseline -ReportDir $runDir -WaitSeconds 5
                 if (-not $cleanup.allObservedExited) { throw '仍有观测到的进程存活。' }
             }
-            catch {
-                $cleanupEvidence = Join-Path $runDir 'native-cleanup.json'
-                if (-not (Test-Path -LiteralPath $cleanupEvidence -PathType Leaf)) {
-                    $cleanupEvidence = Join-Path $runDir 'native-cleanup-error.json'
-                }
-                $checks['WM-3'] = New-Outcome -Status 'fail' -Reason '本次启动的进程清理失败。' `
-                    -Evidence $cleanupEvidence -ExitCode 1
+        }
+        catch {
+            $cleanupEvidence = Join-Path $runDir 'native-cleanup.json'
+            if (-not (Test-Path -LiteralPath $cleanupEvidence -PathType Leaf)) {
+                $cleanupEvidence = Join-Path $runDir 'native-cleanup-error.json'
             }
+            $checks['WM-3'] = New-Outcome -Status 'fail' -Reason '本次启动的进程清理失败。' `
+                -Evidence $cleanupEvidence -ExitCode 1
         }
     }
 }
@@ -449,7 +466,7 @@ try {
                 try {
                     $results = Get-Content -LiteralPath (Join-Path $report.realBrowser.artifacts 'results.json') -Raw -Encoding utf8 |
                         ConvertFrom-Json
-                    if ($results.stats.expected -le 0 -or $results.stats.unexpected -ne 0 -or $results.stats.flaky -ne 0) {
+                    if (-not (Test-RealBrowserResult $results.stats)) {
                         throw '真实业务浏览器用例未全部通过。'
                     }
                     $report.realBrowser.testCounts = $results.stats
