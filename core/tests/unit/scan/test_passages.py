@@ -105,7 +105,7 @@ def test_sixty_per_file_and_sixty_scored_per_event(stack: Any, db: Database) -> 
         db, cast(SemanticEngine, engine), model_id="jev-1.14.0", daily_budget=2_000_000
     )
     service.pipeline_resolver = lambda _: pipeline
-    result = finish(service, service.start("us"))
+    result = finish(service, service.start("us"), timeout=10)
     assert result.run.stats.passages == 120 and result.run.stats.decisions == 60
     assert len(engine.pairs[0]) == 60
     with db.read() as reader:

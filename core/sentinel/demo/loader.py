@@ -693,20 +693,35 @@ def _payloads(data: DemoData) -> dict[str, list[dict[str, Any]]]:
 
 def insert_all(tx: SqlExecutor, data: DemoData, inserted_at: datetime) -> None:
     payloads = _payloads(data)
+    registry_rows: list[list[object]] = []
     for table, columns, keys, json_keys in SCHEMA:
         indexes = {key: columns.index(key) for key in keys}
+        batch: list[list[object]] = []
         for row in payloads[table]:
             values = [_value(table, key, row.get(key)) for key in json_keys]
-            placeholders = ",".join("?" for _ in columns)
-            tx.execute(f"INSERT INTO {table} ({','.join(columns)}) VALUES ({placeholders})", values)
+            batch.append(values)
             key_row = {key: row[json_keys[indexes[key]]] for key in keys}
-            _register(tx, table, key_row, inserted_at)
+            registry_rows.append([table, pk_json(key_row)])
+        if batch:
+            # One JSON parameter avoids per-cell native binding overhead on Windows.
+            selected = ",".join(
+                f"json_extract_string(value, '$[{index}]')" for index in range(len(columns))
+            )
+            tx.execute(
+                f"INSERT INTO {table} ({','.join(columns)}) SELECT {selected} FROM json_each(?)",
+                [json.dumps(batch, ensure_ascii=False)],
+            )
     tx.execute(
         "INSERT INTO setting VALUES ('demoDataLoaded', 'true', ?) ON CONFLICT (key) "
         "DO UPDATE SET value_json='true', updated_at=excluded.updated_at",
         [inserted_at],
     )
-    _register(tx, "setting", {"key": "demoDataLoaded"}, inserted_at)
+    registry_rows.append(["setting", pk_json({"key": "demoDataLoaded"})])
+    tx.execute(
+        "INSERT INTO demo_row SELECT json_extract_string(value, '$[0]'), "
+        "json_extract_string(value, '$[1]'), ? FROM json_each(?)",
+        [inserted_at, json.dumps(registry_rows, ensure_ascii=False)],
+    )
 
 
 def _value(table: str, key: str, value: Any) -> Any:
@@ -715,32 +730,49 @@ def _value(table: str, key: str, value: Any) -> Any:
     return value
 
 
-def _register(tx: SqlExecutor, table: str, values: dict[str, Any], inserted_at: datetime) -> None:
-    tx.execute("INSERT INTO demo_row VALUES (?, ?, ?)", [table, pk_json(values), inserted_at])
-
-
 def delete_registered(tx: SqlExecutor, cleared_at: datetime) -> int:
     tx.execute("SELECT table_name, pk_json FROM demo_row")
     rows = tx.fetchall()
-    order = {table: index for index, table in enumerate(DELETE_ORDER)}
-    ordered = sorted(rows, key=lambda row: order.get(cast(str, row[0]), len(order)))
-    removed = 0
-    for table, raw in ordered:
+    batches: dict[str, list[list[object]]] = {}
+    keys: tuple[str, ...]
+    for table, raw in rows:
         name = cast(str, table)
         if name == "setting":
-            continue
-        if name not in SCHEMA_BY_TABLE:
+            keys = ("key",)
+        elif name in SCHEMA_BY_TABLE:
+            _columns, keys, _json_keys = SCHEMA_BY_TABLE[name][1:]
+        else:
             raise InternalError(detail=f"demo: unknown registry table {name}")
-        _columns, keys, _json_keys = SCHEMA_BY_TABLE[name][1:]
         try:
             values = json.loads(cast(str, raw))
         except (TypeError, ValueError) as exc:
             raise InternalError(detail="demo: invalid registry row") from exc
         if not isinstance(values, dict) or set(values) != set(keys):
             raise InternalError(detail="demo: registry key mismatch")
-        clauses = " AND ".join(f"{key}=?" for key in keys)
-        tx.execute(f"DELETE FROM {name} WHERE {clauses}", [values[key] for key in keys])
-        removed += 1
+        if name == "setting":
+            if values != {"key": "demoDataLoaded"}:
+                raise InternalError(detail="demo: unknown registry setting")
+            continue
+        batches.setdefault(name, []).append([values[key] for key in keys])
+
+    removed = 0
+    for name in DELETE_ORDER:
+        batch = batches.get(name)
+        if not batch:
+            continue
+        _columns, keys, _json_keys = SCHEMA_BY_TABLE[name][1:]
+        selected = ",".join(
+            f"json_extract_string(value, '$[{index}]') AS {key}" for index, key in enumerate(keys)
+        )
+        clauses = " AND ".join(
+            f"{name}.{key}=cast_to_type(demo_keys.{key}, {name}.{key})" for key in keys
+        )
+        tx.execute(
+            f"DELETE FROM {name} USING (SELECT {selected} FROM json_each(?)) AS demo_keys "
+            f"WHERE {clauses}",
+            [json.dumps(batch, ensure_ascii=False)],
+        )
+        removed += len(batch)
     tx.execute(
         "UPDATE setting SET value_json='false', updated_at=? WHERE key='demoDataLoaded'",
         [cleared_at],

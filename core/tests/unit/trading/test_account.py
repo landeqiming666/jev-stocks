@@ -286,6 +286,8 @@ def test_reset_removes_only_target_account(service):
     backup.close()
 
 
+# The complete 200-action sequence takes about 48 seconds on Windows.
+@pytest.mark.timeout(120)
 def test_random_200_step_ledger_invariants(service, monkeypatch):
     from sentinel.ids import new_id
     from sentinel.trading import account as account_module

@@ -48,6 +48,7 @@ class CoreHarness:
         self._reader: threading.Thread | None = None
         self._stderr_reader: threading.Thread | None = None
         self._raw: list[str] = []
+        self._failure: CoreFailure | None = None
 
     # -- 生命周期 ---------------------------------------------------------
     def start(self) -> None:
@@ -57,11 +58,11 @@ class CoreHarness:
         command = [
             uv,
             "run",
+            "--offline",
             "--project",
             str(ROOT / "core"),
             "python",
-            "-m",
-            "sentinel",
+            str(ROOT / "apps/desktop/e2e/acceptance/memory_core.py"),
             "--data-dir",
             str(self.config.data_dir),
             "--resource-dir",
@@ -69,14 +70,25 @@ class CoreHarness:
             "--log-level",
             "WARN",
         ]
-        env = {
-            "PATH": os.environ.get("PATH", ""),
-            "HOME": os.environ.get("HOME", ""),
-            "SENTINEL_OFFLINE": "1",
-            "SENTINEL_CLOCK": "2026-11-02T08:35:00Z",
-            "PYTHONUNBUFFERED": "1",
-            **self.config.env,
-        }
+        env = dict(os.environ)
+        for name in (
+            "JEV_API_KEY",
+            "TYPESAFE_API_KEY",
+            "SENTINEL_JEVDB_PATH",
+            "JEV_ENDPOINT",
+            "SENTINEL_CORE_CMD",
+            "PYTHON_KEYRING_BACKEND",
+        ):
+            env.pop(name, None)
+        env.update(self.config.env)
+        env.update(
+            {
+                "SENTINEL_OFFLINE": "1",
+                "SENTINEL_CLOCK": "2026-11-02T08:35:00Z",
+                "PYTHONUNBUFFERED": "1",
+                "PYTHONUTF8": "1",
+            }
+        )
         self._process = subprocess.Popen(
             command,
             cwd=str(ROOT),
@@ -85,6 +97,7 @@ class CoreHarness:
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             start_new_session=True,
+            creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0),
         )
         assert self._process.stdout is not None and self._process.stderr is not None
         self._stdout, self._stderr = self._process.stdout, self._process.stderr
@@ -94,10 +107,15 @@ class CoreHarness:
         )
         self._reader.start()
         self._stderr_reader.start()
-        self.recv_until(
-            lambda message: message.get("method") == "app.ready",
-            self.config.startup_timeout_s,
-        )
+        try:
+            self.recv_until(
+                lambda message: message.get("method") == "app.ready",
+                self.config.startup_timeout_s,
+            )
+        except BaseException:
+            self._kill()
+            self._close()
+            raise
 
     def _read_stdout(self) -> None:
         assert self._stdout is not None
@@ -108,16 +126,20 @@ class CoreHarness:
             self._raw.append(line)
             try:
                 message = json.loads(line)
-            except json.JSONDecodeError as exc:
+            except json.JSONDecodeError:
                 with self._condition:
+                    self._failure = CoreFailure(f"non-JSON stdout line: {line!r}")
                     self._condition.notify_all()
-                raise CoreFailure(f"non-JSON stdout line: {line!r}") from exc
+                return
             with self._condition:
                 if "id" in message:
                     self._responses[str(message["id"])] = message
                 else:
                     self._notifications.append(message)
                 self._condition.notify_all()
+        with self._condition:
+            self._failure = CoreFailure(f"core stdout closed\n{self.stderr_tail()}")
+            self._condition.notify_all()
 
     def _read_stderr(self) -> None:
         assert self._stderr is not None
@@ -147,6 +169,8 @@ class CoreHarness:
                     if predicate(self._notifications[index]):
                         self._consumed = index + 1
                         return self._notifications[index]
+                if self._failure is not None:
+                    raise self._failure
                 remaining = deadline - time.monotonic()
                 if remaining <= 0:
                     raise CoreFailure(f"timeout waiting for message\n{self.stderr_tail()}")
@@ -167,6 +191,8 @@ class CoreHarness:
         deadline = time.monotonic() + timeout_s
         with self._condition:
             while request_id not in self._responses:
+                if self._failure is not None:
+                    raise self._failure
                 remaining = deadline - time.monotonic()
                 if remaining <= 0:
                     raise CoreFailure(f"timeout waiting for {request_id}\n{self.stderr_tail()}")
@@ -203,13 +229,23 @@ class CoreHarness:
         if process is None:
             return 0
         if process.poll() is None:
-            with contextlib.suppress(CoreFailure):
+            deadline = time.monotonic() + SHUTDOWN_TIMEOUT_S
+            with contextlib.suppress(CoreFailure, OSError):
                 self.request("app.shutdown", {"force": force}, timeout_s=SHUTDOWN_TIMEOUT_S)
             try:
-                process.wait(timeout=SHUTDOWN_TIMEOUT_S)
+                process.wait(timeout=max(0.01, deadline - time.monotonic()))
             except subprocess.TimeoutExpired:
                 self._kill()
+        return self._close()
+
+    def _close(self) -> int:
+        process = self._process
+        if process is None:
+            return 0
         code = process.wait(timeout=5)
+        for thread in (self._reader, self._stderr_reader):
+            if thread is not None:
+                thread.join(timeout=1)
         for stream in (self._stdout, self._stderr):
             if stream is not None:
                 stream.close()
@@ -220,11 +256,28 @@ class CoreHarness:
 
     def _kill(self) -> None:
         process = self._process
-        if process is None:
+        if process is None or process.poll() is not None:
             return
-        try:
-            os.killpg(os.getpgid(process.pid), signal.SIGKILL)
-        except (ProcessLookupError, PermissionError):
+        if hasattr(os, "killpg"):
+            with contextlib.suppress(ProcessLookupError, PermissionError):
+                os.killpg(process.pid, signal.SIGKILL)
+        else:
+            system_root = os.environ.get("SYSTEMROOT", r"C:\Windows")
+            with contextlib.suppress(OSError, subprocess.TimeoutExpired):
+                subprocess.run(
+                    [
+                        str(Path(system_root) / "System32/taskkill.exe"),
+                        "/PID",
+                        str(process.pid),
+                        "/T",
+                        "/F",
+                    ],
+                    capture_output=True,
+                    check=False,
+                    timeout=5,
+                    creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0),
+                )
+        if process.poll() is None:
             process.kill()
 
     def __enter__(self) -> CoreHarness:

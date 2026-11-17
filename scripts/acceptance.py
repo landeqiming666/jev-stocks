@@ -23,37 +23,32 @@ from typing import Literal
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "core"))
 
-if sys.version_info[:2] != (3, 12):
-    os.execvp(
-        "uv",
+
+def _reexec_locked_runtime() -> None:
+    result = subprocess.run(
         [
             "uv",
             "run",
             "--project",
             str(ROOT / "core"),
             "python",
-            str(Path(__file__)),
+            str(Path(__file__).resolve()),
             *sys.argv[1:],
         ],
+        check=False,
     )
+    raise SystemExit(result.returncode)
+
+
+if sys.version_info[:2] != (3, 12):
+    _reexec_locked_runtime()
 
 from datetime import UTC  # noqa: E402
 
 try:
     import duckdb  # noqa: F401
 except ImportError:  # pragma: no cover - 取决于调用方式
-    os.execvp(
-        "uv",
-        [
-            "uv",
-            "run",
-            "--project",
-            str(ROOT / "core"),
-            "python",
-            str(Path(__file__)),
-            *sys.argv[1:],
-        ],
-    )
+    _reexec_locked_runtime()
 
 from sentinel.storage import Database  # noqa: E402
 
@@ -629,7 +624,7 @@ class AcceptanceRunner:
         )
 
     def _rel(self, path: Path) -> str:
-        return os.path.relpath(path.resolve(), self.work_dir.resolve())
+        return Path(os.path.relpath(path.resolve(), self.work_dir.resolve())).as_posix()
 
     def _write_evidence(self, name: str, content: str) -> str:
         directory = self.work_dir / "artifacts"
@@ -646,9 +641,9 @@ class AcceptanceRunner:
                 content = content.replace(value, "[REDACTED]")
         path.write_text(content, encoding="utf-8")
         try:
-            return str(path.relative_to(self.work_dir))
+            return path.relative_to(self.work_dir).as_posix()
         except ValueError:
-            return str(path)
+            return path.as_posix()
 
 
 class _UnconfiguredEngine:
@@ -668,7 +663,7 @@ def _display_path(path: Path) -> str:
     try:
         return resolved.relative_to(ROOT).as_posix()
     except ValueError:
-        return str(resolved)
+        return resolved.as_posix()
 
 
 def _absolute_work_dir(report: AcceptanceReport) -> Path:
@@ -694,7 +689,7 @@ def write_report(report: AcceptanceReport, out_dir: Path) -> Path:
     work_dir = _absolute_work_dir(report)
     for check in payload["checks"]:
         check["evidence"] = [
-            os.path.relpath((work_dir / item).resolve(), out_dir.resolve())
+            Path(os.path.relpath((work_dir / item).resolve(), out_dir.resolve())).as_posix()
             for item in check["evidence"]
         ]
     path = out_dir / "acceptance.json"

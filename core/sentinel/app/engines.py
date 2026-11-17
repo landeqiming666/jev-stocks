@@ -32,6 +32,7 @@ class _Fingerprint:
     key: str
     endpoint: str | None
     extension: str | None
+    extension_version: tuple[int, int, int, int, int] | None
 
 
 class EngineRuntime:
@@ -70,6 +71,16 @@ class EngineRuntime:
             return None
         return Path(raw).expanduser()
 
+    @staticmethod
+    def _extension_version(path: Path | None) -> tuple[int, int, int, int, int] | None:
+        if path is None:
+            return None
+        try:
+            stat = path.stat()
+        except OSError:
+            return None
+        return stat.st_dev, stat.st_ino, stat.st_size, stat.st_mtime_ns, stat.st_ctime_ns
+
     def jevdb_available(self) -> bool:
         path = self._extension()
         return path is not None and path.is_file()
@@ -96,6 +107,11 @@ class EngineRuntime:
                 endpoint=self._endpoint(),
                 connection_factory=self._jevdb_connection_factory,
             )
+            try:
+                engine.load()
+            except Exception:
+                self._close(engine)
+                raise
             return cast(SemanticEngine, engine)
 
         def jev_direct() -> SemanticEngine:
@@ -124,7 +140,11 @@ class EngineRuntime:
         key = self._key()
         extension = self._extension()
         fingerprint = _Fingerprint(
-            choice, _digest(key), self._endpoint(), str(extension) if extension else None
+            choice,
+            _digest(key),
+            self._endpoint(),
+            str(extension) if extension else None,
+            self._extension_version(extension),
         )
         with self._lock:
             if self._engine is not None and self._fingerprint == fingerprint:
@@ -180,6 +200,7 @@ class EngineRuntime:
                 model_id=MODEL_ID,
                 secret_provider=self._key,
                 endpoint=self._endpoint(),
+                connection_factory=self._jevdb_connection_factory,
             )
         except Exception:
             return False

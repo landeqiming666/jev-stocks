@@ -78,6 +78,7 @@ $report = [ordered]@{
     integration = New-Outcome -Reason '当前工作树缺少 I-01 测试、C-07 入口或 E-01 演示加载器。'
     demo = New-Outcome -Reason '当前工作树缺少 E-01 演示加载器。'
     browser = New-Outcome -Reason '尚未执行 Windows Edge 外壳测试。'
+    realBrowser = New-Outcome -Reason '尚未执行真实核心与 Edge 的业务联调。'
     desktop = New-Outcome -Reason '尚未启动本次验收的原生窗口。'
     jevdb = [ordered]@{status = 'not_run'; built = $null; fallback = $null; evidence = $null}
     overall = 'fail'
@@ -228,6 +229,20 @@ function Invoke-RealIntegration {
         if ($outcome.testCounts.passed -eq 0 -or $outcome.testCounts.failed -gt 0) {
             throw 'I-01 没有通过的离线联调用例，或报告中存在失败。'
         }
+        [xml]$results = Get-Content -LiteralPath $junit -Raw -Encoding utf8
+        $required = @(
+            'test_core_ready_then_bootstrap', 'test_shutdown_exits_within_three_seconds',
+            'test_demo_load_returns_exact_counts', 'test_demo_inbox_exact_counts',
+            'test_decision_act_and_reopen', 'test_paper_advance_moves_clock_exactly_one_day',
+            'test_risk_has_60_observations_and_unit_diagonal'
+        )
+        foreach ($name in $required) {
+            $cases = $results.SelectNodes("//testcase[@name='$name']")
+            if ($cases.Count -ne 1 -or $cases[0].SelectSingleNode('skipped | failure | error')) {
+                throw "I-01 必需场景未通过：$name。"
+            }
+        }
+        $outcome.requiredCases = $required
     }
     catch {
         $outcome.status = 'fail'
@@ -290,6 +305,20 @@ function Invoke-NativeDesktop {
             }
             $launch.Dispose()
         }
+        if ($snapshot) {
+            try {
+                $cleanup = & $collector -CleanupPath $snapshot.evidencePath -ReportDir $runDir -WaitSeconds 5
+                if (-not $cleanup.allObservedExited) { throw '仍有观测到的进程存活。' }
+            }
+            catch {
+                $cleanupEvidence = Join-Path $runDir 'native-cleanup.json'
+                if (-not (Test-Path -LiteralPath $cleanupEvidence -PathType Leaf)) {
+                    $cleanupEvidence = Join-Path $runDir 'native-cleanup-error.json'
+                }
+                $checks['WM-3'] = New-Outcome -Status 'fail' -Reason '本次启动的进程清理失败。' `
+                    -Evidence $cleanupEvidence -ExitCode 1
+            }
+        }
     }
 }
 
@@ -309,6 +338,7 @@ $environment = [ordered]@{
     VITE_RPC = 'tauri'
     WEBVIEW2_USER_DATA_FOLDER = (Join-Path $runDir 'webview')
     SENTINEL_WINDOWS_PLAYWRIGHT_OUTPUT = (Join-Path $runDir 'playwright')
+    SENTINEL_WINDOWS_REAL_CORE_OUTPUT = (Join-Path $runDir 'real-core-playwright')
     SENTINEL_DATA_DIR = (Join-Path ([IO.Path]::GetTempPath()) ('sentinel-验收 空格-' + [Guid]::NewGuid().ToString('N')))
 }
 $saved = @{}
@@ -381,17 +411,13 @@ try {
             $report.realBridge.reason = '真实核心测试需要专用 Windows 测试账户。'
         }
     }
-    if ($report.dependencies['I-01'] -and $report.dependencies['C-07'] -and $report.dependencies['E-01'] -and
-        $report.prerequisites.disposableProfileConfirmed) {
-        # Unit tests exercise mocked transports. The real-core suite uses offline mode.
+    if ($report.dependencies['I-01'] -and $report.dependencies['C-07'] -and $report.dependencies['E-01']) {
+        # The integration fixture injects memory-only secrets and disables network access.
         $env:SENTINEL_OFFLINE = '1'
         try { $report.integration = Invoke-RealIntegration }
         finally {
             Remove-Item Env:SENTINEL_OFFLINE
         }
-    }
-    elseif ($report.dependencies['I-01'] -and $report.dependencies['C-07'] -and $report.dependencies['E-01']) {
-        $report.integration.reason = '请在专用 Windows 测试账户中确认凭据隔离后运行真实核心验收。'
     }
     if ($report.checks['WM-1'].status -eq 'pass') {
         if ($report.dependencies['E-01']) {
@@ -413,6 +439,28 @@ try {
             '--config', 'e2e/windows/playwright.config.ts'
         )
         $report.browser.artifacts = $env:SENTINEL_WINDOWS_PLAYWRIGHT_OUTPUT
+        if ($report.integration.status -eq 'pass') {
+            $report.realBrowser = Invoke-Recorded 'playwright-real' 'pnpm.cmd' @(
+                '--dir', 'apps/desktop', 'exec', 'playwright', 'test',
+                '--config', 'e2e/real-core/playwright.config.ts'
+            )
+            $report.realBrowser.artifacts = $env:SENTINEL_WINDOWS_REAL_CORE_OUTPUT
+            if ($report.realBrowser.status -eq 'pass') {
+                try {
+                    $results = Get-Content -LiteralPath (Join-Path $report.realBrowser.artifacts 'results.json') -Raw -Encoding utf8 |
+                        ConvertFrom-Json
+                    if ($results.stats.expected -le 0 -or $results.stats.unexpected -ne 0 -or $results.stats.flaky -ne 0) {
+                        throw '真实业务浏览器用例未全部通过。'
+                    }
+                    $report.realBrowser.testCounts = $results.stats
+                }
+                catch {
+                    $report.realBrowser.status = 'fail'
+                    $report.realBrowser.reason = $_.Exception.Message
+                    $report.realBrowser.exitCode = 1
+                }
+            }
+        }
     }
     if ((Test-Path -LiteralPath (Join-Path $core 'tests\unit\secrets\test_windows_backend.py') -PathType Leaf) -and
         (Test-Path -LiteralPath (Join-Path $core 'sentinel\secrets\windows_backend.py') -PathType Leaf)) {
@@ -450,7 +498,7 @@ try {
     Read-JevdbResult
     $unfinished = @(
         @($report.checks['WM-1'], $report.bridge, $report.realBridge, $report.integration,
-            $report.demo, $report.browser, $report.credentials) |
+            $report.demo, $report.browser, $report.realBrowser, $report.credentials) |
             Where-Object { $_.status -ne 'pass' }
     )
     if ($NoLaunch) {
@@ -472,7 +520,7 @@ try {
     }
     $outcomes = @($checks.Values) + @(
         $report.bridge, $report.realBridge, $report.integration, $report.demo, $report.browser,
-        $report.credentials, $report.desktop
+        $report.realBrowser, $report.credentials, $report.desktop
     )
     $report.exitCode = Get-AcceptanceExitCode -Outcomes $outcomes
     if ($report.exitCode -eq 0) { $report.overall = 'pass' }

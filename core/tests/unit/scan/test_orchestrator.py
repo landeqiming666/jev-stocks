@@ -156,8 +156,8 @@ def stack(db: Database) -> Any:
     service.wait_idle(3)
 
 
-def finish(service: ScanService, run_id: str) -> Any:
-    assert service.wait_idle(3)
+def finish(service: ScanService, run_id: str, *, timeout: float = 3) -> Any:
+    assert service.wait_idle(timeout)
     return service.detail(run_id)
 
 

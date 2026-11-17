@@ -35,6 +35,7 @@ from sentinel.secrets import (
     SecretsService,
     SecretStore,
 )
+from sentinel.secrets.store import _unavailable
 from sentinel.semantic.engines.jevdb import DuckDBConnection
 from sentinel.semantic.pipeline import DecisionPipeline
 from sentinel.settings import SettingsService
@@ -124,7 +125,34 @@ class AppContainer:
         self.db.close()
 
 
+class _UnavailableWindowsSecretStore:
+    """Keep an unconfigured app usable while refusing nonpersistent writes."""
+
+    def get(self, account: str) -> None:
+        return None
+
+    def set(self, account: str, value: str) -> None:
+        raise _unavailable()
+
+    def delete(self, account: str) -> None:
+        raise _unavailable()
+
+
 def _secret_store() -> SecretStore:
+    if platform.name() == "windows":
+        from sentinel.secrets.windows_backend import WindowsCredentialBackend
+
+        try:
+            return KeyringSecretStore(backend=WindowsCredentialBackend())
+        except Exception:
+            log_event(
+                _LOG,
+                logging.WARNING,
+                event="secrets.keyring_unavailable",
+                error_code="INTERNAL",
+                reason="WINDOWS_CREDENTIAL_LOCKER",
+            )
+            return _UnavailableWindowsSecretStore()
     try:
         return KeyringSecretStore()
     except Exception:

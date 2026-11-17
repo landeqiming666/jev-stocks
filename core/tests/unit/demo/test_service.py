@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+import json
 import shutil
+from collections.abc import Sequence
 from datetime import datetime
 from pathlib import Path
 from typing import cast
@@ -8,10 +10,11 @@ from typing import cast
 import pytest
 
 from sentinel.demo import DemoService, clear_demo, load_demo
-from sentinel.demo.loader import SCHEMA
+from sentinel.demo import loader as demo_loader
+from sentinel.demo.loader import SCHEMA, DemoData
 from sentinel.errors import InternalError, UserError
 from sentinel.scan.pending import InboxService, StatusSnapshot
-from sentinel.storage import Database, SqlExecutor
+from sentinel.storage import Database, SqlExecutor, WriteTx
 
 from .conftest import NOW, RESOURCES
 
@@ -59,6 +62,26 @@ def test_load_returns_exact_manifest_counts(service: DemoService) -> None:
     assert status.loaded is True and status.rows > 0
 
 
+def test_batch_preserves_sql_null_and_literal_text(
+    service: DemoService, db: Database, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    payloads = demo_loader._payloads
+    text = '中文 "quote" \\ path'
+
+    def notes(data: DemoData) -> dict[str, list[dict[str, object]]]:
+        rows = payloads(data)
+        rows["holding"][0] = {**rows["holding"][0], "note": "null"}
+        rows["holding"][1] = {**rows["holding"][1], "note": None}
+        rows["holding"][2] = {**rows["holding"][2], "note": text}
+        return rows
+
+    monkeypatch.setattr(demo_loader, "_payloads", notes)
+    service.load()
+    actual = [row[0] for row in query(db, "SELECT note FROM holding")]
+    assert "null" in actual and None in actual and text in actual
+    assert query(db, "SELECT bool_and(is_active) FROM instrument") == [(True,)]
+
+
 def test_load_is_atomic_on_bad_price_row(db: Database, tmp_path: Path) -> None:
     resources = tmp_path / "bad-price"
     shutil.copytree(RESOURCES, resources)
@@ -80,6 +103,31 @@ def test_load_is_atomic_on_bad_manifest_count(db: Database, tmp_path: Path) -> N
         load_demo(db, resources, lambda: NOW)
     assert all(count == 0 for count in table_counts(db).values())
     assert query(db, "SELECT count(*) FROM demo_row") == [(0,)]
+
+
+@pytest.mark.parametrize("failed_table", ["risk_run", "demo_row"])
+def test_load_rolls_back_a_late_batch_failure(
+    db: Database, monkeypatch: pytest.MonkeyPatch, failed_table: str
+) -> None:
+    execute_batch = WriteTx.execute
+
+    def duplicate_last_batch(
+        tx: WriteTx, sql: str, params: Sequence[object] | None = None
+    ) -> WriteTx:
+        if sql.startswith(f"INSERT INTO {failed_table} "):
+            assert params is not None
+            index = 1 if failed_table == "demo_row" else 0
+            batch = json.loads(cast(str, params[index]))
+            params = list(params)
+            params[index] = json.dumps([*batch, batch[0]])
+        return execute_batch(tx, sql, params)
+
+    monkeypatch.setattr(WriteTx, "execute", duplicate_last_batch)
+    with pytest.raises(InternalError):
+        DemoService(db, RESOURCES, lambda: NOW).load()
+    assert all(count == 0 for count in table_counts(db).values())
+    assert query(db, "SELECT count(*) FROM demo_row") == [(0,)]
+    assert query(db, "SELECT count(*) FROM setting WHERE key='demoDataLoaded'") == [(0,)]
 
 
 def test_load_twice_returns_conflict(service: DemoService) -> None:
@@ -167,3 +215,25 @@ def test_clear_after_manual_delete_skips_missing_rows(service: DemoService, db: 
     service.clear()
     assert query(db, "SELECT count(*) FROM instrument WHERE source='demo'") == [(0,)]
     assert query(db, "SELECT count(*) FROM demo_row") == [(0,)]
+
+
+@pytest.mark.parametrize(
+    ("table", "key"),
+    [
+        ("unknown_table", '{"id":"missing"}'),
+        ("instrument", '{"unexpected":"us:ZZAR"}'),
+        ("setting", '{"key":"language"}'),
+    ],
+)
+def test_clear_rejects_invalid_registry_without_deleting_data(
+    service: DemoService, db: Database, table: str, key: str
+) -> None:
+    service.load()
+    before = table_counts(db)
+    with db.write() as tx:
+        tx.execute("INSERT INTO demo_row VALUES (?, ?, ?)", [table, key, NOW])
+    with pytest.raises(InternalError):
+        service.clear()
+    assert table_counts(db) == before
+    assert query(db, "SELECT count(*) FROM demo_row") == [(1653,)]
+    assert query(db, "SELECT value_json FROM setting WHERE key='demoDataLoaded'") == [("true",)]

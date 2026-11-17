@@ -1,5 +1,5 @@
-import { spawn, type ChildProcessWithoutNullStreams } from "node:child_process";
-import { mkdtempSync } from "node:fs";
+import { spawn, spawnSync, type ChildProcessWithoutNullStreams } from "node:child_process";
+import { existsSync, mkdtempSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -16,21 +16,30 @@ type LineHandler = (line: string) => void;
 export class CoreBridge {
   private child: ChildProcessWithoutNullStreams | null = null;
   private sequence = 0;
-  private readonly pending = new Map<string, (message: Json) => void>();
+  private readonly pending = new Map<string, { resolve: (message: Json) => void; reject: (error: Error) => void; timer: NodeJS.Timeout }>();
   private readonly handlers = new Set<LineHandler>();
   private buffer = "";
   private exitCode: number | null = null;
+  private failure: Error | null = null;
+  private stderr = "";
 
-  constructor(readonly dataDir: string, readonly memorySecrets = false) {}
+  constructor(readonly dataDir: string, readonly memorySecrets = true) {}
 
-  async start(): Promise<void> {
+  async start(timeoutMs = 30_000): Promise<void> {
+    this.failure = null;
+    this.stderr = "";
     const entry = this.memorySecrets
       ? [join(ROOT, "apps/desktop/e2e/acceptance/memory_core.py")]
       : ["-m", "sentinel"];
+    const environment = { ...process.env };
+    for (const name of ["JEV_API_KEY", "TYPESAFE_API_KEY", "SENTINEL_JEVDB_PATH", "JEV_ENDPOINT", "SENTINEL_CORE_CMD", "PYTHON_KEYRING_BACKEND"]) {
+      delete environment[name];
+    }
     const child = spawn(
       "uv",
       [
         "run",
+        "--offline",
         "--project",
         join(ROOT, "core"),
         "python",
@@ -45,22 +54,37 @@ export class CoreBridge {
       {
         cwd: ROOT,
         env: {
-          ...process.env,
+          ...environment,
           SENTINEL_OFFLINE: "1",
           SENTINEL_CLOCK: "2026-11-02T08:35:00Z",
           PYTHONUNBUFFERED: "1",
+          PYTHONUTF8: "1",
         },
+        detached: true,
+        windowsHide: true,
       },
     );
     this.child = child;
     child.stdout.setEncoding("utf8");
     child.stdout.on("data", chunk => this.consume(String(chunk)));
     child.stderr.setEncoding("utf8");
-    child.stderr.on("data", () => undefined);
+    child.stderr.on("data", chunk => { this.stderr = (this.stderr + String(chunk)).slice(-8192); });
+    child.on("error", error => { this.failure = error; });
     child.on("exit", code => {
       this.exitCode = code ?? 0;
+      for (const request of this.pending.values()) {
+        clearTimeout(request.timer);
+        request.reject(new Error(`core exited ${this.exitCode}`));
+      }
+      this.pending.clear();
     });
-    await this.waitForNotification("app.ready", 30_000);
+    try {
+      await this.waitForNotification("app.ready", timeoutMs);
+    } catch (error) {
+      await this.terminate(child);
+      this.child = null;
+      throw error;
+    }
   }
 
   private consume(chunk: string): void {
@@ -85,10 +109,12 @@ export class CoreBridge {
       const waiter = this.pending.get(message.id);
       if (waiter) {
         this.pending.delete(message.id);
-        waiter(message);
+        clearTimeout(waiter.timer);
+        waiter.resolve(message);
+        return;
       }
     }
-    // 响应也要交给页面，页面自己的客户端按 id 匹配。
+    // 页面客户端的响应与通知通过最小 IPC 转发。
     for (const handler of this.handlers) handler(line);
   }
 
@@ -102,19 +128,21 @@ export class CoreBridge {
     this.child.stdin.write(line + "\n");
   }
 
-  request(method: string, params: Json = {}): Promise<Json> {
+  request(method: string, params: Json = {}, timeoutMs = 30_000): Promise<Json> {
     this.sequence += 1;
-    const id = `r-${String(this.sequence).padStart(2, "0")}`;
+    const id = `fixture-${this.sequence}`;
     return new Promise<Json>((resolve, reject) => {
       const timer = setTimeout(() => {
         this.pending.delete(id);
         reject(new Error(`timeout waiting for ${method}`));
-      }, 30_000);
-      this.pending.set(id, message => {
+      }, timeoutMs);
+      this.pending.set(id, { resolve, reject, timer });
+      try { this.send(JSON.stringify({ jsonrpc: "2.0", id, method, params })); }
+      catch (error) {
         clearTimeout(timer);
-        resolve(message);
-      });
-      this.send(JSON.stringify({ jsonrpc: "2.0", id, method, params }));
+        this.pending.delete(id);
+        reject(error);
+      }
     });
   }
 
@@ -128,12 +156,22 @@ export class CoreBridge {
     return new Promise<Json>((resolve, reject) => {
       const timer = setTimeout(() => {
         off();
+        clearInterval(poll);
         reject(new Error(`timeout waiting for ${method}`));
       }, timeoutMs);
+      const poll = setInterval(() => {
+        if (this.failure || this.exitCode !== null) {
+          clearTimeout(timer);
+          clearInterval(poll);
+          off();
+          reject(this.failure ?? new Error(`core exited ${this.exitCode}: ${this.stderr}`));
+        }
+      }, 25);
       const off = this.onLine(line => {
         const message = JSON.parse(line) as Json;
         if (message.method === method) {
           clearTimeout(timer);
+          clearInterval(poll);
           off();
           resolve(message);
         }
@@ -150,23 +188,47 @@ export class CoreBridge {
 
   async stop(): Promise<void> {
     const child = this.child;
-    if (!child || this.exitCode !== null) return;
-    try {
-      await this.request("app.shutdown");
-    } catch {
-      // 关闭请求失败时直接结束进程。
+    if (!child) return;
+    const deadline = Date.now() + 3000;
+    if (this.exitCode === null && child.pid) {
+      try {
+        await this.request("app.shutdown", {}, 3000);
+      } catch {
+        // 超时或传输关闭后，结束本次启动的整个进程树。
+      }
+      await this.waitForExit(child, Math.max(1, deadline - Date.now()));
     }
-    await new Promise<void>(resolve => {
-      const timer = setTimeout(() => {
-        child.kill("SIGKILL");
-        resolve();
-      }, 3000);
-      child.on("exit", () => {
-        clearTimeout(timer);
-        resolve();
-      });
-    });
+    if (child.exitCode === null && child.signalCode === null) await this.terminate(child);
     this.child = null;
+  }
+
+  private waitForExit(child: ChildProcessWithoutNullStreams, timeoutMs: number): Promise<void> {
+    if (child.exitCode !== null || child.signalCode !== null || !child.pid) return Promise.resolve();
+    return new Promise(resolve => {
+      const finished = () => {
+        clearTimeout(timer);
+        child.off("exit", finished);
+        resolve();
+      };
+      const timer = setTimeout(finished, timeoutMs);
+      child.once("exit", finished);
+    });
+  }
+
+  private async terminate(child: ChildProcessWithoutNullStreams): Promise<void> {
+    if (!child.pid || child.exitCode !== null || child.signalCode !== null) return;
+    const taskkill = process.env.SystemRoot && join(process.env.SystemRoot, "System32", "taskkill.exe");
+    if (taskkill && existsSync(taskkill)) {
+      const result = spawnSync(taskkill, ["/PID", String(child.pid), "/T", "/F"], {
+        windowsHide: true, timeout: 5000, stdio: "ignore",
+      });
+      if ((result.error || result.status !== 0) && child.exitCode === null && child.signalCode === null) child.kill("SIGKILL");
+    } else {
+      try { process.kill(-child.pid, "SIGKILL"); }
+      catch { if (child.exitCode === null && child.signalCode === null) child.kill("SIGKILL"); }
+    }
+    await this.waitForExit(child, 3000);
+    if (child.exitCode === null && child.signalCode === null) throw new Error("core process did not exit after cleanup");
   }
 }
 
@@ -262,20 +324,20 @@ export function installTauriShim(): void {
 export const test = base.extend<{ core: CoreBridge; app: Page }>({
   // eslint-disable-next-line no-empty-pattern
   core: async ({}, use) => {
-    const bridge = new CoreBridge(
-      tempDataDir(),
-      process.env.SENTINEL_ACCEPTANCE_MEMORY_SECRETS === "1",
-    );
-    await bridge.start();
+    const bridge = new CoreBridge(tempDataDir());
     try {
+      await bridge.start();
       await use(bridge);
     } finally {
       await bridge.stop();
     }
   },
-  app: async ({ page, core }, use) => {
+  app: [async ({ page, core }, use) => {
     let queue: string[] = [];
+    const pageRequests = new Set<string>();
     await page.exposeFunction("__sentinelSend", (line: string) => {
+      const message = JSON.parse(line) as Json;
+      if (typeof message.id === "string") pageRequests.add(message.id);
       core.send(line);
     });
     await page.exposeFunction("__sentinelPoll", () => {
@@ -285,14 +347,22 @@ export const test = base.extend<{ core: CoreBridge; app: Page }>({
     });
     await page.addInitScript(installTauriShim);
     const off = core.onLine(line => {
+      const message = JSON.parse(line) as Json;
+      if (typeof message.id === "string") pageRequests.delete(message.id);
       queue.push(line);
     });
     try {
+      // Vite 的首次转换使用启动预算，测试正文从空白页面开始。
+      await page.goto("/#/today", { timeout: 60_000 });
+      await expect(page.locator("[data-route][data-ready]")).toHaveAttribute("data-ready", "true");
+      await page.goto("about:blank");
+      await expect.poll(() => pageRequests.size).toBe(0);
+      queue = [];
       await use(page);
     } finally {
       off();
     }
-  },
+  }, { timeout: 60_000 }],
 });
 
 export async function openApp(page: Page, hash = "#/today"): Promise<void> {

@@ -242,6 +242,7 @@ try {
     $report | Add-Member -NotePropertyName manualReview -NotePropertyValue $review
     $outcomes = @($checks | ForEach-Object { $report.checks.PSObject.Properties[$_].Value }) +
         @($report.bridge, $report.realBridge, $report.integration, $report.demo, $report.browser, $report.credentials, $report.desktop)
+    if ($report.PSObject.Properties['realBrowser']) { $outcomes += $report.realBrowser }
     if ($report.exitCode -ne 2) {
         $report.exitCode = if ($outcomes.status -ccontains 'fail') { 1 }
             elseif (@($outcomes | Where-Object { $_.status -cne 'pass' }).Count -gt 0) { 3 }

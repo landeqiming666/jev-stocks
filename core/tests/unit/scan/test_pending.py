@@ -34,7 +34,7 @@ ROOT = Path(__file__).resolve().parents[4]
 NOW = datetime(2026, 11, 2, 0, 35, tzinfo=UTC)
 TEXT = "Zenith Arc Robotics: 雪😀。 Sales slowed."
 METHODS = ("inbox.list", "decision.get", "decision.act", "decision.reopen")
-TYPES = json.loads((ROOT / "contracts/types.schema.json").read_text())
+TYPES = json.loads((ROOT / "contracts/types.schema.json").read_text(encoding="utf-8"))
 REGISTRY = Registry().with_resource(
     "types.schema.json", Resource.from_contents(TYPES, default_specification=DRAFT202012)
 )
@@ -802,7 +802,7 @@ def call(dispatcher: Dispatcher, method: str, params: dict) -> dict:
 def test_contract_examples_and_actual_registered_handlers(
     db: Database, dispatcher: Dispatcher, method: str
 ) -> None:
-    document = json.loads((ROOT / f"contracts/methods/{method}.json").read_text())
+    document = json.loads((ROOT / f"contracts/methods/{method}.json").read_text(encoding="utf-8"))
     spec = dispatcher.lookup(method)
     assert spec is not None and spec.result_model is not None
     assert set(dispatcher.methods()) == set(METHODS)

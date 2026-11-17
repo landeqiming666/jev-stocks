@@ -4,3 +4,8 @@
 /core/tests/fixtures/markets/probe/*.json text eol=lf
 /design/prototype/data/mock.js text eol=lf
 /docs/04-数据模型.md text eol=lf
+/resources/demo/*.json text eol=lf
+/resources/demo/*.csv text eol=lf
+/core/tests/fixtures/eval/*.jsonl text eol=lf
+/core/tests/fixtures/eval/*.json text eol=lf
+/core/tests/fixtures/eval/cassettes/*.json text eol=lf

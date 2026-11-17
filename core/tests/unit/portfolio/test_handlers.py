@@ -26,7 +26,7 @@ METHODS = (
     "thesis.versions",
 )
 CONTRACTS = ROOT / "contracts"
-TYPES = json.loads((CONTRACTS / "types.schema.json").read_text())
+TYPES = json.loads((CONTRACTS / "types.schema.json").read_text(encoding="utf-8"))
 REGISTRY = Registry().with_resource(
     "types.schema.json", Resource.from_contents(TYPES, default_specification=DRAFT202012)
 )
@@ -34,7 +34,9 @@ REGISTRY = Registry().with_resource(
 
 class Contract:
     def __init__(self, method: str) -> None:
-        self.document = json.loads((CONTRACTS / "methods" / (method + ".json")).read_text())
+        self.document = json.loads(
+            (CONTRACTS / "methods" / (method + ".json")).read_text(encoding="utf-8")
+        )
         self.params = Draft202012Validator(self.document["params"], registry=REGISTRY)
         self.result = Draft202012Validator(
             self.document["result"], registry=REGISTRY, format_checker=FormatChecker()

@@ -36,7 +36,7 @@ def test_render_missing_parameter_is_not_filled_with_a_guess() -> None:
 
 
 def test_engine_change_message_is_registered_without_fixture_injection() -> None:
-    assert render("engine.changed") == "未找到 JEVDB 扩展，已改用 Jev 直连（同一模型）"
+    assert render("engine.changed") == "JEVDB 扩展不可用，已改用 Jev 直连（同一模型）"
 
 
 def test_unknown_market_cooldown_does_not_guess_seconds() -> None:

@@ -1,4 +1,18 @@
-import { expect, test, emitStatus } from "./fixture";
+import type { ChildProcess } from "node:child_process";
+import { writeFileSync } from "node:fs";
+import { join } from "node:path";
+import { CoreBridge, expect, test, emitStatus, tempDataDir } from "./fixture";
+
+test("failed fixture startup reaps its process", async () => {
+  const blocked = join(tempDataDir(), "file instead of data directory");
+  writeFileSync(blocked, "controlled startup failure", "utf8");
+  const bridge = new CoreBridge(blocked);
+  const started = bridge.start(5000);
+  const child = (bridge as unknown as { child: ChildProcess }).child;
+  await expect(started).rejects.toThrow(/core exited/);
+  await bridge.stop();
+  expect(child.exitCode !== null || child.signalCode !== null).toBe(true);
+});
 
 test("restarting banner keeps the cached inbox visible", async ({ core, app }) => {
   await core.result("demo.load");

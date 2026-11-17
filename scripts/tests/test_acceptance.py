@@ -271,16 +271,16 @@ def test_report_uses_repo_relative_work_dir(tmp_path: Path) -> None:
 
 
 def test_system_python_can_reexec_the_locked_runtime() -> None:
-    import shutil
     import subprocess
 
-    python = shutil.which("python3")
-    assert python is not None
+    python = Path(getattr(sys, "_base_executable", sys.executable))
+    assert python.is_file()
     result = subprocess.run(
-        [python, str(acceptance.ROOT / "scripts/acceptance.py"), "--self-test"],
+        [str(python), str(acceptance.ROOT / "scripts/acceptance.py"), "--self-test"],
         capture_output=True,
         text=True,
         timeout=20,
+        check=False,
     )
     assert result.returncode == 0, result.stderr
     assert "SELF-TEST PASS" in result.stdout

@@ -11,6 +11,8 @@
 .\collect-evidence.ps1 -BaselinePath "$runDir\native-window.json" -ReportDir $runDir -WaitSeconds 5
 .EXAMPLE
 .\collect-evidence.ps1 -BaselinePath "$runDir\native-window.json" -ReportDir $runDir -WaitSeconds 5 -WindowCloseTimeoutSeconds 900
+.EXAMPLE
+.\collect-evidence.ps1 -CleanupPath "$runDir\native-window.json" -ReportDir $runDir -WaitSeconds 5
 #>
 [CmdletBinding(DefaultParameterSetName = 'Launch')]
 param(
@@ -22,6 +24,9 @@ param(
 
     [Parameter(Mandatory, ParameterSetName = 'Exit')]
     [string]$BaselinePath,
+
+    [Parameter(Mandatory, ParameterSetName = 'Cleanup')]
+    [string]$CleanupPath,
 
     [Parameter(Mandatory)]
     [string]$ReportDir,
@@ -93,6 +98,49 @@ function Get-NativeProcessTree {
     return $tree
 }
 
+function Read-NativeCleanupIdentity {
+    param($Entry)
+
+    $processId = 0
+    $started = [DateTimeOffset]::MinValue
+    if ($Entry.startedAtUtc -is [datetime] -or $Entry.startedAtUtc -is [DateTimeOffset]) {
+        $started = [DateTimeOffset]$Entry.startedAtUtc
+    }
+    elseif (-not [DateTimeOffset]::TryParse([string]$Entry.startedAtUtc, [ref]$started)) {
+        throw '清理基线包含无效的启动时间。'
+    }
+    if (-not [int]::TryParse([string]$Entry.pid, [ref]$processId) -or $processId -le 0 -or
+        [string]::IsNullOrWhiteSpace([string]$Entry.name)) {
+        throw '清理基线包含无效的进程身份。'
+    }
+    [pscustomobject]@{
+        pid = $processId; name = [string]$Entry.name
+        startedAtUtc = $started.UtcDateTime; parentPid = $Entry.parentPid
+    }
+}
+
+function Add-NativeCleanupChildren {
+    param([hashtable]$Records, [object[]]$Entries)
+
+    $pending = [Collections.Generic.List[object]]::new()
+    foreach ($entry in $Entries) { $pending.Add((Read-NativeCleanupIdentity $entry)) }
+    do {
+        $added = $false
+        foreach ($entry in @($pending.ToArray())) {
+            $key = "$($entry.pid):$($entry.startedAtUtc.Ticks)"
+            $parent = @($Records.Values | Where-Object {
+                $_.pid -eq $entry.parentPid -and $_.startedAtUtc -le $entry.startedAtUtc
+            })
+            if ($Records.ContainsKey($key) -or $parent.Count -gt 0) {
+                $Records[$key] = $entry
+                [void]$pending.Remove($entry)
+                $added = $true
+            }
+        }
+    } while ($added -and $pending.Count -gt 0)
+    if ($pending.Count -gt 0) { throw '清理身份包含不属于本次启动树的进程。' }
+}
+
 $mode = $PSCmdlet.ParameterSetName
 $lateObserved = @{}
 $windowClosedAtUtc = $null
@@ -133,6 +181,15 @@ namespace Sentinel.Acceptance {
         private static extern bool Process32NextW(IntPtr snapshot, ref ProcessEntry entry);
         [DllImport("kernel32.dll")]
         private static extern bool CloseHandle(IntPtr handle);
+        [DllImport("kernel32.dll", SetLastError = true)]
+        private static extern IntPtr OpenProcess(uint access, bool inherit, int id);
+        [DllImport("kernel32.dll", SetLastError = true)]
+        private static extern bool GetProcessTimes(IntPtr process, out long created, out long exited,
+            out long kernel, out long user);
+        [DllImport("kernel32.dll", SetLastError = true)]
+        private static extern bool TerminateProcess(IntPtr process, uint code);
+        [DllImport("kernel32.dll")]
+        private static extern uint WaitForSingleObject(IntPtr handle, uint milliseconds);
 
         [DllImport("user32.dll")]
         private static extern uint GetWindowThreadProcessId(IntPtr window, out uint id);
@@ -217,12 +274,112 @@ namespace Sentinel.Acceptance {
             return GetWindowThreadProcessId(new IntPtr(handle), out owner) == threadId &&
                 owner == desktopPid;
         }
+
+        public static string TerminateExact(int id, DateTime startedAtUtc) {
+            // Query and termination share the same handle, so PID reuse cannot redirect the kill.
+            IntPtr process = OpenProcess(0x00100000 | 0x1000 | 0x0001, false, id);
+            if (process == IntPtr.Zero) {
+                int error = Marshal.GetLastWin32Error();
+                return error == 87 ? "already_exited" : "error:" + error;
+            }
+            try {
+                long created, exited, kernel, user;
+                if (!GetProcessTimes(process, out created, out exited, out kernel, out user)) {
+                    return "error:" + Marshal.GetLastWin32Error();
+                }
+                if (created != startedAtUtc.ToFileTimeUtc()) return "identity_mismatch";
+                if (WaitForSingleObject(process, 0) == 0) return "already_exited";
+                if (!TerminateProcess(process, 1)) {
+                    return WaitForSingleObject(process, 0) == 0 ? "already_exited" :
+                        "error:" + Marshal.GetLastWin32Error();
+                }
+                return "terminated";
+            } finally { CloseHandle(process); }
+        }
     }
 }
 '@
     }
 
     $timer = [Diagnostics.Stopwatch]::StartNew()
+    if ($mode -eq 'Cleanup') {
+        $cleanupBaseline = (Resolve-Path -LiteralPath $CleanupPath).Path
+        if ($cleanupBaseline -ne (Join-Path $reportRoot 'native-window.json')) {
+            throw '清理需要同次验收目录中的 native-window.json。'
+        }
+        $baseline = Get-Content -LiteralPath $cleanupBaseline -Raw -Encoding UTF8 | ConvertFrom-Json
+        if ($baseline.schema -cne 'windows-native-window/1' -or
+            $baseline.scope.kind -cnotin @('launch', 'desktop')) {
+            throw '清理需要有效的 Sentinel 原生窗口基线。'
+        }
+        $records = @{}
+        $rootEntry = @($baseline.processes | Where-Object { $_.pid -eq $baseline.scope.pid })
+        $desktopEntry = @($baseline.processes | Where-Object {
+            $_.pid -eq $baseline.window.pid -and $_.name -ceq 'sentinel-desktop'
+        })
+        if ($rootEntry.Count -ne 1 -or $desktopEntry.Count -ne 1 -or
+            ([datetimeoffset]$rootEntry[0].startedAtUtc).UtcDateTime -ne
+                ([datetimeoffset]$baseline.scope.startedAtUtc).UtcDateTime) {
+            throw '清理基线缺少匹配的启动进程或 Sentinel 进程。'
+        }
+        $rootRecord = Read-NativeCleanupIdentity $rootEntry[0]
+        $records["$($rootRecord.pid):$($rootRecord.startedAtUtc.Ticks)"] = $rootRecord
+        Add-NativeCleanupChildren $records @($baseline.processes)
+        foreach ($name in 'native-exit.json', 'native-exit-error.json') {
+            $source = Join-Path $reportRoot $name
+            if (-not (Test-Path -LiteralPath $source -PathType Leaf)) { continue }
+            $extra = Get-Content -LiteralPath $source -Raw -Encoding UTF8 | ConvertFrom-Json
+            if ($extra.baselinePath -eq $cleanupBaseline -and
+                ($extra.schema -ceq 'windows-native-exit/1' -or
+                 ($extra.schema -ceq 'windows-native-evidence-error/1' -and $extra.mode -ceq 'exit'))) {
+                Add-NativeCleanupChildren $records @($extra.lateObservedProcesses | Where-Object { $null -ne $_ })
+            }
+        }
+        $actions = @{}
+        do {
+            $live = @{}
+            foreach ($entry in $records.Values) {
+                $identity = [Sentinel.Acceptance.NativeEvidence]::ReadIdentity($entry.pid)
+                if ($identity -and $identity.StartedAtUtc -eq $entry.startedAtUtc -and
+                    $identity.Name -ceq $entry.name) { $live[$identity.Pid] = $identity }
+            }
+            if ($live.Count -eq 0) { break }
+            $tree = Get-NativeProcessTree $live ([datetime]::UtcNow)
+            foreach ($member in $tree.Values) {
+                $identity = $member.identity
+                $key = "$($identity.Pid):$($identity.StartedAtUtc.Ticks)"
+                if (-not $records.ContainsKey($key)) {
+                    $records[$key] = [pscustomobject]@{
+                        pid = $identity.Pid; name = $identity.Name
+                        startedAtUtc = $identity.StartedAtUtc; parentPid = $member.parentPid
+                    }
+                }
+                $actions[$key] = [pscustomobject]@{
+                    pid = $identity.Pid; name = $identity.Name
+                    startedAtUtc = $identity.StartedAtUtc.ToString('o')
+                    result = [Sentinel.Acceptance.NativeEvidence]::TerminateExact($identity.Pid, $identity.StartedAtUtc)
+                }
+            }
+            if ($timer.Elapsed.TotalSeconds -ge $WaitSeconds) { break }
+            Start-Sleep -Milliseconds 100
+        } while ($true)
+        $remaining = @(
+            foreach ($entry in $records.Values) {
+                $identity = [Sentinel.Acceptance.NativeEvidence]::ReadIdentity($entry.pid)
+                if ($identity -and $identity.StartedAtUtc -eq $entry.startedAtUtc) {
+                    [pscustomobject]@{ pid = $identity.Pid; name = $identity.Name; startedAtUtc = $identity.StartedAtUtc.ToString('o') }
+                }
+            }
+        )
+        Write-NativeEvidence 'native-cleanup.json' ([ordered]@{
+            schema = 'windows-native-cleanup/1'; capturedAtUtc = [datetime]::UtcNow.ToString('o')
+            baselinePath = $cleanupBaseline
+            status = if ($remaining.Count -eq 0) { 'pass' } else { 'fail' }
+            allObservedExited = $remaining.Count -eq 0; observedCount = $records.Count
+            actions = @($actions.Values | Sort-Object pid); remaining = $remaining
+        })
+        return
+    }
     if ($mode -eq 'Exit') {
         $baseline = Get-Content -LiteralPath $BaselinePath -Raw -Encoding UTF8 | ConvertFrom-Json
         if ($baseline.schema -ne 'windows-native-window/1' -or -not $baseline.window -or
@@ -392,7 +549,9 @@ namespace Sentinel.Acceptance {
 }
 catch {
     $failure = $_
-    $errorFile = if ($mode -eq 'Exit') { 'native-exit-error.json' } else { 'native-window-error.json' }
+    $errorFile = if ($mode -eq 'Exit') { 'native-exit-error.json' }
+        elseif ($mode -eq 'Cleanup') { 'native-cleanup-error.json' }
+        else { 'native-window-error.json' }
     $errorEvidence = [ordered]@{
         schema = 'windows-native-evidence-error/1'
         capturedAtUtc = [datetime]::UtcNow.ToString('o')
@@ -404,6 +563,9 @@ catch {
         $errorEvidence['windowClosedAtUtc'] = $windowClosedAtUtc
         $errorEvidence['desktopClosedAtUtc'] = $desktopClosedAtUtc
         $errorEvidence['lateObservedProcesses'] = @($lateObserved.Values | Sort-Object pid, startedAtUtc)
+    }
+    if ($mode -eq 'Exit') {
+        $errorEvidence['baselinePath'] = $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath($BaselinePath)
     }
     Write-NativeEvidence $errorFile $errorEvidence | Out-Null
     throw $failure

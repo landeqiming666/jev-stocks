@@ -8,6 +8,7 @@ from typing import cast
 
 import pytest
 
+from sentinel import platform
 from sentinel.app.args import AppArgs
 from sentinel.app.container import AppContainer, allowed_domains, build_container
 from sentinel.app.probe import EngineProbe
@@ -37,7 +38,7 @@ def test_builds_services_and_applies_all_migrations(container: AppContainer) -> 
     assert container.scan.db is container.db
     assert container.paper.db is container.db
     assert container.inbox is not None and container.demo is not None
-    assert container.platform_name == "macos"
+    assert container.platform_name == platform.name()
 
 
 def test_missing_jev_key_still_boots_without_active_engine(container: AppContainer) -> None:

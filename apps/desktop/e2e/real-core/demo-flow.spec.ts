@@ -14,7 +14,7 @@ async function noHorizontalScroll(page: Page): Promise<boolean> {
   return page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth);
 }
 
-test("six pages show demo data at 1440x900 and 1024x700", async ({ core, app }) => {
+test("six pages show demo data at 1440x900 and 1024x700", async ({ core, app }, testInfo) => {
   const errors: string[] = [];
   app.on("pageerror", error => errors.push(error.message));
   app.on("console", message => {
@@ -34,6 +34,7 @@ test("six pages show demo data at 1440x900 and 1024x700", async ({ core, app }) 
       await app.goto(`/${route.hash}`);
       await expect(app.getByRole("heading", { name: route.heading }).first()).toBeVisible();
       expect(await noHorizontalScroll(app)).toBe(true);
+      await app.screenshot({ path: testInfo.outputPath(`${route.hash.slice(2)}-${viewport.width}.png`) });
     }
   }
   expect(errors).toEqual([]);
